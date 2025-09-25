@@ -1,0 +1,19 @@
+{
+  "name": "fashion-search-app",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "server",
+    "client",
+    "admin"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\" \"npm run dev:admin\"",
+    "dev:server": "npm --workspace server run dev",
+    "dev:client": "npm --workspace client run dev",
+    "dev:admin": "npm --workspace admin run dev"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
