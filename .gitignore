@@ -1,5 +1,41 @@
-node_modules/
+# Node workspace (mọi package con)
+**/node_modules/
+**/dist/
+**/build/
+**/.turbo/
+**/.next/
+**/out/
+**/.vercel/
+**/.cache/
+**/.eslintcache
+**/coverage/
+**/*.tsbuildinfo
+
+# Log & debug
+**/logs/
+**/*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Env (đừng commit biến môi trường)
 .env
-.env.local
-dist/.next/
-logs/
+.env.*
+!.env.example
+
+# Python (cho thư mục embeddings/)
+**/__pycache__/
+**/*.py[cod]
+**/.mypy_cache/
+**/.pytest_cache/
+.venv/
+venv/
+
+# HĐH/IDE rác
+.DS_Store
+Thumbs.db
+.idea/
+# .vscode/
+
+# Package manager cache
+.pnpm-store/
