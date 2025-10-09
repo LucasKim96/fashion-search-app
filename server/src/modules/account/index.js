@@ -1,4 +1,4 @@
-import Account from "./account.module.js";
-import Role from "./role.module.js";
+import Account from "./account.model.js";
+import Role from "./role.model.js";
 
 export { Account, Role };
