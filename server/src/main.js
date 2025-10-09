@@ -3,6 +3,9 @@ import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import connectDB from "./config/db.js";
+
+import { ShopRoute } from "./modules/shop/index.js";
+
 // import productRoutes from "./modules/product/product.route.js";
 // import authRoutes from "./modules/auth/auth.route.js";
 // import searchRoutes from "./modules/search/search.route.js";
@@ -27,6 +30,7 @@ app.use(express.json());
 // app.use("/api/auth", authRoutes);
 // app.use("/api/search", searchRoutes);
 // app.use("/api/users", userRoutes);
+app.use("/api/shops", ShopRoute);
 
 // Connect MongoDB and start server
 connectDB(process.env.MONGO_URI);
