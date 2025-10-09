@@ -1,108 +1,55 @@
-// Shop Controller
+// server/src/modules/shop/shop.controller.js
 import * as ShopService from "./shop.service.js";
+import { successResponse, errorResponse } from "../../utils/index.js";
 
 export const getShops = async (req, res) => {
   try {
     const shops = await ShopService.getAllShops();
-    res.status(200).json({
-      success: true,
-      message: shops.length ? "Fetched shops successfully" : "No shops found",
-      data: shops,
-    });
+    successResponse(
+      res,
+      shops,
+      shops.length ? "Fetched shops successfully" : "No shops found"
+    );
   } catch (err) {
-    res.status(500).json({
-      success: false,
-      message: err.message || "Internal Server Error",
-      data: null,
-    });
+    errorResponse(res, err);
   }
 };
 
 export const getShop = async (req, res) => {
   try {
     const shop = await ShopService.getShopById(req.params.id);
-    if (!shop) {
-      return res.status(404).json({
-        success: false,
-        message: "Shop not found",
-        data: null,
-      });
-    }
-    res.status(200).json({
-      success: true,
-      message: "Fetched shop successfully",
-      data: shop,
-    });
+    if (!shop) return errorResponse(res, "Shop not found", 404);
+    successResponse(res, shop, "Fetched shop successfully");
   } catch (err) {
-    res.status(500).json({
-      success: false,
-      message: err.message || "Internal Server Error",
-      data: null,
-    });
+    errorResponse(res, err);
   }
 };
 
 export const addShop = async (req, res) => {
   try {
     const shop = await ShopService.createShop(req.body);
-    res.status(201).json({
-      success: true,
-      message: "Shop created successfully",
-      data: shop,
-    });
+    successResponse(res, shop, "Shop created successfully", 201);
   } catch (err) {
-    res.status(500).json({
-      success: false,
-      message: err.message || "Internal Server Error",
-      data: null,
-    });
+    errorResponse(res, err);
   }
 };
 
 export const editShop = async (req, res) => {
   try {
     const shop = await ShopService.updateShop(req.params.id, req.body);
-    if (!shop) {
-      return res.status(404).json({
-        success: false,
-        message: "Shop not found",
-        data: null,
-      });
-    }
-    res.status(200).json({
-      success: true,
-      message: "Shop updated successfully",
-      data: shop,
-    });
+    if (!shop) return errorResponse(res, "Shop not found", 404);
+    successResponse(res, shop, "Shop updated successfully");
   } catch (err) {
-    res.status(500).json({
-      success: false,
-      message: err.message || "Internal Server Error",
-      data: null,
-    });
+    errorResponse(res, err);
   }
 };
 
 export const removeShop = async (req, res) => {
   try {
     const shop = await ShopService.deleteShop(req.params.id);
-    if (!shop) {
-      return res.status(404).json({
-        success: false,
-        message: "Shop not found",
-        data: null,
-      });
-    }
-    res.status(200).json({
-      success: true,
-      message: "Shop deleted successfully",
-      data: null,
-    });
+    if (!shop) return errorResponse(res, "Shop not found", 404);
+    successResponse(res, null, "Shop deleted successfully");
   } catch (err) {
-    res.status(500).json({
-      success: false,
-      message: err.message || "Internal Server Error",
-      data: null,
-    });
+    errorResponse(res, err);
   }
 };
