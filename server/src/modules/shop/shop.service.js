@@ -1,23 +1,23 @@
-// Shop Service
-import Shop from "./shop.model.js";
+// server/src/modules/shop/shop.service.js
+import ShopModel from "./shop.index.js";
 
 export const getAllShops = async () => {
-  return await Shop.find().populate("accountId");
+  return await ShopModel.find().populate("accountId");
 };
 
 export const getShopById = async (id) => {
-  return await Shop.findById(id).populate("accountId");
+  return await ShopModel.findById(id).populate("accountId");
 };
 
 export const createShop = async (data) => {
-  const shop = new Shop(data);
+  const shop = new ShopModel(data);
   return await shop.save();
 };
 
 export const updateShop = async (id, data) => {
-  return await Shop.findByIdAndUpdate(id, data, { new: true });
+  return await ShopModel.findByIdAndUpdate(id, data, { new: true });
 };
 
 export const deleteShop = async (id) => {
-  return await Shop.findByIdAndDelete(id);
+  return await ShopModel.findByIdAndDelete(id);
 };
