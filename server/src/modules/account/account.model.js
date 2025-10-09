@@ -6,7 +6,7 @@ const accountSchema = new mongoose.Schema({
   password: { type: String, required: true }, // lưu password đã băm
   status: { type: String, enum: ["active", "inactive", "banned"], default: "active" },
   lastLogin: { type: Date, default: null }, // lưu ngày giờ lần cuối đăng nhập
-  roleId: { type: mongoose.Schema.Types.ObjectId, ref: "Role" },
+  roles: [{ type: mongoose.Schema.Types.ObjectId, ref: "Role" }], //vd:1 account có thể có nhiều role vừa là Khách hàng vừa là Chủ shop
   userInfoId: { type: mongoose.Schema.Types.ObjectId, ref: "UserInfo" },
 }, { timestamps: true }); // timestamps tạo createdAt và updatedAt tự động
 
