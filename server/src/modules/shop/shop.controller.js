@@ -1,6 +1,8 @@
 // server/src/modules/shop/shop.controller.js
 import * as ShopService from "./shop.service.js";
-import { successResponse, errorResponse } from "../../utils/index.js";
+import { apiResponse } from "../../utils/index.js";
+
+const { successResponse, errorResponse } = apiResponse;
 
 export const getShops = async (req, res) => {
   try {

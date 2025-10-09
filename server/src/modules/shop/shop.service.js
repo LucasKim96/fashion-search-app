@@ -1,5 +1,5 @@
 // server/src/modules/shop/shop.service.js
-import ShopModel from "./shop.index.js";
+import ShopModel from "./shop.model.js";
 
 export const getAllShops = async () => {
   return await ShopModel.find().populate("accountId");
