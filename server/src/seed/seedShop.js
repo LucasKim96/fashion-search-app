@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import dotenv from "dotenv";
-import { ShopModel } from "../server/src/modules/shop/index.js";
+import { ShopModel } from "../modules/shop/index.js";
 import path from "path";
 
 dotenv.config({ path: path.resolve("./server/.env") });
@@ -14,14 +14,17 @@ const shopsSeed = [
     logoUrl: "https://example.com/logoA.png",
     coverUrl: "https://example.com/coverA.png",
     description: "Shop A description",
-    status: "active",
+    status: "closed",
+    accountId: "68e8bfe2cb715d27f9409f6b",
   },
+
   {
     shopName: "Fashion Store B",
     logoUrl: "https://example.com/logoB.png",
     coverUrl: "https://example.com/coverB.png",
     description: "Shop B description",
     status: "closed",
+    accountId: "68e8bfe2cb715d27f9409f6c",
   },
 ];
 
