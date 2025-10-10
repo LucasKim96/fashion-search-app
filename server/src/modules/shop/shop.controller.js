@@ -50,7 +50,7 @@ export const addShop = async (req, res) => {
 export const editShop = async (req, res) => {
   try {
     const { id } = req.params;
-    const accountId = req.user?._id;
+    const accountId = req.user?._id || req.body.accountId;
     const updateData = req.body;
 
     const updatedShop = await ShopService.updateShop(id, accountId, updateData);
@@ -66,7 +66,7 @@ export const editShop = async (req, res) => {
 export const removeShop = async (req, res) => {
   try {
     const { id } = req.params;
-    const accountId = req.user?._id;
+    const accountId = req.user?._id || req.body.accountId;
 
     const result = await ShopService.deleteShop(id, accountId);
     return successResponse(res, result, "Xóa shop thành công");

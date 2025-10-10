@@ -15,7 +15,7 @@ const shopsSeed = [
     coverUrl: "https://example.com/coverA.png",
     description: "Shop A description",
     status: "closed",
-    accountId: "670811900000000000000000",
+    accountId: "68e8bfe2cb715d27f9409f6b",
   },
 
   {
@@ -24,7 +24,7 @@ const shopsSeed = [
     coverUrl: "https://example.com/coverB.png",
     description: "Shop B description",
     status: "closed",
-    accountId: "670811900000000000000000",
+    accountId: "68e8bfe2cb715d27f9409f6c",
   },
 ];
 
