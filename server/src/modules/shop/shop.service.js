@@ -1,11 +1,14 @@
-// server/src/modules/shop/shop.service.js
 import Shop from "./shop.model.js";
+import Account from "../account/account.model.js";
 
 /**
  * 🔹 Lấy danh sách tất cả shop (hoặc có thể thêm filter sau này)
  */
 export const getShops = async () => {
-  return await Shop.find().populate("accountId", "username email");
+  const shop = await Shop.findOne();
+  console.log(shop.accountId); // xem thử có ObjectId hợp lệ không
+
+  return await Shop.find().populate("accountId", "username phoneNumber");
 };
 
 /**
@@ -14,9 +17,9 @@ export const getShops = async () => {
 export const getShopById = async (shopId) => {
   const shop = await Shop.findById(shopId).populate(
     "accountId",
-    "username email"
+    "username phoneNumber"
   );
-  if (!shop) throw new Error("Shop not found");
+  if (!shop) throw new Error("Không tìm thấy shop");
   return shop;
 };
 
@@ -28,7 +31,7 @@ export const createShop = async (data) => {
 
   // Kiểm tra account đã có shop chưa (1 account = 1 shop)
   const existingShop = await Shop.findOne({ accountId });
-  if (existingShop) throw new Error("This account already owns a shop");
+  if (existingShop) throw new Error("Tài khoản này đã có shop");
 
   const shop = new Shop({
     shopName,
@@ -46,10 +49,10 @@ export const createShop = async (data) => {
  */
 export const updateShop = async (shopId, accountId, updateData) => {
   const shop = await Shop.findById(shopId);
-  if (!shop) throw new Error("Shop not found");
+  if (!shop) throw new Error("Không tìm thấy shop");
 
   if (shop.accountId.toString() !== accountId)
-    throw new Error("Not authorized to update this shop");
+    throw new Error("Không có quyền cập nhật shop này");
 
   Object.assign(shop, updateData);
   return await shop.save();
@@ -60,13 +63,13 @@ export const updateShop = async (shopId, accountId, updateData) => {
  */
 export const deleteShop = async (shopId, accountId) => {
   const shop = await Shop.findById(shopId);
-  if (!shop) throw new Error("Shop not found");
+  if (!shop) throw new Error("Không tìm thấy shop");
 
   if (shop.accountId.toString() !== accountId)
-    throw new Error("Not authorized to delete this shop");
+    throw new Error("Không có quyền xóa shop này");
 
   await Shop.findByIdAndDelete(shopId);
-  return { message: "Shop deleted successfully" };
+  return { message: "Xóa shop thành công" };
 };
 
 /**
@@ -74,10 +77,11 @@ export const deleteShop = async (shopId, accountId) => {
  */
 export const updateShopStatus = async (shopId, status) => {
   const validStatuses = ["active", "closed", "suspended"];
-  if (!validStatuses.includes(status)) throw new Error("Invalid status");
+  if (!validStatuses.includes(status))
+    throw new Error("Trạng thái không hợp lệ");
 
   const shop = await Shop.findByIdAndUpdate(shopId, { status }, { new: true });
 
-  if (!shop) throw new Error("Shop not found");
+  if (!shop) throw new Error("Không tìm thấy shop");
   return shop;
 };
