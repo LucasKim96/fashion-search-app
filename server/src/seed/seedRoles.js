@@ -3,8 +3,9 @@
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import Role from "../modules/account/role.model.js";
+import path from "path";
 
-dotenv.config();
+dotenv.config({ path: path.resolve("./server/.env") });
 
 // Danh sách vai trò mặc định cho nền tảng bán hàng có shop
 const roles = [
