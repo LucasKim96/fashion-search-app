@@ -15,6 +15,10 @@ import authRoutes from "./modules/auth/auth.route.js";
 //   loggerMiddleware,
 // } from "./middlewares/index.js";
 
+
+import { ShopRoutes } from "./modules/shop/index.js";
+
+// Config
 dotenv.config();
 
 const app = express();
@@ -33,10 +37,13 @@ app.use("/assets", express.static(path.join(__dirname, "assets")));
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Routes
+
 // app.use("/api/products", productRoutes);
 app.use("/api/auth", authRoutes);
 // app.use("/api/search", searchRoutes);
 // app.use("/api/users", userRoutes);
+app.use("/api/shops", ShopRoutes);
+
 
 // Connect MongoDB and start server
 connectDB(process.env.MONGO_URI)
