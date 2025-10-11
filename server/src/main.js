@@ -5,12 +5,7 @@ import cors from "cors";
 import connectDB from "./config/db.js";
 import path from "path";
 import { fileURLToPath } from "url";
-import "./modules/index.js"; // import cho mongodb
-
-import authRoutes from "./modules/auth/auth.route.js";
-
-import { ShopRoutes } from "./modules/shop/index.js";
-// import { CartRoutes } from "./modules/cart/index.js";
+import { authRoutes, ShopRoutes, CartRoutes } from "./modules/index.js"; // import cho mongodb
 
 // Config
 dotenv.config();
@@ -31,12 +26,9 @@ app.use("/assets", express.static(path.join(__dirname, "assets")));
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Routes
-
-// app.use("/api/products", productRoutes);
 app.use("/api/auth", authRoutes);
-// app.use("/api/search", searchRoutes);
-// app.use("/api/users", userRoutes);
 app.use("/api/shops", ShopRoutes);
+app.use("/api/carts", CartRoutes);
 
 // Connect MongoDB and start server
 connectDB(process.env.MONGO_URI)

@@ -5,7 +5,7 @@ import Shop from "./shop.model.js";
  */
 export const getShops = async () => {
   const shop = await Shop.findOne();
-  console.log(shop.accountId); // xem thử có ObjectId hợp lệ không
+  // console.log(shop.accountId); // xem thử có /ObjectId hợp lệ không
 
   return await Shop.find().populate("accountId", "username phoneNumber");
 };
