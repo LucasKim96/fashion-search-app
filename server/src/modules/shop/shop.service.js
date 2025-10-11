@@ -1,5 +1,4 @@
 import Shop from "./shop.model.js";
-import Account from "../account/account.model.js";
 
 /**
  * 🔹 Lấy danh sách tất cả shop (hoặc có thể thêm filter sau này)
