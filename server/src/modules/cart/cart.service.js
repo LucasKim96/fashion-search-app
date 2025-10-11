@@ -1,6 +1,5 @@
 // server/src/modules/cart/cart.service.js
 import Cart from "./cart.model.js";
-import ProductVariant from "../product/index.js";
 
 /**
  * Lấy giỏ hàng của 1 người dùng
