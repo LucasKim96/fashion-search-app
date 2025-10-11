@@ -105,7 +105,7 @@ export const changeStatus = async (req, res) => {
     // Kiểm tra đăng nhập
     if (!req.user) return errorResponse(res, "Chưa đăng nhập", 401);
 
-    const { _id, roleNames, maxLevel } = req.user;
+    const { _id, maxLevel } = req.user;
     const shop = await ShopService.getShopById(id);
     if (!shop) return errorResponse(res, "Không tìm thấy shop", 404);
 
