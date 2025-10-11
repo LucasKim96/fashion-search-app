@@ -1,13 +1,22 @@
-// Shop Routes
+// server/src/modules/shop/shop.routes.js
 import express from "express";
 import * as ShopController from "./shop.controller.js";
+// import { verifyToken, verifyAdmin } from "../../middleware/auth.middleware.js";
 
 const router = express.Router();
 
-router.get("/", ShopController.getShops); // GET all shops
-router.get("/:id", ShopController.getShop); // GET shop by id
-router.post("/", ShopController.addShop); // CREATE shop
-router.put("/:id", ShopController.editShop); // UPDATE shop
-router.delete("/:id", ShopController.removeShop); // DELETE shop
+// Public
+router.get("/", ShopController.getShops);
+router.get("/:id", ShopController.getShop);
+
+// Protected (chủ shop)
+// router.use(verifyToken);
+router.post("/", ShopController.addShop);
+router.put("/:id", ShopController.editShop);
+router.delete("/:id", ShopController.removeShop);
+
+// Admin
+// router.use(verifyAdmin);
+router.put("/:id/status", ShopController.changeStatus);
 
 export default router;

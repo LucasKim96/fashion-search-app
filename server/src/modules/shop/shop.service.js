@@ -1,83 +1,87 @@
-// server/src/modules/cart/cart.service.js
-import Cart from "./cart.model.js";
+import Shop from "./shop.model.js";
+import Account from "../account/account.model.js";
 
 /**
- * 🔹 Lấy giỏ hàng theo accountId
+ * 🔹 Lấy danh sách tất cả shop (hoặc có thể thêm filter sau này)
  */
-export const getCartByAccount = async (accountId) => {
-  return await Cart.findOne({ accountId }).populate(
-    "cartItems.productVariantId"
+export const getShops = async () => {
+  const shop = await Shop.findOne();
+  console.log(shop.accountId); // xem thử có ObjectId hợp lệ không
+
+  return await Shop.find().populate("accountId", "username phoneNumber");
+};
+
+/**
+ * 🔹 Lấy chi tiết shop theo ID
+ */
+export const getShopById = async (shopId) => {
+  const shop = await Shop.findById(shopId).populate(
+    "accountId",
+    "username phoneNumber"
   );
+  if (!shop) throw new Error("Không tìm thấy shop");
+  return shop;
 };
 
 /**
- * 🔹 Thêm sản phẩm vào giỏ hàng
- * - Nếu user chưa có cart → tạo mới
- * - Nếu sản phẩm đã có → tăng số lượng
+ * 🔹 Tạo shop mới
  */
-export const addToCart = async (accountId, productVariantId, quantity = 1) => {
-  let cart = await Cart.findOne({ accountId });
+export const createShop = async (data) => {
+  const { shopName, logoUrl, coverUrl, description, accountId } = data;
 
-  if (!cart) {
-    // Tạo giỏ hàng mới nếu chưa có
-    cart = new Cart({
-      accountId,
-      cartItems: [{ productVariantId, quantity }],
-    });
-  } else {
-    // Kiểm tra sản phẩm đã có trong giỏ chưa
-    const existingItem = cart.cartItems.find(
-      (item) => item.productVariantId.toString() === productVariantId
-    );
+  // Kiểm tra account đã có shop chưa (1 account = 1 shop)
+  const existingShop = await Shop.findOne({ accountId });
+  if (existingShop) throw new Error("Tài khoản này đã có shop");
 
-    if (existingItem) {
-      existingItem.quantity += quantity; // tăng số lượng
-    } else {
-      cart.cartItems.push({ productVariantId, quantity });
-    }
-  }
+  const shop = new Shop({
+    shopName,
+    logoUrl,
+    coverUrl,
+    description,
+    accountId,
+  });
 
-  return await cart.save();
+  return await shop.save();
 };
 
 /**
- * 🔹 Cập nhật số lượng sản phẩm trong giỏ
+ * 🔹 Cập nhật shop (chỉ chủ shop được phép làm)
  */
-export const updateCartItem = async (accountId, productVariantId, quantity) => {
-  const cart = await Cart.findOne({ accountId });
-  if (!cart) throw new Error("Cart not found");
+export const updateShop = async (shopId, accountId, updateData) => {
+  const shop = await Shop.findById(shopId);
+  if (!shop) throw new Error("Không tìm thấy shop");
 
-  const item = cart.cartItems.find(
-    (item) => item.productVariantId.toString() === productVariantId
-  );
+  if (shop.accountId.toString() !== accountId)
+    throw new Error("Không có quyền cập nhật shop này");
 
-  if (!item) throw new Error("Item not found in cart");
-
-  item.quantity = quantity;
-  return await cart.save();
+  Object.assign(shop, updateData);
+  return await shop.save();
 };
 
 /**
- * 🔹 Xóa sản phẩm khỏi giỏ hàng
+ * 🔹 Xóa shop (chỉ chủ shop được phép làm)
  */
-export const removeCartItem = async (accountId, productVariantId) => {
-  const cart = await Cart.findOne({ accountId });
-  if (!cart) throw new Error("Cart not found");
+export const deleteShop = async (shopId, accountId) => {
+  const shop = await Shop.findById(shopId);
+  if (!shop) throw new Error("Không tìm thấy shop");
 
-  cart.cartItems = cart.cartItems.filter(
-    (item) => item.productVariantId.toString() !== productVariantId
-  );
+  if (shop.accountId.toString() !== accountId)
+    throw new Error("Không có quyền xóa shop này");
 
-  return await cart.save();
+  await Shop.findByIdAndDelete(shopId);
+  return { message: "Xóa shop thành công" };
 };
 
 /**
- * 🔹 Xóa toàn bộ giỏ hàng (vd: sau khi tạo order)
+ * 🔹 Cập nhật trạng thái (admin hoặc chủ shop)
  */
-export const clearCart = async (accountId) => {
-  const cart = await Cart.findOne({ accountId });
-  if (!cart) throw new Error("Cart not found");
+export const updateShopStatus = async (shopId, status) => {
+  const validStatuses = ["active", "closed", "suspended"];
+  if (!validStatuses.includes(status))
+    throw new Error("Trạng thái không hợp lệ");
 
-  cart.cartItems = [];
-  return await cart.save();
+  const shop = await Shop.findByIdAndUpdate(shopId, { status }, { new: true });
+
+  if (!shop) throw new Error("Không tìm thấy shop");
+  return shop;
 };
