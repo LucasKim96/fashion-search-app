@@ -78,9 +78,11 @@ export const login = async ({ usernameOrPhone, password }) => {
     if (!isMatch) throw new Error("Sai mật khẩu!");
 
     // Tạo accessToken và refreshToken
-    const roles = account.roles.map((r) => r.roleName);
-    const maxRoleLevel = Math.max(...account.roles.map((r) => r.level));
-    const payload = { id: account._id, roles, maxRoleLevel };
+    const payload = {
+      id: account._id,
+      roleNames: account.roles.map((r) => r.roleName),
+      maxLevel: Math.max(...account.roles.map((r) => r.level)),
+    };
     const accessToken = jwt.sign(payload, JWT_SECRET, {
       expiresIn: JWT_EXPIRES_IN,
     });

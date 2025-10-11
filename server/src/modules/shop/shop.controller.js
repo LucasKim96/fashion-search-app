@@ -105,12 +105,9 @@ export const changeStatus = async (req, res) => {
     // Kiểm tra đăng nhập
     if (!req.user) return errorResponse(res, "Chưa đăng nhập", 401);
 
-    const { _id, roles } = req.user;
+    const { _id, roleNames, maxLevel } = req.user;
     const shop = await ShopService.getShopById(id);
     if (!shop) return errorResponse(res, "Không tìm thấy shop", 404);
-
-    // Lấy level cao nhất của user
-    const maxLevel = Math.max(...(roles?.map((r) => r.level) || [0]));
 
     // Chỉ admin (>=3) hoặc chủ shop (chính chủ) được phép
     if (maxLevel < 3 && shop.accountId.toString() !== _id.toString()) {
