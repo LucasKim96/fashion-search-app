@@ -4,9 +4,6 @@ import Shop from "./shop.model.js";
  * Lấy danh sách tất cả shop (hoặc có thể thêm filter sau này)
  */
 export const getShops = async () => {
-  const shop = await Shop.findOne();
-  // console.log(shop.accountId); // xem thử có /ObjectId hợp lệ không
-
   return await Shop.find().populate("accountId", "username phoneNumber");
 };
 
