@@ -6,10 +6,6 @@ import Role from "../modules/account/role.model.js";
 import path from "path";
 
 dotenv.config({ path: path.resolve("./server/.env") });
-
-const MONGO_URI =
-  process.env.MONGO_URI || "mongodb://localhost:27017/fashionDB";
-
 // Danh sách vai trò mặc định cho nền tảng bán hàng có shop
 const roles = [
   {
