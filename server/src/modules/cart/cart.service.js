@@ -1,18 +1,18 @@
 // server/src/modules/cart/cart.service.js
 import Cart from "./cart.model.js";
+import mongoose from "mongoose";
 
 /**
  * Lấy giỏ hàng của 1 người dùng
  */
 export const getCartByAccount = async (accountId) => {
-  let cart = await Cart.findOne({ accountId })
-    .populate("cartItems.productVariantId")
-    .lean();
+  if (!accountId) throw new Error("Thiếu accountId hợp lệ");
 
-  // Nếu chưa có giỏ hàng thì tạo rỗng
-  if (!cart) {
-    cart = await Cart.create({ accountId, cartItems: [] });
-  }
+  const cart = await Cart.findOneAndUpdate(
+    { accountId },
+    { $setOnInsert: { cartItems: [] } },
+    { new: true, upsert: true }
+  ).populate("cartItems.productVariantId");
 
   return cart;
 };
@@ -21,14 +21,22 @@ export const getCartByAccount = async (accountId) => {
  * Thêm sản phẩm vào giỏ
  */
 export const addToCart = async (accountId, productVariantId, quantity = 1) => {
+  if (!mongoose.Types.ObjectId.isValid(productVariantId))
+    throw new Error("ID sản phẩm không hợp lệ");
+
+  if (quantity <= 0) throw new Error("Số lượng phải lớn hơn 0");
+
+  // Tìm cart của user
   let cart = await Cart.findOne({ accountId });
 
+  // Nếu chưa có → tạo rỗng
   if (!cart) {
-    cart = new Cart({ accountId, cartItems: [] });
+    cart = await Cart.create({ accountId, cartItems: [] });
   }
 
+  // Tìm sản phẩm trong giỏ hàng
   const existingItem = cart.cartItems.find(
-    (item) => item.productVariantId.toString() === productVariantId
+    (item) => item.productVariantId.toString() === String(productVariantId)
   );
 
   if (existingItem) {

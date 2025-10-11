@@ -1,7 +1,7 @@
 import Shop from "./shop.model.js";
 
 /**
- * 🔹 Lấy danh sách tất cả shop (hoặc có thể thêm filter sau này)
+ * Lấy danh sách tất cả shop (hoặc có thể thêm filter sau này)
  */
 export const getShops = async () => {
   const shop = await Shop.findOne();
@@ -11,7 +11,7 @@ export const getShops = async () => {
 };
 
 /**
- * 🔹 Lấy chi tiết shop theo ID
+ * Lấy chi tiết shop theo ID
  */
 export const getShopById = async (shopId) => {
   const shop = await Shop.findById(shopId).populate(
@@ -23,7 +23,7 @@ export const getShopById = async (shopId) => {
 };
 
 /**
- * 🔹 Tạo shop mới
+ * Tạo shop mới
  */
 export const createShop = async (data) => {
   const { shopName, logoUrl, coverUrl, description, accountId } = data;
@@ -44,7 +44,7 @@ export const createShop = async (data) => {
 };
 
 /**
- * 🔹 Cập nhật shop (chỉ chủ shop được phép làm)
+ * Cập nhật shop (chỉ chủ shop được phép làm)
  */
 export const updateShop = async (shopId, accountId, updateData) => {
   const shop = await Shop.findById(shopId);
@@ -58,7 +58,7 @@ export const updateShop = async (shopId, accountId, updateData) => {
 };
 
 /**
- * 🔹 Xóa shop (chỉ chủ shop được phép làm)
+ * Xóa shop (chỉ chủ shop được phép làm)
  */
 export const deleteShop = async (shopId, accountId) => {
   const shop = await Shop.findById(shopId);
@@ -72,7 +72,7 @@ export const deleteShop = async (shopId, accountId) => {
 };
 
 /**
- * 🔹 Cập nhật trạng thái (admin hoặc chủ shop)
+ * Cập nhật trạng thái (admin hoặc chủ shop)
  */
 export const updateShopStatus = async (shopId, status) => {
   const validStatuses = ["active", "closed", "suspended"];
