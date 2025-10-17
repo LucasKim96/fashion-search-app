@@ -1,17 +1,28 @@
 import Shop from "./shop.model.js";
-import Account from "../account/account.model.js";
+import mongoose from "mongoose";
 
 /**
- * 🔹 Lấy danh sách tất cả shop (hoặc có thể thêm filter sau này)
+ * Lấy danh sách tất cả shop (hoặc có thể thêm filter sau này)
  */
-export const getShops = async () => {
-  return await Shop.find().populate("accountId", "username phoneNumber");
+export const getShops = async (filters = {}, options = {}) => {
+  const { page = 1, limit = 20 } = options;
+  const query = {};
+
+  if (filters.status) query.status = filters.status;
+  if (filters.shopName) query.shopName = new RegExp(filters.shopName, "i");
+
+  return await Shop.find(query)
+    .populate("accountId", "username phoneNumber")
+    .skip((page - 1) * limit)
+    .limit(limit);
 };
 
 /**
- * 🔹 Lấy chi tiết shop theo ID
+ * Lấy chi tiết shop theo ID
  */
 export const getShopById = async (shopId) => {
+  if (!mongoose.Types.ObjectId.isValid(shopId))
+    throw new Error("ID shop không hợp lệ");
   const shop = await Shop.findById(shopId).populate(
     "accountId",
     "username phoneNumber"
@@ -21,7 +32,7 @@ export const getShopById = async (shopId) => {
 };
 
 /**
- * 🔹 Tạo shop mới
+ * Tạo shop mới
  */
 export const createShop = async (data) => {
   const { shopName, logoUrl, coverUrl, description, accountId } = data;
@@ -42,7 +53,7 @@ export const createShop = async (data) => {
 };
 
 /**
- * 🔹 Cập nhật shop (chỉ chủ shop được phép làm)
+ * Cập nhật shop (chỉ chủ shop được phép làm)
  */
 export const updateShop = async (shopId, accountId, updateData) => {
   const shop = await Shop.findById(shopId);
@@ -56,7 +67,7 @@ export const updateShop = async (shopId, accountId, updateData) => {
 };
 
 /**
- * 🔹 Xóa shop (chỉ chủ shop được phép làm)
+ * Xóa shop (chỉ chủ shop được phép làm)
  */
 export const deleteShop = async (shopId, accountId) => {
   const shop = await Shop.findById(shopId);
@@ -70,7 +81,7 @@ export const deleteShop = async (shopId, accountId) => {
 };
 
 /**
- * 🔹 Cập nhật trạng thái (admin hoặc chủ shop)
+ * Cập nhật trạng thái (admin hoặc chủ shop)
  */
 export const updateShopStatus = async (shopId, status) => {
   const validStatuses = ["active", "closed", "suspended"];
