@@ -20,6 +20,7 @@
     "bcryptjs": "^3.0.2",
     "express-validator": "^7.2.1",
     "jsonwebtoken": "^9.0.2",
-    "moment-timezone": "^0.6.0"
+    "moment-timezone": "^0.6.0",
+    "readline-sync": "^1.4.10"
   }
 }
