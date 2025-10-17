@@ -29,8 +29,7 @@ export const register = async (data) => {
 
     // Lấy vai trò (đã seed sẵn)
     const role = await Role.findOne({ roleName: "Khách hàng" });
-    if (!role)
-      throw new Error("Không tìm thấy vai trò mặc định trong hệ thống!");
+    if (!role) throw new Error("Không tìm thấy vai trò mặc định trong hệ thống!");
 
     // Tạo userInfo rỗng
     const userInfoDoc = await UserInfo.create({
@@ -46,6 +45,8 @@ export const register = async (data) => {
       password: hashedPassword,
       roles: [role._id],
       userInfoId: userInfoDoc._id,
+      status: "inactive",
+      isBanned: false,
     });
 
     return {
@@ -70,8 +71,7 @@ export const login = async ({ usernameOrPhone, password }) => {
     }).populate("roles");
 
     if (!account) throw new Error("Tài khoản không tồn tại!");
-    if (account.status === "banned")
-      throw new Error("Tài khoản của bạn đã bị khóa!");
+    if (account.isBanned) throw new Error("Tài khoản của bạn đã bị khóa!");
 
     // Kiểm tra mật khẩu
     const isMatch = await bcrypt.compare(password, account.password);
@@ -90,21 +90,16 @@ export const login = async ({ usernameOrPhone, password }) => {
       expiresIn: REFRESH_TOKEN_EXPIRES_IN,
     });
 
-    // Cập nhật lần đăng nhập cuối
-    account.lastLogin = new Date();
+    // Cập nhật trạng thái và thời gian đăng nhập
+    account.status = "active";
+    account.lastActive = new Date();
     await account.save();
 
     return {
       success: true,
       message: "Đăng nhập thành công!",
       data: {
-        account: {
-          // chuyển đổi sang giờ việt nam
-          ...account.toObject(),
-          lastLoginVN: moment(account.lastLogin)
-            .tz("Asia/Ho_Chi_Minh")
-            .format("YYYY-MM-DD HH:mm:ss"),
-        },
+        account,
         accessToken,
         refreshToken,
       },
@@ -113,6 +108,29 @@ export const login = async ({ usernameOrPhone, password }) => {
     return {
       success: false,
       message: error.message || "Đăng nhập thất bại!",
+    };
+  }
+};
+
+
+// Đăng xuất — chuyển trạng thái về inactive
+export const logout = async (accountId) => {
+  try {
+    const account = await Account.findById(accountId);
+    if (!account) throw new Error("Không tìm thấy tài khoản!");
+
+    account.status = "inactive";
+    account.lastActive = new Date();
+    await account.save();
+
+    return {
+      success: true,
+      message: "Đăng xuất thành công!",
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: error.message || "Đăng xuất thất bại!",
     };
   }
 };
