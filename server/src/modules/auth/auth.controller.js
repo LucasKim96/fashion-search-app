@@ -1,18 +1,5 @@
-import { validationResult } from "express-validator";
+import { handleValidation } from "../../utils/index.js";
 import * as AuthService from "./auth.service.js";
-import jwt from "jsonwebtoken";
-
-// Xử lý kết quả validate
-const handleValidation = (req) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return {
-      success: false,
-      message: errors.array()[0].msg, // chỉ lấy lỗi đầu tiên
-    };
-  }
-  return null;
-};
 
 // [POST] /api/auth/register
 export const register = async (req, res) => {
@@ -31,6 +18,24 @@ export const login = async (req, res) => {
   const result = await AuthService.login(req.body);
   res.status(result.success ? 200 : 400).json(result);
 };
+
+// [POST] /api/auth/logout
+export const logout = async (req, res) => {
+  try {
+    const userId = req.user?.id; // lấy từ middleware xác thực (decode từ token)
+
+    if (!userId)
+      return res
+        .status(401)
+        .json({ success: false, message: "Thiếu token hoặc token không hợp lệ!" });
+
+    const result = await AuthService.logout(userId);
+    res.status(result.success ? 200 : 400).json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message || "Lỗi máy chủ!" });
+  }
+};
+
 
 // [POST] /api/auth/refresh
 export const refresh = async (req, res) => {
