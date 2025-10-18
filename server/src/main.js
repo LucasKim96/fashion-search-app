@@ -11,6 +11,7 @@ import {
   UserInfoRoutes,
   ShopRoutes,
   CartRoutes,
+  OrderRoutes,
 } from "./modules/index.js"; // import cho mongodb
 import { errorHandler, notFoundHandler } from "./middlewares/errorHandler.js";
 
@@ -38,6 +39,7 @@ app.use("/api/auth", AuthRoutes);
 app.use("/api/users", UserInfoRoutes);
 app.use("/api/shops", ShopRoutes);
 app.use("/api/carts", CartRoutes);
+app.use("/api/orders", OrderRoutes);
 
 // 404 handler - phải đặt trước errorHandler
 app.use(notFoundHandler);
