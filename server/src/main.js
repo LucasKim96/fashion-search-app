@@ -5,7 +5,7 @@ import cors from "cors";
 import connectDB from "./config/db.js";
 import path from "path";
 import { fileURLToPath } from "url";
-import { AccountRoutes, AuthRoutes, ShopRoutes, CartRoutes } from "./modules/index.js"; // import cho mongodb
+import { AccountRoutes, AuthRoutes, UserInfoRoutes, ShopRoutes, CartRoutes } from "./modules/index.js"; // import cho mongodb
 
 // Config
 dotenv.config();
@@ -28,6 +28,7 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 // Routes
 app.use("/api/accounts", AccountRoutes);
 app.use("/api/auth", AuthRoutes);
+app.use("/api/users", UserInfoRoutes);
 app.use("/api/shops", ShopRoutes);
 app.use("/api/carts", CartRoutes);
 
