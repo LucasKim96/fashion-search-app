@@ -154,14 +154,18 @@ export const changeStatus = async (req, res) => {
  */
 export const deleteNullShops = async (req, res) => {
   try {
-    const adminAccountId = req.user?._id;
+    const adminAccountId = req.user?._id || req.body.accountId;
 
     if (!adminAccountId) {
       return errorResponse(res, "Chưa đăng nhập", 401);
     }
 
     const result = await ShopService.deleteShopsWithNullAccount(adminAccountId);
-    return successResponse(res, result, result.message);
+    return successResponse(
+      res,
+      result,
+      `Super Admin đã xóa ${result.deletedShops} shop null hoặc có accountId không tồn tại khỏi hệ thống và ${result.deletedProducts} sản phẩm thành công`
+    );
   } catch (error) {
     // ApiError sẽ được xử lý bởi errorHandler middleware
     throw error;
