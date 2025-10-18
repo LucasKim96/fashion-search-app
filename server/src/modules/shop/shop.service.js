@@ -1,6 +1,9 @@
 // server/src/modules/shop/shop.service.js
 import Shop from "./shop.model.js";
 import mongoose from "mongoose";
+import ApiError from "../../utils/apiError.js";
+import { Account } from "../account/index.js";
+import { Role } from "../account/index.js";
 
 /**
  * Lấy danh sách shop với phân trang + filter
@@ -19,7 +22,7 @@ export const getShops = async (filters = {}, options = {}) => {
   if (filters.status) {
     const validStatuses = ["active", "closed", "suspended"];
     if (!validStatuses.includes(filters.status)) {
-      throw new Error("Trạng thái không hợp lệ");
+      throw ApiError.badRequest("Trạng thái không hợp lệ");
     }
     query.status = filters.status;
   }
@@ -41,13 +44,13 @@ export const getShops = async (filters = {}, options = {}) => {
  */
 export const getShopById = async (shopId) => {
   if (!mongoose.Types.ObjectId.isValid(shopId))
-    throw new Error("ID shop không hợp lệ");
+    throw ApiError.badRequest("ID shop không hợp lệ");
 
   const shop = await Shop.findById(shopId).populate(
     "accountId",
     "username phoneNumber"
   );
-  if (!shop) throw new Error("Không tìm thấy shop");
+  if (!shop) throw ApiError.notFound("Không tìm thấy shop");
   return shop;
 };
 
@@ -57,34 +60,64 @@ export const getShopById = async (shopId) => {
 export const createShop = async (data) => {
   const { shopName, logoUrl, coverUrl, description, accountId } = data;
 
-  // validate accountId là ObjectId
+  // 1️⃣ Validate accountId
   if (!mongoose.Types.ObjectId.isValid(accountId))
-    throw new Error("accountId không hợp lệ");
+    throw ApiError.badRequest("accountId không hợp lệ");
 
-  // validate bắt buộc shopName
-  if (!shopName || !shopName.trim()) throw new Error("Tên shop là bắt buộc");
+  // 2️⃣ Validate shopName
+  if (!shopName || !shopName.trim())
+    throw ApiError.badRequest("Tên shop là bắt buộc");
 
-  // chuẩn hóa chuỗi
+  // 3️⃣ Kiểm tra account tồn tại
+  const account = await Account.findById(accountId);
+  if (!account) throw ApiError.notFound("Tài khoản không tồn tại");
+
+  // 4️⃣ Kiểm tra account đã có shop chưa
+  const existingShop = await Shop.findOne({ accountId });
+  if (existingShop) throw ApiError.conflict("Tài khoản này đã có shop");
+
+  // 5️⃣ Chuẩn hóa chuỗi
   const trimmedShopName = shopName.trim();
   const trimmedDescription = description?.trim() || "";
+  const trimmedLogoUrl = logoUrl?.trim() || "";
+  const trimmedCoverUrl = coverUrl?.trim() || "";
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
   try {
-    const shop = new Shop({
-      shopName: trimmedShopName,
-      logoUrl,
-      coverUrl,
-      description: trimmedDescription,
-      accountId,
-    });
+    const shop = await Shop.create(
+      [
+        {
+          shopName: trimmedShopName,
+          logoUrl: trimmedLogoUrl,
+          coverUrl: trimmedCoverUrl,
+          description: trimmedDescription,
+          accountId,
+        },
+      ],
+      { session }
+    );
 
-    return await shop.save();
-  } catch (error) {
-    // xử lý lỗi duplicate key (E11000)
-    if (error.code === 11000) {
-      const key = Object.keys(error.keyPattern || {})[0];
-      throw Object.assign(new Error(`${key} đã tồn tại`), { status: 409 });
-    }
-    throw error;
+    const shopOwnerRole = await Role.findOne({ roleName: "Chủ shop" }).session(
+      session
+    );
+    if (!shopOwnerRole)
+      throw ApiError.internal("Không tìm thấy role 'Chủ shop'");
+
+    await Account.updateOne(
+      { _id: accountId },
+      { $addToSet: { roles: shopOwnerRole._id } },
+      { session }
+    );
+
+    await session.commitTransaction();
+    session.endSession();
+    return shop[0];
+  } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+    throw err;
   }
 };
 
@@ -94,15 +127,21 @@ export const createShop = async (data) => {
 export const updateShop = async (shopId, accountId, updateData) => {
   // validate ID
   if (!mongoose.Types.ObjectId.isValid(shopId))
-    throw new Error("ID shop không hợp lệ");
+    throw ApiError.badRequest("ID shop không hợp lệ");
   if (!mongoose.Types.ObjectId.isValid(accountId))
-    throw new Error("accountId không hợp lệ");
+    throw ApiError.badRequest("accountId không hợp lệ");
+
+  // kiểm tra accountId có tồn tại trong database không
+  const account = await Account.findById(accountId);
+  if (!account) {
+    throw ApiError.notFound("Tài khoản không tồn tại");
+  }
 
   const shop = await Shop.findById(shopId);
-  if (!shop) throw new Error("Không tìm thấy shop");
+  if (!shop) throw ApiError.notFound("Không tìm thấy shop");
 
   if (shop.accountId.toString() !== accountId)
-    throw new Error("Không có quyền cập nhật shop này");
+    throw ApiError.forbidden("Không có quyền cập nhật shop này");
 
   // chỉ cho phép update whitelist fields
   const allowedFields = ["shopName", "logoUrl", "coverUrl", "description"];
@@ -124,20 +163,65 @@ export const updateShop = async (shopId, accountId, updateData) => {
  * Xóa shop (chỉ chủ shop được phép làm)
  */
 export const deleteShop = async (shopId, accountId) => {
-  // validate ID
+  // 1️⃣ Validate ID
   if (!mongoose.Types.ObjectId.isValid(shopId))
-    throw new Error("ID shop không hợp lệ");
+    throw ApiError.badRequest("ID shop không hợp lệ");
   if (!mongoose.Types.ObjectId.isValid(accountId))
-    throw new Error("accountId không hợp lệ");
+    throw ApiError.badRequest("accountId không hợp lệ");
 
+  // 2️⃣ Kiểm tra tài khoản tồn tại + roles
+  const account = await Account.findById(accountId).populate("roles");
+  if (!account) throw ApiError.notFound("Tài khoản không tồn tại");
+
+  // 3️⃣ Kiểm tra shop
   const shop = await Shop.findById(shopId);
-  if (!shop) throw new Error("Không tìm thấy shop");
+  if (!shop) throw ApiError.notFound("Không tìm thấy shop");
 
-  if (shop.accountId.toString() !== accountId)
-    throw new Error("Không có quyền xóa shop này");
+  // 4️⃣ Kiểm tra quyền
+  const isSuperAdmin = account.roles.some(
+    (r) => r.roleName === "Super Admin" || r.level >= 4
+  );
 
-  await Shop.findByIdAndDelete(shopId);
-  return { message: "Xóa shop thành công" };
+  if (!isSuperAdmin && shop.accountId.toString() !== accountId)
+    throw ApiError.forbidden("Không có quyền xóa shop này");
+
+  // 5️⃣ Bắt đầu transaction
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    // 6️⃣ Xóa shop
+    await Shop.findByIdAndDelete(shopId, { session });
+
+    // 7️⃣ Xử lý role "Chủ shop" nếu cần
+    const shopOwnerRole = await Role.findOne({ roleName: "Chủ shop" });
+    if (shopOwnerRole) {
+      // Nếu account không còn shop nào nữa thì gỡ role "Chủ shop"
+      const remainingShop = await Shop.findOne({ accountId: shop.accountId });
+      if (!remainingShop) {
+        await Account.updateOne(
+          { _id: shop.accountId },
+          { $pull: { roles: shopOwnerRole._id } },
+          { session }
+        );
+      }
+    }
+
+    // 8️⃣ Commit transaction
+    await session.commitTransaction();
+    session.endSession();
+
+    // 9️⃣ Trả message khác nhau
+    const message = isSuperAdmin
+      ? "Super Admin đã xóa shop thành công"
+      : "Shop của bạn đã được xóa thành công";
+
+    return { message };
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    throw error;
+  }
 };
 
 /**
@@ -146,14 +230,14 @@ export const deleteShop = async (shopId, accountId) => {
 export const updateShopStatus = async (shopId, status) => {
   // validate shopId
   if (!mongoose.Types.ObjectId.isValid(shopId))
-    throw new Error("ID shop không hợp lệ");
+    throw ApiError.badRequest("ID shop không hợp lệ");
 
   const validStatuses = ["active", "closed", "suspended"];
   if (!validStatuses.includes(status))
-    throw new Error("Trạng thái không hợp lệ");
+    throw ApiError.badRequest("Trạng thái không hợp lệ");
 
   const shop = await Shop.findByIdAndUpdate(shopId, { status }, { new: true });
-  if (!shop) throw new Error("Không tìm thấy shop");
+  if (!shop) throw ApiError.notFound("Không tìm thấy shop");
 
   return shop;
 };

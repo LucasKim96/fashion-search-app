@@ -15,8 +15,8 @@ import authRoutes from "./modules/auth/auth.route.js";
 //   loggerMiddleware,
 // } from "./middlewares/index.js";
 
-
 import { ShopRoutes } from "./modules/shop/index.js";
+import { errorHandler } from "./middlewares/errorHandler.js";
 
 // Config
 dotenv.config();
@@ -44,6 +44,8 @@ app.use("/api/auth", authRoutes);
 // app.use("/api/users", userRoutes);
 app.use("/api/shops", ShopRoutes);
 
+// Error handling middleware (phải đặt cuối cùng)
+app.use(errorHandler);
 
 // Connect MongoDB and start server
 connectDB(process.env.MONGO_URI)
