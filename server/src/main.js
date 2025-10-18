@@ -5,7 +5,14 @@ import cors from "cors";
 import connectDB from "./config/db.js";
 import path from "path";
 import { fileURLToPath } from "url";
-import { AccountRoutes, AuthRoutes, UserInfoRoutes, ShopRoutes, CartRoutes } from "./modules/index.js"; // import cho mongodb
+import {
+  AccountRoutes,
+  AuthRoutes,
+  ShopRoutes,
+  CartRoutes,
+} from "./modules/index.js"; // import cho mongodb
+import { errorHandler } from "./middlewares/errorHandler.js";
+
 
 // Config
 dotenv.config();
@@ -31,7 +38,7 @@ app.use("/api/auth", AuthRoutes);
 app.use("/api/users", UserInfoRoutes);
 app.use("/api/shops", ShopRoutes);
 app.use("/api/carts", CartRoutes);
-
+app.use(errorHandler);
 // Connect MongoDB and start server
 connectDB(process.env.MONGO_URI)
   .then(() => {
