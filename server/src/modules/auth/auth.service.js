@@ -80,6 +80,7 @@ export const login = async ({ usernameOrPhone, password }) => {
     // Tạo accessToken và refreshToken
     const payload = {
       id: account._id,
+      userInfoId: account.userInfoId,
       roleNames: account.roles.map((r) => r.roleName),
       maxLevel: Math.max(...account.roles.map((r) => r.level)),
     };
