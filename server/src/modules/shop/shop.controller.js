@@ -148,3 +148,22 @@ export const changeStatus = async (req, res) => {
     throw error;
   }
 };
+
+/**
+ * Xóa các shop có accountId null (chỉ Super Admin)
+ */
+export const deleteNullShops = async (req, res) => {
+  try {
+    const adminAccountId = req.user?._id;
+
+    if (!adminAccountId) {
+      return errorResponse(res, "Chưa đăng nhập", 401);
+    }
+
+    const result = await ShopService.deleteShopsWithNullAccount(adminAccountId);
+    return successResponse(res, result, result.message);
+  } catch (error) {
+    // ApiError sẽ được xử lý bởi errorHandler middleware
+    throw error;
+  }
+};

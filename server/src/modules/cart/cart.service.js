@@ -1,6 +1,10 @@
 // server/src/modules/cart/cart.service.js
 import Cart from "./cart.model.js";
 import mongoose from "mongoose";
+import ApiError from "../../utils/apiError.js";
+import ProductVariant from "../product/productVariant.model.js";
+import Product from "../product/product.model.js";
+import Shop from "../shop/shop.model.js";
 
 /**
  * Lấy giỏ hàng của 1 người dùng
@@ -22,9 +26,23 @@ export const getCartByAccount = async (accountId) => {
  */
 export const addToCart = async (accountId, productVariantId, quantity = 1) => {
   if (!mongoose.Types.ObjectId.isValid(productVariantId))
-    throw new Error("ID sản phẩm không hợp lệ");
+    throw ApiError.badRequest("ID sản phẩm không hợp lệ");
 
-  if (quantity <= 0) throw new Error("Số lượng phải lớn hơn 0");
+  if (quantity <= 0) throw ApiError.badRequest("Số lượng phải lớn hơn 0");
+
+  // Kiểm tra trạng thái shop của product variant
+  const variant = await ProductVariant.findById(productVariantId);
+  if (!variant) throw ApiError.notFound("Không tìm thấy biến thể sản phẩm");
+
+  const product = await Product.findById(variant.productId);
+  if (!product) throw ApiError.notFound("Không tìm thấy sản phẩm");
+
+  const shop = await Shop.findById(product.shopId);
+  if (!shop) throw ApiError.notFound("Không tìm thấy shop của sản phẩm");
+
+  if (shop.status === "closed") {
+    throw ApiError.forbidden("Shop đang đóng, không thể thêm vào giỏ hàng");
+  }
 
   // Tìm cart của user
   let cart = await Cart.findOne({ accountId });
@@ -97,4 +115,26 @@ export const clearCart = async (accountId) => {
     { new: true }
   );
   return cart;
+};
+
+/**
+ * Xóa sản phẩm của shop đã bị xóa khỏi tất cả giỏ hàng
+ */
+export const removeProductsFromAllCarts = async (productIds) => {
+  if (!productIds || productIds.length === 0) return;
+
+  // Tìm tất cả product variants của các sản phẩm bị xóa
+  const variants = await ProductVariant.find(
+    { productId: { $in: productIds } },
+    { _id: 1 }
+  );
+  const variantIds = variants.map((v) => v._id);
+
+  if (variantIds.length === 0) return;
+
+  // Xóa khỏi tất cả giỏ hàng
+  await Cart.updateMany(
+    {},
+    { $pull: { cartItems: { productVariantId: { $in: variantIds } } } }
+  );
 };

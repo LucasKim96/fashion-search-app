@@ -5,6 +5,16 @@ import ApiError from "../utils/apiError.js";
 export const errorHandler = (err, req, res, next) => {
   // 1️⃣ Nếu lỗi là ApiError thì lấy status và message từ nó
   if (err instanceof ApiError) {
+    // Xử lý đặc biệt cho lỗi 404 - thêm thông tin hữu ích cho frontend
+    if (err.statusCode === 404) {
+      return errorResponse(res, err.message, 404, {
+        redirect: true,
+        type: "not_found",
+        path: req.originalUrl,
+        method: req.method,
+        timestamp: new Date().toISOString(),
+      });
+    }
     return errorResponse(res, err.message, err.statusCode);
   }
 
@@ -67,4 +77,26 @@ export const errorHandler = (err, req, res, next) => {
   // 🔟 Lỗi còn lại: Internal Server Error
   console.error("Unhandled Error:", err);
   return errorResponse(res, err.message || "Lỗi máy chủ nội bộ", 500);
+};
+
+/**
+ * Middleware xử lý route không tồn tại (404)
+ */
+export const notFoundHandler = (req, res, next) => {
+  return errorResponse(res, "API endpoint không tồn tại", 404, {
+    redirect: true,
+    type: "route_not_found",
+    path: req.originalUrl,
+    method: req.method,
+    availableEndpoints: [
+      "GET /api/shops",
+      "POST /api/shops",
+      "GET /api/shops/:id",
+      "PUT /api/shops/:id",
+      "DELETE /api/shops/:id",
+      "POST /api/auth/login",
+      "POST /api/auth/register",
+    ],
+    timestamp: new Date().toISOString(),
+  });
 };

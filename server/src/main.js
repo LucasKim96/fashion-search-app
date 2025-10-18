@@ -12,7 +12,7 @@ import {
   ShopRoutes,
   CartRoutes,
 } from "./modules/index.js"; // import cho mongodb
-import { errorHandler } from "./middlewares/errorHandler.js";
+import { errorHandler, notFoundHandler } from "./middlewares/errorHandler.js";
 
 // Config
 dotenv.config();
@@ -38,6 +38,11 @@ app.use("/api/auth", AuthRoutes);
 app.use("/api/users", UserInfoRoutes);
 app.use("/api/shops", ShopRoutes);
 app.use("/api/carts", CartRoutes);
+
+// 404 handler - phải đặt trước errorHandler
+app.use(notFoundHandler);
+
+// Error handling middleware (phải đặt cuối cùng)
 app.use(errorHandler);
 // Connect MongoDB and start server
 connectDB(process.env.MONGO_URI)
