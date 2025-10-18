@@ -352,3 +352,85 @@ export const updateShopStatus = async (shopId, status) => {
     throw error;
   }
 };
+
+/**
+ * Xóa tất cả shop có accountId là null
+ */
+/**
+ * Xóa các shop có accountId null (chỉ Super Admin)
+ */
+export const deleteShopsWithNullAccount = async (adminAccountId) => {
+  // 1️⃣ Validate adminAccountId
+  if (!mongoose.Types.ObjectId.isValid(adminAccountId))
+    throw ApiError.badRequest("adminAccountId không hợp lệ");
+
+  // 2️⃣ Kiểm tra quyền Super Admin
+  const admin = await Account.findById(adminAccountId).populate("roles");
+  if (!admin) throw ApiError.notFound("Không tìm thấy tài khoản admin");
+
+  const isSuperAdmin = admin.roles.some(
+    (r) => r.roleName === "Super Admin" || r.level >= 4
+  );
+
+  if (!isSuperAdmin) {
+    throw ApiError.forbidden(
+      "Chỉ Super Admin mới được phép thực hiện thao tác này"
+    );
+  }
+
+  // 3️⃣ Tìm các shop có accountId null
+  const nullShops = await Shop.find({ accountId: null });
+  const shopIds = nullShops.map((shop) => shop._id);
+
+  if (shopIds.length === 0) {
+    return {
+      message: "Không có shop nào có accountId null để xóa",
+      deletedCount: 0,
+    };
+  }
+
+  // 4️⃣ Bắt đầu transaction để xóa an toàn
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    // 5️⃣ Tìm và xóa tất cả sản phẩm của các shop null
+    const products = await Product.find(
+      { shopId: { $in: shopIds } },
+      { _id: 1 },
+      { session }
+    );
+    const productIds = products.map((p) => p._id);
+
+    // 6️⃣ Xóa product variants
+    if (productIds.length > 0) {
+      await ProductVariant.deleteMany(
+        { productId: { $in: productIds } },
+        { session }
+      );
+    }
+
+    // 7️⃣ Xóa sản phẩm
+    await Product.deleteMany({ shopId: { $in: shopIds } }, { session });
+
+    // 8️⃣ Xóa sản phẩm khỏi giỏ hàng
+    await removeProductsFromAllCarts(productIds);
+
+    // 9️⃣ Xóa các shop null
+    const result = await Shop.deleteMany({ accountId: null }, { session });
+
+    // 🔟 Commit transaction
+    await session.commitTransaction();
+    session.endSession();
+
+    return {
+      message: `Super Admin đã xóa ${result.deletedCount} shop null và ${productIds.length} sản phẩm thành công`,
+      deletedShops: result.deletedCount,
+      deletedProducts: productIds.length,
+    };
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    throw error;
+  }
+};
