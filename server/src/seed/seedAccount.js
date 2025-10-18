@@ -15,26 +15,34 @@ const seedAccounts = async () => {
     console.log("✅ Connected to MongoDB");
 
     // Xoá account cũ để tránh trùng phone/username
-    await Account.deleteMany({});
+    // await Account.deleteMany({});
 
     // Băm password mẫu
     const passwordHash = await bcrypt.hash("123456", 10);
+    const zeropwd = await bcrypt.hash("1816109070", 10);
 
     const accounts = [
-      {
-        username: "sellerA",
-        phoneNumber: "0901000001",
-        password: passwordHash,
-        status: "active",
-        roles: [], // thêm sau nếu có role model
-      },
-      {
-        username: "sellerB",
-        phoneNumber: "0901000002",
-        password: passwordHash,
-        status: "active",
-        roles: [],
-      },
+      // {
+      //   username: "sellerC",
+      //   phoneNumber: "0901000003",
+      //   password: passwordHash,
+      //   status: "active",
+      //   roles: [], // thêm sau nếu có role model
+      // },
+      // {
+      //   username: "sellerD",
+      //   phoneNumber: "0901000004",
+      //   password: passwordHash,
+      //   status: "active",
+      //   roles: [],
+      // },
+      // {
+      //   username: "ZeroAdmin",
+      //   phoneNumber: "0916613912",
+      //   password: zeropwd,
+      //   status: "active",
+      //   roles: ["68e76a6a3c683a928eb104f1"],
+      // },
     ];
 
     const createdAccounts = await Account.insertMany(accounts);
