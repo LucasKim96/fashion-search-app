@@ -5,17 +5,12 @@ import cors from "cors";
 import connectDB from "./config/db.js";
 import path from "path";
 import { fileURLToPath } from "url";
-// import productRoutes from "./modules/product/product.route.js";
-import authRoutes from "./modules/auth/auth.route.js";
-// import searchRoutes from "./modules/search/search.route.js";
-// import userRoutes from "./modules/user/user.route.js";
-// import {
-//   authMiddleware,
-//   errorMiddleware,
-//   loggerMiddleware,
-// } from "./middlewares/index.js";
-
-import { ShopRoutes } from "./modules/shop/index.js";
+import {
+  AccountRoutes,
+  AuthRoutes,
+  ShopRoutes,
+  CartRoutes,
+} from "./modules/index.js"; // import cho mongodb
 import { errorHandler } from "./middlewares/errorHandler.js";
 
 // Config
@@ -37,16 +32,11 @@ app.use("/assets", express.static(path.join(__dirname, "assets")));
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Routes
-
-// app.use("/api/products", productRoutes);
-app.use("/api/auth", authRoutes);
-// app.use("/api/search", searchRoutes);
-// app.use("/api/users", userRoutes);
+app.use("/api/accounts", AccountRoutes);
+app.use("/api/auth", AuthRoutes);
 app.use("/api/shops", ShopRoutes);
-
-// Error handling middleware (phải đặt cuối cùng)
+app.use("/api/carts", CartRoutes);
 app.use(errorHandler);
-
 // Connect MongoDB and start server
 connectDB(process.env.MONGO_URI)
   .then(() => {
