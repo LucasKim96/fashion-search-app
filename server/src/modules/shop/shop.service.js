@@ -4,12 +4,15 @@ import mongoose from "mongoose";
 import ApiError from "../../utils/apiError.js";
 import { Account } from "../account/index.js";
 import { Role } from "../account/index.js";
+import Product from "../product/product.model.js";
+import ProductVariant from "../product/productVariant.model.js";
+import { removeProductsFromAllCarts } from "../cart/cart.service.js";
 
 /**
  * Lấy danh sách shop với phân trang + filter
  */
 export const getShops = async (filters = {}, options = {}) => {
-  let { page = 1, limit = 20 } = options;
+  let { page = 1, limit = 10 } = options;
   const query = {};
 
   // ép kiểu an toàn
@@ -33,10 +36,34 @@ export const getShops = async (filters = {}, options = {}) => {
     query.shopName = new RegExp(safeName, "i");
   }
 
-  return await Shop.find(query)
+  // Đếm tổng số documents
+  const total = await Shop.countDocuments(query);
+
+  // Tính toán pagination
+  const totalPages = Math.ceil(total / limit);
+  const hasNextPage = page < totalPages;
+  const hasPrevPage = page > 1;
+
+  // Lấy data với pagination
+  const shops = await Shop.find(query)
     .populate("accountId", "username phoneNumber")
     .skip((page - 1) * limit)
-    .limit(limit);
+    .limit(limit)
+    .sort({ createdAt: -1 }); // Sắp xếp theo thời gian tạo mới nhất
+
+  return {
+    data: shops,
+    pagination: {
+      currentPage: page,
+      totalPages,
+      totalItems: total,
+      itemsPerPage: limit,
+      hasNextPage,
+      hasPrevPage,
+      nextPage: hasNextPage ? page + 1 : null,
+      prevPage: hasPrevPage ? page - 1 : null,
+    },
+  };
 };
 
 /**
@@ -117,6 +144,20 @@ export const createShop = async (data) => {
   } catch (err) {
     await session.abortTransaction();
     session.endSession();
+
+    // Xử lý các lỗi cụ thể trong transaction
+    if (err.code === 11000) {
+      const field = Object.keys(err.keyPattern || {})[0];
+      throw ApiError.conflict(`${field} đã tồn tại trong hệ thống`);
+    }
+
+    if (err.name === "ValidationError") {
+      const errors = Object.values(err.errors)
+        .map((e) => e.message)
+        .join(", ");
+      throw ApiError.badRequest(`Dữ liệu không hợp lệ: ${errors}`);
+    }
+
     throw err;
   }
 };
@@ -156,7 +197,25 @@ export const updateShop = async (shopId, accountId, updateData) => {
   }
 
   Object.assign(shop, safeUpdates);
-  return await shop.save();
+
+  try {
+    return await shop.save();
+  } catch (error) {
+    // Xử lý lỗi validation từ mongoose
+    if (error.name === "ValidationError") {
+      const errors = Object.values(error.errors)
+        .map((e) => e.message)
+        .join(", ");
+      throw ApiError.badRequest(`Dữ liệu không hợp lệ: ${errors}`);
+    }
+
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern || {})[0];
+      throw ApiError.conflict(`${field} đã tồn tại trong hệ thống`);
+    }
+
+    throw error;
+  }
 };
 
 /**
@@ -190,10 +249,28 @@ export const deleteShop = async (shopId, accountId) => {
   session.startTransaction();
 
   try {
-    // 6️⃣ Xóa shop
+    // 6️⃣ Tìm tất cả sản phẩm của shop
+    const products = await Product.find({ shopId }, { _id: 1 }, { session });
+    const productIds = products.map((p) => p._id);
+
+    // 7️⃣ Xóa tất cả product variants của shop
+    if (productIds.length > 0) {
+      await ProductVariant.deleteMany(
+        { productId: { $in: productIds } },
+        { session }
+      );
+    }
+
+    // 8️⃣ Xóa tất cả sản phẩm của shop
+    await Product.deleteMany({ shopId }, { session });
+
+    // 8️⃣.5️⃣ Xóa sản phẩm khỏi tất cả giỏ hàng (ngoài transaction)
+    await removeProductsFromAllCarts(productIds);
+
+    // 9️⃣ Xóa shop
     await Shop.findByIdAndDelete(shopId, { session });
 
-    // 7️⃣ Xử lý role "Chủ shop" nếu cần
+    // 🔟 Xử lý role "Chủ shop" nếu cần
     const shopOwnerRole = await Role.findOne({ roleName: "Chủ shop" });
     if (shopOwnerRole) {
       // Nếu account không còn shop nào nữa thì gỡ role "Chủ shop"
@@ -207,19 +284,35 @@ export const deleteShop = async (shopId, accountId) => {
       }
     }
 
-    // 8️⃣ Commit transaction
+    // 1️⃣1️⃣ Commit transaction
     await session.commitTransaction();
     session.endSession();
 
-    // 9️⃣ Trả message khác nhau
+    // 1️⃣2️⃣ Trả message khác nhau
     const message = isSuperAdmin
-      ? "Super Admin đã xóa shop thành công"
-      : "Shop của bạn đã được xóa thành công";
+      ? `Super Admin đã xóa shop và ${productIds.length} sản phẩm thành công`
+      : `Shop của bạn và ${productIds.length} sản phẩm đã được xóa thành công`;
 
-    return { message };
+    return {
+      message,
+      deletedProducts: productIds.length,
+    };
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
+
+    // Xử lý các lỗi cụ thể trong transaction
+    if (error.name === "CastError") {
+      throw ApiError.badRequest("ID không hợp lệ");
+    }
+
+    if (error.name === "ValidationError") {
+      const errors = Object.values(error.errors)
+        .map((e) => e.message)
+        .join(", ");
+      throw ApiError.badRequest(`Dữ liệu không hợp lệ: ${errors}`);
+    }
+
     throw error;
   }
 };
@@ -236,8 +329,26 @@ export const updateShopStatus = async (shopId, status) => {
   if (!validStatuses.includes(status))
     throw ApiError.badRequest("Trạng thái không hợp lệ");
 
-  const shop = await Shop.findByIdAndUpdate(shopId, { status }, { new: true });
-  if (!shop) throw ApiError.notFound("Không tìm thấy shop");
+  // Transaction để đảm bảo tính nhất quán khi thay đổi trạng thái
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const shop = await Shop.findByIdAndUpdate(
+      shopId,
+      { status },
+      { new: true, session }
+    );
+    if (!shop) throw ApiError.notFound("Không tìm thấy shop");
 
-  return shop;
+    // Có thể thêm các tác vụ liên quan khi đóng/mở shop tại đây
+    // Ví dụ: cập nhật cache, gửi notification, khóa sản phẩm,...
+
+    await session.commitTransaction();
+    session.endSession();
+    return shop;
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    throw error;
+  }
 };
