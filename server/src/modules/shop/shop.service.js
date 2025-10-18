@@ -378,14 +378,31 @@ export const deleteShopsWithNullAccount = async (adminAccountId) => {
     );
   }
 
-  // 3️⃣ Tìm các shop có accountId null
-  const nullShops = await Shop.find({ accountId: null });
-  const shopIds = nullShops.map((shop) => shop._id);
+  // 3️⃣ Tìm các shop có accountId null hoặc accountId không tồn tại trong Account
+  const allShops = await Shop.find({}, "_id accountId");
+
+  const validAccountIds = (await Account.find({}, "_id")).map((acc) =>
+    acc._id.toString()
+  );
+
+  const orphanShops = allShops.filter(
+    (shop) =>
+      !shop.accountId || !validAccountIds.includes(shop.accountId.toString())
+  );
+
+  if (orphanShops.length === 0) {
+    return {
+      deletedShops: 0,
+      deletedProducts: 0,
+    };
+  }
+
+  const shopIds = orphanShops.map((shop) => shop._id);
 
   if (shopIds.length === 0) {
     return {
-      message: "Không có shop nào có accountId null để xóa",
-      deletedCount: 0,
+      deletedShops: 0,
+      deletedProducts: 0,
     };
   }
 
@@ -394,7 +411,7 @@ export const deleteShopsWithNullAccount = async (adminAccountId) => {
   session.startTransaction();
 
   try {
-    // 5️⃣ Tìm và xóa tất cả sản phẩm của các shop null
+    // 5️⃣ Tìm và xóa tất cả sản phẩm của các shop null hoặc có accountId không tồn tại
     const products = await Product.find(
       { shopId: { $in: shopIds } },
       { _id: 1 },
@@ -413,18 +430,25 @@ export const deleteShopsWithNullAccount = async (adminAccountId) => {
     // 7️⃣ Xóa sản phẩm
     await Product.deleteMany({ shopId: { $in: shopIds } }, { session });
 
-    // 8️⃣ Xóa sản phẩm khỏi giỏ hàng
-    await removeProductsFromAllCarts(productIds);
+    // 8️⃣ Xóa sản phẩm khỏi giỏ hàng (ngoài transaction vì service này có thể không dùng mongoose)
+    try {
+      await removeProductsFromAllCarts(productIds);
+    } catch (cartErr) {
+      console.warn("⚠️ Lỗi khi xóa sản phẩm khỏi giỏ hàng:", cartErr.message);
+      // Không throw ở đây để tránh rollback toàn bộ transaction chỉ vì cart service
+    }
 
-    // 9️⃣ Xóa các shop null
-    const result = await Shop.deleteMany({ accountId: null }, { session });
+    // 9️⃣ Xóa các shop null hoặc có accountId không tồn tại
+    const result = await Shop.deleteMany(
+      { _id: { $in: orphanShops.map((s) => s._id) } },
+      { session }
+    );
 
     // 🔟 Commit transaction
     await session.commitTransaction();
     session.endSession();
 
     return {
-      message: `Super Admin đã xóa ${result.deletedCount} shop null và ${productIds.length} sản phẩm thành công`,
       deletedShops: result.deletedCount,
       deletedProducts: productIds.length,
     };
