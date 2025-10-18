@@ -21,20 +21,25 @@ export const allowRoles = (...roles) => {
 export const checkSelfOrRoles = (...allowedRoles) => {
   return (req, res, next) => {
     try {
-      const userIdFromToken = req.user?.id?.toString();
+      const userIdFromToken = req.user?.id?.toString();       // id Account
+      const userInfoIdFromToken = req.user?.userInfoId?.toString(); // userInfoId nếu có
       const idFromRequest =
         req.params.id?.toString() ||
         req.body.id?.toString() ||
         req.query.id?.toString();
 
-      if (!userIdFromToken || !idFromRequest) {
+      if (!idFromRequest) {
         return res.status(400).json({
           success: false,
           message: "Không xác định được người dùng!",
         });
       }
 
-      const isSelf = userIdFromToken === idFromRequest;
+      // Kiểm tra có phải chính bản thân: id Account hoặc id UserInfo
+      const isSelf =
+        userIdFromToken === idFromRequest ||
+        userInfoIdFromToken === idFromRequest;
+
       const hasAllowedRole = req.user?.roleNames?.some((r) =>
         allowedRoles.includes(r)
       );
@@ -53,6 +58,7 @@ export const checkSelfOrRoles = (...allowedRoles) => {
     }
   };
 };
+
 
 // Các middleware chính chủ or nhóm người dùng
 export const isSelf = checkSelfOrRoles();
