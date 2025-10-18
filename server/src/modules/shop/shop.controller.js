@@ -11,9 +11,20 @@ const { successResponse, errorResponse } = apiResponse;
  */
 export const getShops = async (req, res) => {
   try {
-    const { filters, options } = req.query;
-    const shops = await ShopService.getShops(filters, options);
-    return successResponse(res, shops, "Lấy danh sách shop thành công");
+    const { page, limit, status, shopName } = req.query;
+
+    // Parse filters
+    const filters = {};
+    if (status) filters.status = status;
+    if (shopName) filters.shopName = shopName;
+
+    // Parse options
+    const options = {};
+    if (page) options.page = page;
+    if (limit) options.limit = limit;
+
+    const result = await ShopService.getShops(filters, options);
+    return successResponse(res, result, "Lấy danh sách shop thành công");
   } catch (error) {
     // ApiError sẽ được xử lý bởi errorHandler middleware
     throw error;
