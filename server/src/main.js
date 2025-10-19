@@ -9,6 +9,7 @@ import {
   AccountRoutes,
   AuthRoutes,
   ShopRoutes,
+  UserInfoRoutes,
   CartRoutes,
 } from "./modules/index.js"; // import cho mongodb
 import { errorHandler } from "./middlewares/errorHandler.js";
