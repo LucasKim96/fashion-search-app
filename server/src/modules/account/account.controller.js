@@ -61,6 +61,27 @@ export const updateRoles = async (req, res) => {
   res.status(result.success ? 200 : 400).json(result);
 };
 
+export const modifyRoles = async (req, res) => {
+  const { roleIds, action } = req.body;
+
+  // Kiểm tra dữ liệu đầu vào
+  if (!action || !["add", "remove"].includes(action)) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Hành động không hợp lệ! (chỉ hỗ trợ 'add' hoặc 'remove')" });
+  }
+
+  if (!Array.isArray(roleIds) || roleIds.length === 0) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Danh sách vai trò (roleIds) không hợp lệ hoặc trống!" });
+  }
+
+  const result = await AccountService.modifyRoles(req.params.id, roleIds, action);
+  res.status(result.success ? 200 : 400).json(result);
+};
+
+
 // [GET] /api/accounts/stats/status 
 export const countByStatus = async (req, res) => {
   const result = await AccountService.countByStatus();
