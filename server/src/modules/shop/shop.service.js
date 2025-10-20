@@ -1,20 +1,21 @@
 // server/src/modules/shop/shop.service.js
-import Shop from "./shop.model.js";
-import mongoose from "mongoose";
-import ApiError from "../../utils/apiError.js";
-import { Account } from "../account/index.js";
-import { Role } from "../account/index.js";
+import { Shop } from "./index.js";
+import { ApiError, withTransaction } from "../../utils/index.js";
+import { Account, Role } from "../account/index.js";
+import { Product, ProductVariant } from "../product/index.js";
+import { removeProductsFromAllCarts } from "../cart/cart.service.js";
 
 /**
  * Lấy danh sách shop với phân trang + filter
  */
 export const getShops = async (filters = {}, options = {}) => {
-  let { page = 1, limit = 20 } = options;
-  const query = {};
+  let { page = 1, limit = 10 } = options;
+  const query = { isDeleted: { $ne: true } };
 
   // ép kiểu an toàn
-  page = Math.max(parseInt(page) || 1, 1);
-  limit = Math.max(parseInt(limit) || 20, 1);
+  page = Number(page) > 0 ? Number(page) : 1;
+  limit = Math.min(Math.max(Number(limit) || 20, 1), 100);
+
   const maxLimit = 100;
   if (limit > maxLimit) limit = maxLimit;
 
@@ -33,23 +34,45 @@ export const getShops = async (filters = {}, options = {}) => {
     query.shopName = new RegExp(safeName, "i");
   }
 
-  return await Shop.find(query)
+  // Đếm tổng số documents
+  const total = await Shop.countDocuments(query);
+
+  // Tính toán pagination
+  const totalPages = Math.ceil(total / limit);
+  const hasNextPage = page < totalPages;
+  const hasPrevPage = page > 1;
+
+  // Lấy data với pagination
+  const shops = await Shop.find(query)
     .populate("accountId", "username phoneNumber")
     .skip((page - 1) * limit)
-    .limit(limit);
+    .limit(limit)
+    .sort({ createdAt: -1, _id: -1 });
+
+  return {
+    data: shops,
+    pagination: {
+      currentPage: page,
+      totalPages,
+      totalItems: total,
+      itemsPerPage: limit,
+      hasNextPage,
+      hasPrevPage,
+      nextPage: hasNextPage ? page + 1 : null,
+      prevPage: hasPrevPage ? page - 1 : null,
+    },
+  };
 };
 
 /**
  * Lấy chi tiết shop theo ID
  */
 export const getShopById = async (shopId) => {
-  if (!mongoose.Types.ObjectId.isValid(shopId))
-    throw ApiError.badRequest("ID shop không hợp lệ");
+  const shop = await Shop.findOne({
+    _id: shopId,
+    isDeleted: { $ne: true },
+  }).populate("accountId", "username phoneNumber");
 
-  const shop = await Shop.findById(shopId).populate(
-    "accountId",
-    "username phoneNumber"
-  );
   if (!shop) throw ApiError.notFound("Không tìm thấy shop");
   return shop;
 };
@@ -60,32 +83,20 @@ export const getShopById = async (shopId) => {
 export const createShop = async (data) => {
   const { shopName, logoUrl, coverUrl, description, accountId } = data;
 
-  // 1️⃣ Validate accountId
-  if (!mongoose.Types.ObjectId.isValid(accountId))
-    throw ApiError.badRequest("accountId không hợp lệ");
+  if (!shopName?.trim()) throw ApiError.badRequest("Tên shop là bắt buộc");
 
-  // 2️⃣ Validate shopName
-  if (!shopName || !shopName.trim())
-    throw ApiError.badRequest("Tên shop là bắt buộc");
-
-  // 3️⃣ Kiểm tra account tồn tại
   const account = await Account.findById(accountId);
   if (!account) throw ApiError.notFound("Tài khoản không tồn tại");
 
-  // 4️⃣ Kiểm tra account đã có shop chưa
   const existingShop = await Shop.findOne({ accountId });
   if (existingShop) throw ApiError.conflict("Tài khoản này đã có shop");
 
-  // 5️⃣ Chuẩn hóa chuỗi
   const trimmedShopName = shopName.trim();
   const trimmedDescription = description?.trim() || "";
   const trimmedLogoUrl = logoUrl?.trim() || "";
   const trimmedCoverUrl = coverUrl?.trim() || "";
 
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
-  try {
+  return await withTransaction(async (session) => {
     const shop = await Shop.create(
       [
         {
@@ -111,33 +122,24 @@ export const createShop = async (data) => {
       { session }
     );
 
-    await session.commitTransaction();
-    session.endSession();
     return shop[0];
-  } catch (err) {
-    await session.abortTransaction();
-    session.endSession();
-    throw err;
-  }
+  });
 };
 
 /**
  * Cập nhật shop (chỉ chủ shop được phép làm)
  */
 export const updateShop = async (shopId, accountId, updateData) => {
-  // validate ID
-  if (!mongoose.Types.ObjectId.isValid(shopId))
-    throw ApiError.badRequest("ID shop không hợp lệ");
-  if (!mongoose.Types.ObjectId.isValid(accountId))
-    throw ApiError.badRequest("accountId không hợp lệ");
-
   // kiểm tra accountId có tồn tại trong database không
   const account = await Account.findById(accountId);
   if (!account) {
     throw ApiError.notFound("Tài khoản không tồn tại");
   }
 
-  const shop = await Shop.findById(shopId);
+  const shop = await Shop.findOne({
+    _id: shopId,
+    isDeleted: { $ne: true },
+  });
   if (!shop) throw ApiError.notFound("Không tìm thấy shop");
 
   if (shop.accountId.toString() !== accountId)
@@ -156,28 +158,40 @@ export const updateShop = async (shopId, accountId, updateData) => {
   }
 
   Object.assign(shop, safeUpdates);
-  return await shop.save();
+
+  try {
+    return await shop.save();
+  } catch (error) {
+    // Xử lý lỗi validation từ mongoose
+    if (error.name === "ValidationError") {
+      const errors = Object.values(error.errors)
+        .map((e) => e.message)
+        .join(", ");
+      throw ApiError.badRequest(`Dữ liệu không hợp lệ: ${errors}`);
+    }
+
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern || {})[0];
+      throw ApiError.conflict(`${field} đã tồn tại trong hệ thống`);
+    }
+
+    throw error;
+  }
 };
 
 /**
  * Xóa shop (chỉ chủ shop được phép làm)
  */
 export const deleteShop = async (shopId, accountId) => {
-  // 1️⃣ Validate ID
-  if (!mongoose.Types.ObjectId.isValid(shopId))
-    throw ApiError.badRequest("ID shop không hợp lệ");
-  if (!mongoose.Types.ObjectId.isValid(accountId))
-    throw ApiError.badRequest("accountId không hợp lệ");
-
-  // 2️⃣ Kiểm tra tài khoản tồn tại + roles
   const account = await Account.findById(accountId).populate("roles");
   if (!account) throw ApiError.notFound("Tài khoản không tồn tại");
 
-  // 3️⃣ Kiểm tra shop
-  const shop = await Shop.findById(shopId);
+  const shop = await Shop.findOne({
+    _id: shopId,
+    isDeleted: { $ne: true },
+  });
   if (!shop) throw ApiError.notFound("Không tìm thấy shop");
 
-  // 4️⃣ Kiểm tra quyền
   const isSuperAdmin = account.roles.some(
     (r) => r.roleName === "Super Admin" || r.level >= 4
   );
@@ -185,59 +199,246 @@ export const deleteShop = async (shopId, accountId) => {
   if (!isSuperAdmin && shop.accountId.toString() !== accountId)
     throw ApiError.forbidden("Không có quyền xóa shop này");
 
-  // 5️⃣ Bắt đầu transaction
-  const session = await mongoose.startSession();
-  session.startTransaction();
+  return await withTransaction(async (session) => {
+    const products = await Product.find({ shopId }, { _id: 1 }, { session });
+    const productIds = products.map((p) => p._id);
 
-  try {
-    // 6️⃣ Xóa shop
-    await Shop.findByIdAndDelete(shopId, { session });
-
-    // 7️⃣ Xử lý role "Chủ shop" nếu cần
-    const shopOwnerRole = await Role.findOne({ roleName: "Chủ shop" });
-    if (shopOwnerRole) {
-      // Nếu account không còn shop nào nữa thì gỡ role "Chủ shop"
-      const remainingShop = await Shop.findOne({ accountId: shop.accountId });
-      if (!remainingShop) {
-        await Account.updateOne(
-          { _id: shop.accountId },
-          { $pull: { roles: shopOwnerRole._id } },
-          { session }
-        );
-      }
+    // Soft delete variants
+    if (productIds.length > 0) {
+      await ProductVariant.updateMany(
+        { productId: { $in: productIds } },
+        { $set: { isDeleted: true, deletedAt: new Date() } },
+        { session }
+      );
     }
 
-    // 8️⃣ Commit transaction
-    await session.commitTransaction();
-    session.endSession();
+    // Soft delete products
+    await Product.updateMany(
+      { shopId },
+      { $set: { isDeleted: true, deletedAt: new Date() } },
+      { session }
+    );
 
-    // 9️⃣ Trả message khác nhau
-    const message = isSuperAdmin
-      ? "Super Admin đã xóa shop thành công"
-      : "Shop của bạn đã được xóa thành công";
+    // Xóa khỏi cart (ngoài transaction)
+    removeProductsFromAllCarts(productIds).catch((err) =>
+      console.warn("⚠️ Lỗi khi xóa sản phẩm khỏi giỏ hàng:", err.message)
+    );
 
-    return { message };
-  } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
-    throw error;
-  }
+    // Soft delete shop
+    await Shop.updateOne(
+      { _id: shopId },
+      { $set: { isDeleted: true, deletedAt: new Date() } },
+      { session }
+    );
+
+    // Nếu user không còn shop nào khác => gỡ role Chủ shop
+    const shopOwnerRole = await Role.findOne({ roleName: "Chủ shop" }).session(
+      session
+    );
+    const stillHasShop = await Shop.exists({
+      accountId: shop.accountId,
+      isDeleted: false,
+    }).session(session);
+
+    if (!stillHasShop && shopOwnerRole) {
+      await Account.updateOne(
+        { _id: shop.accountId },
+        { $pull: { roles: shopOwnerRole._id } },
+        { session }
+      );
+    }
+
+    return {
+      message: isSuperAdmin
+        ? `Super Admin đã vô hiệu hóa shop và ${productIds.length} sản phẩm`
+        : `Shop của bạn đã bị vô hiệu hóa cùng ${productIds.length} sản phẩm`,
+      affectedProducts: productIds.length,
+    };
+  });
 };
 
 /**
  * Cập nhật trạng thái (admin hoặc chủ shop)
  */
-export const updateShopStatus = async (shopId, status) => {
-  // validate shopId
-  if (!mongoose.Types.ObjectId.isValid(shopId))
-    throw ApiError.badRequest("ID shop không hợp lệ");
-
+export const updateShopStatus = async (shopId, accountId, status) => {
+  // 2️⃣ Validate status
   const validStatuses = ["active", "closed", "suspended"];
-  if (!validStatuses.includes(status))
+  if (!validStatuses.includes(status)) {
     throw ApiError.badRequest("Trạng thái không hợp lệ");
+  }
 
-  const shop = await Shop.findByIdAndUpdate(shopId, { status }, { new: true });
-  if (!shop) throw ApiError.notFound("Không tìm thấy shop");
+  // 4️⃣ Lấy shop để kiểm tra quyền
+  const shop = await Shop.findById(shopId).populate(
+    "accountId",
+    "username phoneNumber"
+  );
+  if (!shop || shop.isDeleted) {
+    throw ApiError.notFound("Không tìm thấy shop");
+  }
 
-  return shop;
+  // 3️⃣ Lấy thông tin người thay đổi (từ Account)
+  const account = await Account.findById(accountId).populate("roles");
+  if (!account) {
+    throw ApiError.notFound("Không tìm thấy tài khoản");
+  }
+  const isOwner = shop.accountId?._id?.toString() === accountId.toString();
+  const isAdmin = account.maxLevel >= 3;
+
+  if (!isAdmin && !isOwner) {
+    throw ApiError.forbidden("Không có quyền cập nhật trạng thái shop này");
+  }
+
+  // ⚠️ Kiểm tra nếu status không thay đổi
+  if (shop.status === status) {
+    throw ApiError.badRequest(`Shop đã đang ở trạng thái '${status}'`);
+  }
+
+  // 5️⃣ Cập nhật trong transaction
+  return await withTransaction(async (session) => {
+    const updatedShop = await Shop.findOneAndUpdate(
+      { _id: shopId, isDeleted: { $ne: true } },
+      { status },
+      { new: true, session }
+    ).populate("accountId", "username phoneNumber");
+
+    if (!updatedShop) {
+      throw ApiError.notFound("Không tìm thấy shop");
+    }
+
+    return updatedShop;
+  });
+};
+
+/**
+ * Xóa các shop có accountId null (chỉ Super Admin)
+ */
+export const deleteShopsWithNullAccount = async (adminAccountId) => {
+  const admin = await Account.findById(adminAccountId).populate("roles");
+  if (!admin) throw ApiError.notFound("Không tìm thấy tài khoản admin");
+
+  const isSuperAdmin = admin.roles.some(
+    (r) => r.roleName === "Super Admin" || r.level >= 4
+  );
+  if (!isSuperAdmin)
+    throw ApiError.forbidden(
+      "Chỉ Super Admin mới được phép thực hiện thao tác này"
+    );
+
+  const allShops = await Shop.find({}, "_id accountId");
+  const validAccountIds = (await Account.find({}, "_id")).map((acc) => acc._id);
+
+  const orphanShops = await Shop.find({
+    $or: [
+      { accountId: { $exists: false } },
+      { accountId: null },
+      { accountId: { $nin: validAccountIds } },
+    ],
+  });
+  if (orphanShops.length === 0) return { deletedShops: 0, deletedProducts: 0 };
+
+  const shopIds = orphanShops.map((s) => s._id);
+
+  return await withTransaction(async (session) => {
+    const products = await Product.find(
+      { shopId: { $in: shopIds } },
+      { _id: 1 },
+      { session }
+    );
+    const productIds = products.map((p) => p._id);
+
+    if (productIds.length > 0) {
+      await ProductVariant.deleteMany(
+        { productId: { $in: productIds } },
+        { session }
+      );
+    }
+
+    await Product.deleteMany({ shopId: { $in: shopIds } }, { session });
+
+    try {
+      await removeProductsFromAllCarts(productIds);
+    } catch (err) {
+      console.warn("⚠️ Lỗi khi xóa sản phẩm khỏi giỏ hàng:", err.message);
+    }
+
+    const result = await Shop.deleteMany(
+      { _id: { $in: shopIds } },
+      { session }
+    );
+
+    return {
+      deletedShops: result.deletedCount,
+      deletedProducts: productIds.length,
+    };
+  });
+};
+
+export const restoreShop = async (shopId, adminAccountId) => {
+  // 1️⃣ Kiểm tra quyền Super Admin
+  const admin = await Account.findById(adminAccountId).populate(
+    "roles",
+    "roleName level"
+  );
+  if (!admin) throw ApiError.notFound("Không tìm thấy tài khoản admin");
+
+  const isSuperAdmin = admin.roles.some(
+    (r) => r.roleName === "Super Admin" || r.level >= 4
+  );
+  if (!isSuperAdmin) {
+    throw ApiError.forbidden("Chỉ Super Admin mới được phép khôi phục shop");
+  }
+
+  // 2️⃣ Kiểm tra shop đã bị xóa mềm chưa
+  const shop = await Shop.findOne({ _id: shopId, isDeleted: true });
+  if (!shop) {
+    throw ApiError.notFound("Shop không tồn tại hoặc chưa bị xóa");
+  }
+
+  // 3️⃣ Chạy transaction khôi phục
+  return await withTransaction(async (session) => {
+    // 3.1️⃣ Khôi phục shop
+    await Shop.updateOne(
+      { _id: shopId },
+      { $set: { isDeleted: false }, $unset: { deletedAt: "" } },
+      { session }
+    );
+
+    // 3.2️⃣ Khôi phục toàn bộ sản phẩm
+    const restoredProducts = await Product.updateMany(
+      { shopId, isDeleted: true },
+      { $set: { isDeleted: false }, $unset: { deletedAt: "" } },
+      { session }
+    );
+
+    // 3.3️⃣ Khôi phục variants của những sản phẩm này
+    if (restoredProducts.modifiedCount > 0) {
+      const productIds = (
+        await Product.find({ shopId }, "_id", { session })
+      ).map((p) => p._id);
+
+      await ProductVariant.updateMany(
+        { productId: { $in: productIds }, isDeleted: true },
+        { $set: { isDeleted: false }, $unset: { deletedAt: "" } },
+        { session }
+      );
+    }
+
+    // 3.4️⃣ Khôi phục quyền "Chủ shop" nếu bị gỡ
+    const shopOwnerRole = await Role.findOne({ roleName: "Chủ shop" }).session(
+      session
+    );
+    if (shopOwnerRole) {
+      await Account.updateOne(
+        { _id: shop.accountId },
+        { $addToSet: { roles: shopOwnerRole._id } },
+        { session }
+      );
+    }
+
+    // 3.5️⃣ Trả kết quả
+    return {
+      message: `Shop '${shop.shopName}' và toàn bộ sản phẩm đã được khôi phục thành công`,
+      restoredProducts: restoredProducts.modifiedCount,
+    };
+  });
 };
