@@ -261,6 +261,7 @@ export const deleteShop = async (shopId, accountId) => {
  * Cập nhật trạng thái (admin hoặc chủ shop)
  */
 export const updateShopStatus = async (shopId, accountId, status) => {
+  // console.log("accountId:", accountId);
   // 2️⃣ Validate status
   const validStatuses = ["active", "closed", "suspended"];
   if (!validStatuses.includes(status)) {
@@ -282,7 +283,9 @@ export const updateShopStatus = async (shopId, accountId, status) => {
     throw ApiError.notFound("Không tìm thấy tài khoản");
   }
   const isOwner = shop.accountId?._id?.toString() === accountId.toString();
-  const isAdmin = account.maxLevel >= 3;
+  const isAdmin = account.roles.some(
+    (r) => r.roleName === "Super Admin" || r.level >= 3
+  );
 
   if (!isAdmin && !isOwner) {
     throw ApiError.forbidden("Không có quyền cập nhật trạng thái shop này");
