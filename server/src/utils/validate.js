@@ -1,4 +1,8 @@
-export const isEmail = (email) => {
-  const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return regex.test(email);
+import mongoose from "mongoose";
+import ApiError from "./apiError.js";
+
+export const validateObjectId = (id, name = "ID") => {
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    throw ApiError.badRequest(`${name} không hợp lệ`);
+  }
 };

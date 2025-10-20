@@ -1,5 +1,5 @@
 // server/src/middlewares/validateShop.js
-import ApiError from "../utils/apiError.js";
+import { ApiError } from "../utils/index.js";
 
 // Regex cơ bản cho URL (chấp nhận http, https, ftp)
 const urlRegex =

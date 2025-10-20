@@ -37,6 +37,8 @@ const shopSchema = new mongoose.Schema(
       unique: true,
       index: true,
     },
+    isDeleted: { type: Boolean, default: false },
+    deletedAt: { type: Date, default: null },
   },
   { timestamps: true }
 );
