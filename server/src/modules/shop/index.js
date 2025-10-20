@@ -2,6 +2,6 @@
 import * as ShopController from "./shop.controller.js";
 import * as ShopService from "./shop.service.js";
 import ShopRoutes from "./shop.route.js";
-import ShopModel from "./shop.model.js";
+import Shop from "./shop.model.js";
 
-export { ShopController, ShopService, ShopModel, ShopRoutes };
+export { ShopController, ShopService, ShopRoutes, Shop };

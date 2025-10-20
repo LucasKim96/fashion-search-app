@@ -1,11 +1,9 @@
 // server/src/modules/order/order.service.js
 import Order from "./order.model.js";
-import Cart from "../cart/cart.model.js";
-import ProductVariant from "../product/productVariant.model.js";
-import Product from "../product/product.model.js";
-import Shop from "../shop/shop.model.js";
-import mongoose from "mongoose";
-import ApiError from "../../utils/index.js";
+import { Cart } from "../cart/index.js";
+import { ProductVariant } from "../product/index.js";
+import { Shop } from "../shop/index.js";
+import { ApiError, validateObjectId } from "../../utils/index.js";
 
 /**
  * Tạo mã đơn hàng duy nhất
@@ -20,9 +18,10 @@ const generateOrderCode = () => {
  * Tạo đơn hàng từ giỏ hàng
  */
 export const createOrderFromCart = async (accountId, orderData) => {
+  validateObjectId(accountId, "accountId");
+
   const { addressLine, receiverName, phone, note } = orderData;
 
-  // 1️⃣ Validate dữ liệu đầu vào
   if (!addressLine || !receiverName || !phone) {
     throw ApiError.badRequest(
       "Thiếu thông tin địa chỉ, tên người nhận hoặc số điện thoại"
@@ -30,20 +29,9 @@ export const createOrderFromCart = async (accountId, orderData) => {
   }
 
   // 2️⃣ Lấy giỏ hàng với thông tin đầy đủ
-  const cart = await Cart.findOne({ accountId }).populate({
-    path: "cartItems.productVariantId",
-    populate: {
-      path: "productId",
-      populate: {
-        path: "shopId",
-        select: "shopName status",
-      },
-    },
-  });
-
-  if (!cart || cart.cartItems.length === 0) {
-    throw ApiError.badRequest("Giỏ hàng trống");
-  }
+  const cart = await Cart.findOne({ accountId }).populate(
+    "cartItems.productVariantId"
+  );
 
   // 3️⃣ Kiểm tra shop status và tồn kho
   const validItems = [];

@@ -1,33 +1,30 @@
 // server/src/modules/cart/cart.service.js
 import Cart from "./cart.model.js";
-import mongoose from "mongoose";
-import ApiError from "../../utils/index.js";
-import ProductVariant from "../product/index.jsjs";
-import Product from "../product/index.js";
-import Shop from "../shop/index.js";
+import { ApiError, validateObjectId } from "../../utils/index.js";
+import { Product, ProductVariant } from "../product/index.js";
+import { Shop } from "../shop/index.js";
 
 /**
  * Thêm sản phẩm vào giỏ
  */
 export const addToCart = async (accountId, productVariantId, quantity = 1) => {
-  if (!mongoose.Types.ObjectId.isValid(productVariantId))
-    throw ApiError.badRequest("ID sản phẩm không hợp lệ");
+  validateObjectId(productVariantId, "ID sản phẩm");
 
   if (quantity <= 0) throw ApiError.badRequest("Số lượng phải lớn hơn 0");
 
   // Kiểm tra trạng thái shop của product variant
-  const variant = await ProductVariant.findById(productVariantId);
-  if (!variant) throw ApiError.notFound("Không tìm thấy biến thể sản phẩm");
+  validateObjectId(productVariantId, "ID sản phẩm variant");
 
-  const product = await Product.findById(variant.productId);
-  if (!product) throw ApiError.notFound("Không tìm thấy sản phẩm");
+  const variant = await ProductVariant.findById(productVariantId).populate(
+    "productId"
+  );
+  if (!variant) throw ApiError.notFound("Không tìm thấy sản phẩm variant");
+
+  const product = variant.productId;
+  validateObjectId(product.shopId, "ID shop của sản phẩm");
 
   const shop = await Shop.findById(product.shopId);
   if (!shop) throw ApiError.notFound("Không tìm thấy shop của sản phẩm");
-
-  if (shop.status === "closed") {
-    throw ApiError.forbidden("Shop đang đóng, không thể thêm vào giỏ hàng");
-  }
 
   // Tìm cart của user
   let cart = await Cart.findOne({ accountId });
