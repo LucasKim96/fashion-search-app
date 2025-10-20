@@ -1,6 +1,8 @@
 // server/src/middlewares/errorHandler.js
-import { errorResponse } from "../utils/apiResponse.js";
-import ApiError from "../utils/apiError.js";
+import { apiResponse } from "../utils/index.js";
+import { ApiError } from "../utils/index.js";
+
+const { errorResponse } = apiResponse;
 
 export const errorHandler = (err, req, res, next) => {
   // 1️⃣ Nếu lỗi là ApiError thì lấy status và message từ nó

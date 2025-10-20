@@ -1,8 +1,7 @@
 // server/src/modules/shop/shop.controller.js
 import * as ShopService from "./shop.service.js";
 import { apiResponse } from "../../utils/index.js";
-import mongoose from "mongoose";
-import ApiError from "../../utils/apiError.js";
+import { validateObjectId } from "../../utils/index.js";
 
 const { successResponse, errorResponse } = apiResponse;
 
@@ -37,9 +36,7 @@ export const getShops = async (req, res) => {
 export const getShop = async (req, res) => {
   try {
     const { id } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return errorResponse(res, "ID shop không hợp lệ", 400);
-    }
+    validateObjectId(id, "ID shop");
     const shop = await ShopService.getShopById(id);
     return successResponse(res, shop, "Lấy thông tin shop thành công");
   } catch (error) {
