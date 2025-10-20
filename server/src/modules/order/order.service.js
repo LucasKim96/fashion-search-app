@@ -5,7 +5,7 @@ import ProductVariant from "../product/productVariant.model.js";
 import Product from "../product/product.model.js";
 import Shop from "../shop/shop.model.js";
 import mongoose from "mongoose";
-import ApiError from "../../utils/apiError.js";
+import ApiError from "../../utils/index.js";
 
 /**
  * Tạo mã đơn hàng duy nhất
