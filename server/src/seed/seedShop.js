@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import dotenv from "dotenv";
-import { ShopModel } from "../modules/shop/index.js";
+import { Shop } from "../modules/shop/index.js";
 import path from "path";
 
 dotenv.config({ path: path.resolve("./server/.env") });
@@ -119,8 +119,8 @@ const seedShops = async () => {
     });
     console.log("✅ MongoDB connected");
 
-    await ShopModel.deleteMany(); // xóa hết shop cũ
-    const inserted = await ShopModel.insertMany(shopsSeed);
+    await Shop.deleteMany(); // xóa hết shop cũ
+    const inserted = await Shop.insertMany(shopsSeed);
     console.log("✅ Seeded shops:", inserted);
 
     mongoose.disconnect();
