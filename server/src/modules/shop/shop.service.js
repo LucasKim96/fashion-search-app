@@ -324,7 +324,6 @@ export const deleteShopsWithNullAccount = async (adminAccountId) => {
       "Chỉ Super Admin mới được phép thực hiện thao tác này"
     );
 
-  const allShops = await Shop.find({}, "_id accountId");
   const validAccountIds = (await Account.find({}, "_id")).map((acc) => acc._id);
 
   const orphanShops = await Shop.find({
