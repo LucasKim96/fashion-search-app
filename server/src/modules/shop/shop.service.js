@@ -1,23 +1,29 @@
 // server/src/modules/shop/shop.service.js
 import Shop from "./shop.model.js";
 import mongoose from "mongoose";
-import ApiError from "../../utils/apiError.js";
+import ApiError from "../../utils/index.js";
 import { Account } from "../account/index.js";
 import { Role } from "../account/index.js";
-import Product from "../product/product.model.js";
-import ProductVariant from "../product/productVariant.model.js";
+import Product from "../product/index.js";
+import ProductVariant from "../product/index.js";
 import { removeProductsFromAllCarts } from "../cart/cart.service.js";
+import {
+  validateObjectId,
+  handleMongooseError,
+  withTransaction,
+} from "../../utils/index.js";
 
 /**
  * Lấy danh sách shop với phân trang + filter
  */
 export const getShops = async (filters = {}, options = {}) => {
   let { page = 1, limit = 10 } = options;
-  const query = {};
+  const query = { isDeleted: { $ne: true } };
 
   // ép kiểu an toàn
-  page = Math.max(parseInt(page) || 1, 1);
-  limit = Math.max(parseInt(limit) || 20, 1);
+  page = Number(page) > 0 ? Number(page) : 1;
+  limit = Math.min(Math.max(Number(limit) || 20, 1), 100);
+
   const maxLimit = 100;
   if (limit > maxLimit) limit = maxLimit;
 
@@ -70,13 +76,11 @@ export const getShops = async (filters = {}, options = {}) => {
  * Lấy chi tiết shop theo ID
  */
 export const getShopById = async (shopId) => {
-  if (!mongoose.Types.ObjectId.isValid(shopId))
-    throw ApiError.badRequest("ID shop không hợp lệ");
-
-  const shop = await Shop.findById(shopId).populate(
-    "accountId",
-    "username phoneNumber"
-  );
+  validateObjectId(shopId, "shopId");
+  const shop = await Shop.findOne({
+    _id: shopId,
+    isDeleted: { $ne: true },
+  }).populate("accountId", "username phoneNumber");
   if (!shop) throw ApiError.notFound("Không tìm thấy shop");
   return shop;
 };
@@ -87,32 +91,21 @@ export const getShopById = async (shopId) => {
 export const createShop = async (data) => {
   const { shopName, logoUrl, coverUrl, description, accountId } = data;
 
-  // 1️⃣ Validate accountId
-  if (!mongoose.Types.ObjectId.isValid(accountId))
-    throw ApiError.badRequest("accountId không hợp lệ");
+  validateObjectId(accountId, "accountId");
+  if (!shopName?.trim()) throw ApiError.badRequest("Tên shop là bắt buộc");
 
-  // 2️⃣ Validate shopName
-  if (!shopName || !shopName.trim())
-    throw ApiError.badRequest("Tên shop là bắt buộc");
-
-  // 3️⃣ Kiểm tra account tồn tại
   const account = await Account.findById(accountId);
   if (!account) throw ApiError.notFound("Tài khoản không tồn tại");
 
-  // 4️⃣ Kiểm tra account đã có shop chưa
   const existingShop = await Shop.findOne({ accountId });
   if (existingShop) throw ApiError.conflict("Tài khoản này đã có shop");
 
-  // 5️⃣ Chuẩn hóa chuỗi
   const trimmedShopName = shopName.trim();
   const trimmedDescription = description?.trim() || "";
   const trimmedLogoUrl = logoUrl?.trim() || "";
   const trimmedCoverUrl = coverUrl?.trim() || "";
 
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
-  try {
+  return await withTransaction(async (session) => {
     const shop = await Shop.create(
       [
         {
@@ -138,28 +131,8 @@ export const createShop = async (data) => {
       { session }
     );
 
-    await session.commitTransaction();
-    session.endSession();
     return shop[0];
-  } catch (err) {
-    await session.abortTransaction();
-    session.endSession();
-
-    // Xử lý các lỗi cụ thể trong transaction
-    if (err.code === 11000) {
-      const field = Object.keys(err.keyPattern || {})[0];
-      throw ApiError.conflict(`${field} đã tồn tại trong hệ thống`);
-    }
-
-    if (err.name === "ValidationError") {
-      const errors = Object.values(err.errors)
-        .map((e) => e.message)
-        .join(", ");
-      throw ApiError.badRequest(`Dữ liệu không hợp lệ: ${errors}`);
-    }
-
-    throw err;
-  }
+  });
 };
 
 /**
@@ -167,10 +140,8 @@ export const createShop = async (data) => {
  */
 export const updateShop = async (shopId, accountId, updateData) => {
   // validate ID
-  if (!mongoose.Types.ObjectId.isValid(shopId))
-    throw ApiError.badRequest("ID shop không hợp lệ");
-  if (!mongoose.Types.ObjectId.isValid(accountId))
-    throw ApiError.badRequest("accountId không hợp lệ");
+  validateObjectId(shopId, "shopId");
+  validateObjectId(accountId, "accountId");
 
   // kiểm tra accountId có tồn tại trong database không
   const account = await Account.findById(accountId);
@@ -178,7 +149,10 @@ export const updateShop = async (shopId, accountId, updateData) => {
     throw ApiError.notFound("Tài khoản không tồn tại");
   }
 
-  const shop = await Shop.findById(shopId);
+  const shop = await Shop.findOne({
+    _id: shopId,
+    isDeleted: { $ne: true },
+  });
   if (!shop) throw ApiError.notFound("Không tìm thấy shop");
 
   if (shop.accountId.toString() !== accountId)
@@ -222,21 +196,18 @@ export const updateShop = async (shopId, accountId, updateData) => {
  * Xóa shop (chỉ chủ shop được phép làm)
  */
 export const deleteShop = async (shopId, accountId) => {
-  // 1️⃣ Validate ID
-  if (!mongoose.Types.ObjectId.isValid(shopId))
-    throw ApiError.badRequest("ID shop không hợp lệ");
-  if (!mongoose.Types.ObjectId.isValid(accountId))
-    throw ApiError.badRequest("accountId không hợp lệ");
+  validateObjectId(shopId, "shopId");
+  validateObjectId(accountId, "accountId");
 
-  // 2️⃣ Kiểm tra tài khoản tồn tại + roles
   const account = await Account.findById(accountId).populate("roles");
   if (!account) throw ApiError.notFound("Tài khoản không tồn tại");
 
-  // 3️⃣ Kiểm tra shop
-  const shop = await Shop.findById(shopId);
+  const shop = await Shop.findOne({
+    _id: shopId,
+    isDeleted: { $ne: true },
+  });
   if (!shop) throw ApiError.notFound("Không tìm thấy shop");
 
-  // 4️⃣ Kiểm tra quyền
   const isSuperAdmin = account.roles.some(
     (r) => r.roleName === "Super Admin" || r.level >= 4
   );
@@ -244,143 +215,102 @@ export const deleteShop = async (shopId, accountId) => {
   if (!isSuperAdmin && shop.accountId.toString() !== accountId)
     throw ApiError.forbidden("Không có quyền xóa shop này");
 
-  // 5️⃣ Bắt đầu transaction
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
-  try {
-    // 6️⃣ Tìm tất cả sản phẩm của shop
+  return await withTransaction(async (session) => {
     const products = await Product.find({ shopId }, { _id: 1 }, { session });
     const productIds = products.map((p) => p._id);
 
-    // 7️⃣ Xóa tất cả product variants của shop
+    // Soft delete variants
     if (productIds.length > 0) {
-      await ProductVariant.deleteMany(
+      await ProductVariant.updateMany(
         { productId: { $in: productIds } },
+        { $set: { isDeleted: true, deletedAt: new Date() } },
         { session }
       );
     }
 
-    // 8️⃣ Xóa tất cả sản phẩm của shop
-    await Product.deleteMany({ shopId }, { session });
+    // Soft delete products
+    await Product.updateMany(
+      { shopId },
+      { $set: { isDeleted: true, deletedAt: new Date() } },
+      { session }
+    );
 
-    // 8️⃣.5️⃣ Xóa sản phẩm khỏi tất cả giỏ hàng (ngoài transaction)
-    await removeProductsFromAllCarts(productIds);
+    // Xóa khỏi cart (ngoài transaction)
+    removeProductsFromAllCarts(productIds).catch((err) =>
+      console.warn("⚠️ Lỗi khi xóa sản phẩm khỏi giỏ hàng:", err.message)
+    );
 
-    // 9️⃣ Xóa shop
-    await Shop.findByIdAndDelete(shopId, { session });
+    // Soft delete shop
+    await Shop.updateOne(
+      { _id: shopId },
+      { $set: { isDeleted: true, deletedAt: new Date() } },
+      { session }
+    );
 
-    // 🔟 Xử lý role "Chủ shop" nếu cần
-    const shopOwnerRole = await Role.findOne({ roleName: "Chủ shop" });
-    if (shopOwnerRole) {
-      // Nếu account không còn shop nào nữa thì gỡ role "Chủ shop"
-      const remainingShop = await Shop.findOne({ accountId: shop.accountId });
-      if (!remainingShop) {
-        await Account.updateOne(
-          { _id: shop.accountId },
-          { $pull: { roles: shopOwnerRole._id } },
-          { session }
-        );
-      }
+    // Nếu user không còn shop nào khác => gỡ role Chủ shop
+    const shopOwnerRole = await Role.findOne({ roleName: "Chủ shop" }).session(
+      session
+    );
+    const stillHasShop = await Shop.exists({
+      accountId: shop.accountId,
+      isDeleted: false,
+    }).session(session);
+
+    if (!stillHasShop && shopOwnerRole) {
+      await Account.updateOne(
+        { _id: shop.accountId },
+        { $pull: { roles: shopOwnerRole._id } },
+        { session }
+      );
     }
-
-    // 1️⃣1️⃣ Commit transaction
-    await session.commitTransaction();
-    session.endSession();
-
-    // 1️⃣2️⃣ Trả message khác nhau
-    const message = isSuperAdmin
-      ? `Super Admin đã xóa shop và ${productIds.length} sản phẩm thành công`
-      : `Shop của bạn và ${productIds.length} sản phẩm đã được xóa thành công`;
 
     return {
-      message,
-      deletedProducts: productIds.length,
+      message: isSuperAdmin
+        ? `Super Admin đã vô hiệu hóa shop và ${productIds.length} sản phẩm`
+        : `Shop của bạn đã bị vô hiệu hóa cùng ${productIds.length} sản phẩm`,
+      affectedProducts: productIds.length,
     };
-  } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
-
-    // Xử lý các lỗi cụ thể trong transaction
-    if (error.name === "CastError") {
-      throw ApiError.badRequest("ID không hợp lệ");
-    }
-
-    if (error.name === "ValidationError") {
-      const errors = Object.values(error.errors)
-        .map((e) => e.message)
-        .join(", ");
-      throw ApiError.badRequest(`Dữ liệu không hợp lệ: ${errors}`);
-    }
-
-    throw error;
-  }
+  });
 };
 
 /**
  * Cập nhật trạng thái (admin hoặc chủ shop)
  */
 export const updateShopStatus = async (shopId, status) => {
-  // validate shopId
-  if (!mongoose.Types.ObjectId.isValid(shopId))
-    throw ApiError.badRequest("ID shop không hợp lệ");
-
+  validateObjectId(shopId, "shopId");
   const validStatuses = ["active", "closed", "suspended"];
   if (!validStatuses.includes(status))
     throw ApiError.badRequest("Trạng thái không hợp lệ");
 
-  // Transaction để đảm bảo tính nhất quán khi thay đổi trạng thái
-  const session = await mongoose.startSession();
-  session.startTransaction();
-  try {
-    const shop = await Shop.findByIdAndUpdate(
-      shopId,
+  return await withTransaction(async (session) => {
+    const shop = await Shop.findOneAndUpdate(
+      { _id: shopId, isDeleted: { $ne: true } },
       { status },
       { new: true, session }
-    );
+    ).populate("accountId", "username phoneNumber");
     if (!shop) throw ApiError.notFound("Không tìm thấy shop");
-
-    // Có thể thêm các tác vụ liên quan khi đóng/mở shop tại đây
-    // Ví dụ: cập nhật cache, gửi notification, khóa sản phẩm,...
-
-    await session.commitTransaction();
-    session.endSession();
     return shop;
-  } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
-    throw error;
-  }
+  });
 };
 
-/**
- * Xóa tất cả shop có accountId là null
- */
 /**
  * Xóa các shop có accountId null (chỉ Super Admin)
  */
 export const deleteShopsWithNullAccount = async (adminAccountId) => {
-  // 1️⃣ Validate adminAccountId
-  if (!mongoose.Types.ObjectId.isValid(adminAccountId))
-    throw ApiError.badRequest("adminAccountId không hợp lệ");
+  validateObjectId(adminAccountId, "adminID");
 
-  // 2️⃣ Kiểm tra quyền Super Admin
   const admin = await Account.findById(adminAccountId).populate("roles");
   if (!admin) throw ApiError.notFound("Không tìm thấy tài khoản admin");
 
   const isSuperAdmin = admin.roles.some(
     (r) => r.roleName === "Super Admin" || r.level >= 4
   );
-
-  if (!isSuperAdmin) {
+  if (!isSuperAdmin)
     throw ApiError.forbidden(
       "Chỉ Super Admin mới được phép thực hiện thao tác này"
     );
-  }
 
-  // 3️⃣ Tìm các shop có accountId null hoặc accountId không tồn tại trong Account
   const allShops = await Shop.find({}, "_id accountId");
-
   const validAccountIds = (await Account.find({}, "_id")).map((acc) =>
     acc._id.toString()
   );
@@ -390,28 +320,11 @@ export const deleteShopsWithNullAccount = async (adminAccountId) => {
       !shop.accountId || !validAccountIds.includes(shop.accountId.toString())
   );
 
-  if (orphanShops.length === 0) {
-    return {
-      deletedShops: 0,
-      deletedProducts: 0,
-    };
-  }
+  if (orphanShops.length === 0) return { deletedShops: 0, deletedProducts: 0 };
 
-  const shopIds = orphanShops.map((shop) => shop._id);
+  const shopIds = orphanShops.map((s) => s._id);
 
-  if (shopIds.length === 0) {
-    return {
-      deletedShops: 0,
-      deletedProducts: 0,
-    };
-  }
-
-  // 4️⃣ Bắt đầu transaction để xóa an toàn
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
-  try {
-    // 5️⃣ Tìm và xóa tất cả sản phẩm của các shop null hoặc có accountId không tồn tại
+  return await withTransaction(async (session) => {
     const products = await Product.find(
       { shopId: { $in: shopIds } },
       { _id: 1 },
@@ -419,7 +332,6 @@ export const deleteShopsWithNullAccount = async (adminAccountId) => {
     );
     const productIds = products.map((p) => p._id);
 
-    // 6️⃣ Xóa product variants
     if (productIds.length > 0) {
       await ProductVariant.deleteMany(
         { productId: { $in: productIds } },
@@ -427,34 +339,22 @@ export const deleteShopsWithNullAccount = async (adminAccountId) => {
       );
     }
 
-    // 7️⃣ Xóa sản phẩm
     await Product.deleteMany({ shopId: { $in: shopIds } }, { session });
 
-    // 8️⃣ Xóa sản phẩm khỏi giỏ hàng (ngoài transaction vì service này có thể không dùng mongoose)
     try {
       await removeProductsFromAllCarts(productIds);
-    } catch (cartErr) {
-      console.warn("⚠️ Lỗi khi xóa sản phẩm khỏi giỏ hàng:", cartErr.message);
-      // Không throw ở đây để tránh rollback toàn bộ transaction chỉ vì cart service
+    } catch (err) {
+      console.warn("⚠️ Lỗi khi xóa sản phẩm khỏi giỏ hàng:", err.message);
     }
 
-    // 9️⃣ Xóa các shop null hoặc có accountId không tồn tại
     const result = await Shop.deleteMany(
-      { _id: { $in: orphanShops.map((s) => s._id) } },
+      { _id: { $in: shopIds } },
       { session }
     );
-
-    // 🔟 Commit transaction
-    await session.commitTransaction();
-    session.endSession();
 
     return {
       deletedShops: result.deletedCount,
       deletedProducts: productIds.length,
     };
-  } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
-    throw error;
-  }
+  });
 };

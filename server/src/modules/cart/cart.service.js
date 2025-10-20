@@ -1,10 +1,10 @@
 // server/src/modules/cart/cart.service.js
 import Cart from "./cart.model.js";
 import mongoose from "mongoose";
-import ApiError from "../../utils/apiError.js";
-import ProductVariant from "../product/productVariant.model.js";
-import Product from "../product/product.model.js";
-import Shop from "../shop/shop.model.js";
+import ApiError from "../../utils/index.js";
+import ProductVariant from "../product/index.jsjs";
+import Product from "../product/index.js";
+import Shop from "../shop/index.js";
 
 /**
  * Thêm sản phẩm vào giỏ
