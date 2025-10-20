@@ -72,9 +72,7 @@ export const editShop = async (req, res) => {
     const forbidden = ["accountId", "status"];
     forbidden.forEach((f) => delete updateData[f]);
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return errorResponse(res, "ID shop không hợp lệ", 400);
-    }
+    validateObjectId(id, "ID shop");
 
     const updatedShop = await ShopService.updateShop(id, accountId, updateData);
     return successResponse(res, updatedShop, "Cập nhật shop thành công");
@@ -92,9 +90,7 @@ export const removeShop = async (req, res) => {
     const { id } = req.params;
     const accountId = req.user?._id || req.body.accountId;
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return errorResponse(res, "ID shop không hợp lệ", 400);
-    }
+    validateObjectId(id, "ID shop");
 
     const result = await ShopService.deleteShop(id, accountId);
     return successResponse(res, result, "Xóa shop thành công");
@@ -112,10 +108,7 @@ export const changeStatus = async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
-    // Kiểm tra ID hợp lệ
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return errorResponse(res, "ID shop không hợp lệ", 400);
-    }
+    validateObjectId(id, "ID shop");
 
     // Kiểm tra đăng nhập
     if (!req.user) return errorResponse(res, "Chưa đăng nhập", 401);
