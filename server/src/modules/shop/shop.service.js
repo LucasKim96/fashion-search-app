@@ -1,17 +1,13 @@
 // server/src/modules/shop/shop.service.js
 import Shop from "./shop.model.js";
-import mongoose from "mongoose";
-import ApiError from "../../utils/index.js";
-import { Account } from "../account/index.js";
-import { Role } from "../account/index.js";
-import Product from "../product/index.js";
-import ProductVariant from "../product/index.js";
-import { removeProductsFromAllCarts } from "../cart/cart.service.js";
 import {
+  ApiError,
   validateObjectId,
-  handleMongooseError,
   withTransaction,
 } from "../../utils/index.js";
+import { Account, Role } from "../account/index.js";
+import { Product, ProductVariant } from "../product/index.js";
+import { removeProductsFromAllCarts } from "../cart/cart.service.js";
 
 /**
  * Lấy danh sách shop với phân trang + filter
