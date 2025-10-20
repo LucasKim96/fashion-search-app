@@ -160,7 +160,7 @@ export const restoreShop = async (req, res, next) => {
     const { id } = req.params;
     const adminAccountId = req.user?._id || req.body.accountId;
 
-    console.log("adminAccountId:", adminAccountId);
+    // console.log("adminAccountId:", adminAccountId);
     validateObjectId(id, "shopID");
     validateObjectId(adminAccountId, "adminID");
 
