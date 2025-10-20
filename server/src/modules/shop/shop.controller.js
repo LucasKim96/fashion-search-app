@@ -36,7 +36,9 @@ export const getShops = async (req, res) => {
 export const getShop = async (req, res) => {
   try {
     const { id } = req.params;
+
     validateObjectId(id, "ID shop");
+
     const shop = await ShopService.getShopById(id);
     return successResponse(res, shop, "Lấy thông tin shop thành công");
   } catch (error) {
@@ -50,9 +52,11 @@ export const getShop = async (req, res) => {
  */
 export const addShop = async (req, res) => {
   try {
-    const accountId = req.user?._id || req.body.accountId; // lấy từ middleware verifyToken
+    const accountId = req.user?.id; // || req.body.accountId;
     const shopData = { ...req.body, accountId };
+
     validateObjectId(accountId, "accID");
+
     const newShop = await ShopService.createShop(shopData);
     return successResponse(res, newShop, "Tạo shop thành công", 201);
   } catch (error) {
@@ -67,7 +71,7 @@ export const addShop = async (req, res) => {
 export const editShop = async (req, res) => {
   try {
     const { id } = req.params;
-    const accountId = req.user?._id || req.body.accountId;
+    const accountId = req.user?.id; // || req.body.accountId;
     const updateData = req.body;
     const forbidden = ["accountId", "status"];
     forbidden.forEach((f) => delete updateData[f]);
@@ -89,7 +93,7 @@ export const editShop = async (req, res) => {
 export const removeShop = async (req, res) => {
   try {
     const { id } = req.params;
-    const accountId = req.user?._id || req.body.accountId;
+    const accountId = req.user?.id; // || req.body.accountId;
 
     validateObjectId(id, "ID shop");
     validateObjectId(accountId, "accID");
@@ -108,9 +112,11 @@ export const removeShop = async (req, res) => {
 export const changeStatus = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const accountId = req.user?._id || req.body.accountId;
+    const accountId = req.user?.id; // || req.body.accountId;
     const { status } = req.body;
-
+    // console.log("accountId:", accountId);
+    // console.log("status:", status);
+    // console.log("id:", id);
     validateObjectId(id, "shopID");
     validateObjectId(accountId, "accID");
 
@@ -136,7 +142,7 @@ export const changeStatus = async (req, res, next) => {
  */
 export const deleteNullShops = async (req, res) => {
   try {
-    const adminAccountId = req.user?._id || req.body.accountId;
+    const adminAccountId = req.user?.id; // || req.body.accountId;
     validateObjectId(adminAccountId, "adminID");
 
     if (!adminAccountId) {
@@ -158,9 +164,8 @@ export const deleteNullShops = async (req, res) => {
 export const restoreShop = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const adminAccountId = req.user?._id || req.body.accountId;
+    const adminAccountId = req.user?.id; // || req.body.accountId;
 
-    // console.log("adminAccountId:", adminAccountId);
     validateObjectId(id, "shopID");
     validateObjectId(adminAccountId, "adminID");
 
