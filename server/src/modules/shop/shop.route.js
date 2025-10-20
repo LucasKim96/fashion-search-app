@@ -19,6 +19,7 @@ router.delete("/:id", ShopController.removeShop);
 // Admin
 // router.use(verifyAdmin);
 router.put("/:id/status", ShopController.changeStatus);
+router.put("/:id/restore", ShopController.restoreShop);
 
 // Super Admin only
 router.delete("/cleanup/null-accounts", ShopController.deleteNullShops);
