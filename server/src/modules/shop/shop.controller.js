@@ -52,7 +52,7 @@ export const addShop = async (req, res) => {
   try {
     const accountId = req.user?._id || req.body.accountId; // lấy từ middleware verifyToken
     const shopData = { ...req.body, accountId };
-
+    validateObjectId(accountId, "accID");
     const newShop = await ShopService.createShop(shopData);
     return successResponse(res, newShop, "Tạo shop thành công", 201);
   } catch (error) {
@@ -73,6 +73,7 @@ export const editShop = async (req, res) => {
     forbidden.forEach((f) => delete updateData[f]);
 
     validateObjectId(id, "ID shop");
+    validateObjectId(accountId, "accID");
 
     const updatedShop = await ShopService.updateShop(id, accountId, updateData);
     return successResponse(res, updatedShop, "Cập nhật shop thành công");
@@ -91,6 +92,7 @@ export const removeShop = async (req, res) => {
     const accountId = req.user?._id || req.body.accountId;
 
     validateObjectId(id, "ID shop");
+    validateObjectId(accountId, "accID");
 
     const result = await ShopService.deleteShop(id, accountId);
     return successResponse(res, result, "Xóa shop thành công");
@@ -103,39 +105,29 @@ export const removeShop = async (req, res) => {
 /**
  * Cập nhật trạng thái shop (admin hoặc chủ shop)
  */
-export const changeStatus = async (req, res) => {
+export const changeStatus = async (req, res, next) => {
   try {
     const { id } = req.params;
+    const accountId = req.user?._id || req.body.accountId;
     const { status } = req.body;
 
-    validateObjectId(id, "ID shop");
+    validateObjectId(id, "shopID");
+    validateObjectId(accountId, "accID");
 
-    // Kiểm tra đăng nhập
-    if (!req.user) return errorResponse(res, "Chưa đăng nhập", 401);
+    // Gọi xuống service xử lý logic
+    const updatedShop = await ShopService.updateShopStatus(
+      id,
+      accountId,
+      status
+    );
 
-    const { _id, maxLevel } = req.user;
-    const shop = await ShopService.getShopById(id);
-    if (!shop) return errorResponse(res, "Không tìm thấy shop", 404);
-
-    // Chỉ admin (>=3) hoặc chủ shop (chính chủ) được phép
-    if (maxLevel < 3 && shop.accountId.toString() !== _id.toString()) {
-      return errorResponse(
-        res,
-        "Không có quyền cập nhật trạng thái shop này",
-        403
-      );
-    }
-
-    // Cập nhật
-    const updatedShop = await ShopService.updateShopStatus(id, status);
     return successResponse(
       res,
       updatedShop,
       "Cập nhật trạng thái shop thành công"
     );
   } catch (error) {
-    // ApiError sẽ được xử lý bởi errorHandler middleware
-    throw error;
+    next(error); // để middleware errorHandler xử lý
   }
 };
 
@@ -145,6 +137,7 @@ export const changeStatus = async (req, res) => {
 export const deleteNullShops = async (req, res) => {
   try {
     const adminAccountId = req.user?._id || req.body.accountId;
+    validateObjectId(adminAccountId, "adminID");
 
     if (!adminAccountId) {
       return errorResponse(res, "Chưa đăng nhập", 401);
@@ -159,5 +152,21 @@ export const deleteNullShops = async (req, res) => {
   } catch (error) {
     // ApiError sẽ được xử lý bởi errorHandler middleware
     throw error;
+  }
+};
+
+export const restoreShop = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const adminAccountId = req.user?._id || req.body.accountId;
+
+    console.log("adminAccountId:", adminAccountId);
+    validateObjectId(id, "shopID");
+    validateObjectId(adminAccountId, "adminID");
+
+    const result = await ShopService.restoreShop(id, adminAccountId);
+    return successResponse(res, result, "Khôi phục shop thành công");
+  } catch (error) {
+    next(error);
   }
 };
