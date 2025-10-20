@@ -1,7 +1,7 @@
 // server/src/modules/shop/shop.routes.js
 import express from "express";
 import * as ShopController from "./shop.controller.js";
-import { validateShop } from "../../middlewares/shop.middleware.js";
+import { validateShop } from "../../middlewares/index.js";
 // import { verifyToken, verifyAdmin } from "../../middleware/auth.middleware.js";
 
 const router = express.Router();
