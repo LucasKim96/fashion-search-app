@@ -1,30 +1,30 @@
 // server/src/modules/cart/cart.service.js
 import Cart from "./cart.model.js";
-import mongoose from "mongoose";
-
-/**
- * Lấy giỏ hàng của 1 người dùng
- */
-export const getCartByAccount = async (accountId) => {
-  if (!accountId) throw new Error("Thiếu accountId hợp lệ");
-
-  const cart = await Cart.findOneAndUpdate(
-    { accountId },
-    { $setOnInsert: { cartItems: [] } },
-    { new: true, upsert: true }
-  ).populate("cartItems.productVariantId");
-
-  return cart;
-};
+import { ApiError, validateObjectId } from "../../utils/index.js";
+import { Product, ProductVariant } from "../product/index.js";
+import { Shop } from "../shop/index.js";
 
 /**
  * Thêm sản phẩm vào giỏ
  */
 export const addToCart = async (accountId, productVariantId, quantity = 1) => {
-  if (!mongoose.Types.ObjectId.isValid(productVariantId))
-    throw new Error("ID sản phẩm không hợp lệ");
+  validateObjectId(productVariantId, "ID sản phẩm");
 
-  if (quantity <= 0) throw new Error("Số lượng phải lớn hơn 0");
+  if (quantity <= 0) throw ApiError.badRequest("Số lượng phải lớn hơn 0");
+
+  // Kiểm tra trạng thái shop của product variant
+  validateObjectId(productVariantId, "ID sản phẩm variant");
+
+  const variant = await ProductVariant.findById(productVariantId).populate(
+    "productId"
+  );
+  if (!variant) throw ApiError.notFound("Không tìm thấy sản phẩm variant");
+
+  const product = variant.productId;
+  validateObjectId(product.shopId, "ID shop của sản phẩm");
+
+  const shop = await Shop.findById(product.shopId);
+  if (!shop) throw ApiError.notFound("Không tìm thấy shop của sản phẩm");
 
   // Tìm cart của user
   let cart = await Cart.findOne({ accountId });
@@ -97,4 +97,134 @@ export const clearCart = async (accountId) => {
     { new: true }
   );
   return cart;
+};
+
+/**
+ * Xóa sản phẩm của shop đã bị xóa khỏi tất cả giỏ hàng
+ */
+export const removeProductsFromAllCarts = async (productIds) => {
+  if (!productIds || productIds.length === 0) return;
+
+  // Tìm tất cả product variants của các sản phẩm bị xóa
+  const variants = await ProductVariant.find(
+    { productId: { $in: productIds } },
+    { _id: 1 }
+  );
+  const variantIds = variants.map((v) => v._id);
+
+  if (variantIds.length === 0) return;
+
+  // Xóa khỏi tất cả giỏ hàng
+  await Cart.updateMany(
+    {},
+    { $pull: { cartItems: { productVariantId: { $in: variantIds } } } }
+  );
+};
+
+/**
+ * Lấy giỏ hàng với thông tin sản phẩm đầy đủ
+ */
+export const getCartWithDetails = async (accountId) => {
+  if (!accountId) throw ApiError.badRequest("Thiếu accountId");
+
+  const cart = await Cart.findOne({ accountId }).populate({
+    path: "cartItems.productVariantId",
+    populate: {
+      path: "productId",
+      populate: {
+        path: "shopId",
+        select: "shopName status",
+      },
+    },
+  });
+
+  if (!cart) {
+    // Tạo giỏ hàng rỗng nếu chưa có
+    const newCart = await Cart.create({ accountId, cartItems: [] });
+    return newCart;
+  }
+
+  // Lọc bỏ các sản phẩm không tồn tại hoặc shop đã đóng
+  const validItems = cart.cartItems.filter((item) => {
+    const variant = item.productVariantId;
+    if (!variant || !variant.productId) return false;
+
+    const product = variant.productId;
+    if (!product || !product.shopId) return false;
+
+    const shop = product.shopId;
+    return shop.status === "active";
+  });
+
+  // Cập nhật giỏ hàng nếu có sản phẩm không hợp lệ
+  if (validItems.length !== cart.cartItems.length) {
+    cart.cartItems = validItems;
+    await cart.save();
+  }
+
+  return cart;
+};
+
+/**
+ * Tính tổng tiền giỏ hàng
+ */
+export const calculateCartTotal = async (accountId) => {
+  const cart = await getCartWithDetails(accountId);
+
+  let total = 0;
+  let itemCount = 0;
+
+  cart.cartItems.forEach((item) => {
+    if (item.productVariantId && item.productVariantId.price) {
+      total += item.productVariantId.price * item.quantity;
+      itemCount += item.quantity;
+    }
+  });
+
+  return {
+    total,
+    itemCount,
+    items: cart.cartItems.length,
+  };
+};
+
+/**
+ * Kiểm tra tồn kho sản phẩm
+ */
+export const checkStockAvailability = async (productVariantId, quantity) => {
+  const variant = await ProductVariant.findById(productVariantId);
+  if (!variant) {
+    throw ApiError.notFound("Không tìm thấy sản phẩm");
+  }
+
+  if (variant.stock < quantity) {
+    throw ApiError.badRequest(`Chỉ còn ${variant.stock} sản phẩm trong kho`);
+  }
+
+  return true;
+};
+
+/**
+ * Cập nhật tồn kho sau khi đặt hàng
+ */
+export const updateStockAfterOrder = async (orderItems) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    for (const item of orderItems) {
+      await ProductVariant.findByIdAndUpdate(
+        item.productVariantId,
+        { $inc: { stock: -item.quantity } },
+        { session }
+      );
+    }
+
+    await session.commitTransaction();
+    session.endSession();
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    throw error;
+  }
 };

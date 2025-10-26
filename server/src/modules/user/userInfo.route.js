@@ -3,10 +3,12 @@ import * as UserInfoController from "./userInfo.controller.js";
 import { authMiddleware } from "../../middlewares/auth.middleware.js";
 import { isAdminOrSuperAdmin, isSelf, isSelfOrAdmin } from "../../middlewares/role.middleware.js";
 import { validateUpdateBasicUserInfo } from "./userInfo.validate.js";
-import multer from "multer";
+import { uploadFiles } from "../../middlewares/upload.middleware.js"; // import đúng
 
 const router = express.Router();
-const upload = multer(); // dùng memory storage, nếu cần lưu file ở server
+
+// Middleware Multer cho avatars
+const uploadAvatar = uploadFiles("avatars"); // dùng memory storage, nếu cần lưu file ở server
 
 // --- Admin routes ---
 // Lấy danh sách tất cả người dùng
@@ -20,13 +22,13 @@ router.get("/stats/gender", authMiddleware, isAdminOrSuperAdmin, UserInfoControl
 // Thống kê người dùng theo độ tuổi
 router.get("/stats/age", authMiddleware, isAdminOrSuperAdmin, UserInfoController.statsByAgeRange);
 // Thay đổi avatar mặc định cho tất cả người dùng chưa có avatar riêng (Admin)
-router.put("/default-avatar", authMiddleware, isAdminOrSuperAdmin, upload.single("avatar"), UserInfoController.updateDefaultAvatar);
+router.put("/default-avatar", authMiddleware, isAdminOrSuperAdmin, uploadAvatar.single("avatar"), UserInfoController.updateDefaultAvatar);
 // Lấy người dùng theo ID
 router.get("/:id", authMiddleware, isSelfOrAdmin, UserInfoController.getUserById);
 
 // --- User routes ---
 // Cập nhật ảnh đại diện (self hoặc admin)
-router.put("/avatar/:id", authMiddleware, isSelf, upload.single("avatar"), UserInfoController.updateAvatar);
+router.put("/avatar/:id", authMiddleware, isSelf, uploadAvatar.single("avatar"), UserInfoController.updateAvatar);
 // Cập nhật thông tin cơ bản (name, dayOfBirth, gender, email)
 router.put("/basic-info/:id", authMiddleware, isSelf, validateUpdateBasicUserInfo, UserInfoController.updateBasicUserInfo);
 

@@ -1,14 +1,3 @@
-// import mongoose from "mongoose";
-
-// const productVariantSchema = new mongoose.Schema({
-//   productId: { type: mongoose.Schema.Types.ObjectId, ref: "Product", required: true },
-//   stock: { type: Number, default: 0, min: 0 },
-//   image: { type: String, default: "" },
-//   price: { type: Number, required: true, min: 0 },
-// }, { timestamps: true });
-
-// export default mongoose.model("ProductVariant", productVariantSchema);
-
 import mongoose from "mongoose";
 
 const productVariantSchema = new mongoose.Schema({
@@ -20,7 +9,7 @@ const productVariantSchema = new mongoose.Schema({
   }],
   stock: { type: Number, default: 0, min: 0 },
   images: { type: [String], default: [] }, // ảnh riêng cho biến thể (vd áo trắng size M)
-  //không lưu giá mà dùng basePrice + priceAdjustment để tính giá
+  priceAdjustment: { type: Number, default: 0 },// ví dụ +10 hoặc -15 so với basePrice
 }, { timestamps: true });
 
 productVariantSchema.index({ productId: 1, variantKey: 1 }, { unique: true });

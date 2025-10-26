@@ -1,34 +1,41 @@
 import express from "express";
-import * as attributeController from "./attribute.controller.js";
+import * as AttributeController from "./attribute.controller.js";
+import { authMiddleware } from "../../middlewares/auth.middleware.js";
+import { parseValuesMiddleware } from "../../middlewares/parseValues.middleware.js";
+import { isAdminOrSuperAdmin, isShopOwner } from "../../middlewares/role.middleware.js";
 import {
-  validateObjectIdParam,
   validateCreateAttribute,
   validateUpdateAttribute,
-  validateGetAttributes,
-  validateSearchAttributes
+  validateUpdateAttributeLabel,
+  validateParamId,
 } from "./attribute.validate.js";
+import { uploadAttributeImages } from "../../middlewares/uploadAttribute.middleware.js";
 
 const router = express.Router();
 
-// GET /attributes - Lấy danh sách attributes
-router.get("/", validateGetAttributes, attributeController.getAttributes);
+// ========================= ADMIN ROUTES =========================
+const adminRouter = express.Router();
+adminRouter.get("/", AttributeController.getAttributesFlexible);
+adminRouter.get("/search", AttributeController.searchGlobalAttributes);
+adminRouter.post("/", uploadAttributeImages(),  parseValuesMiddleware, validateCreateAttribute, AttributeController.createGlobalAttribute);
+adminRouter.put("/:id", uploadAttributeImages(),  parseValuesMiddleware, validateUpdateAttribute, AttributeController.updateGlobalAttribute);
+adminRouter.put("/label/:id", validateParamId, validateUpdateAttributeLabel, AttributeController.updateGlobalAttributeLabel );
+router.use("/admin", authMiddleware, isAdminOrSuperAdmin, adminRouter);
 
-// GET /attributes/search - Tìm kiếm attributes
-router.get("/search", validateSearchAttributes, attributeController.searchAttributes);
+// ========================= SHOP ROUTES =========================
+const shopRouter = express.Router();
+shopRouter.get("/", AttributeController.getAttributesFlexible);
+shopRouter.get("/search", AttributeController.searchShopAttributes);
+shopRouter.post("/", uploadAttributeImages(),  parseValuesMiddleware, validateCreateAttribute, AttributeController.createShopAttribute);
+shopRouter.put("/:id", uploadAttributeImages(),  parseValuesMiddleware, validateUpdateAttribute, AttributeController.updateShopAttribute);
+shopRouter.put("/label/:id", validateParamId, validateUpdateAttributeLabel, AttributeController.updateShopAttributeLabel );
+router.use("/shop", authMiddleware, isShopOwner, shopRouter);
 
-// GET /attributes/:id - Lấy chi tiết attribute
-router.get("/:id", validateObjectIdParam("id"), attributeController.getAttributeById);
-
-// POST /attributes - Tạo attribute mới
-router.post("/", validateCreateAttribute, attributeController.createAttribute);
-
-// PUT /attributes/:id - Cập nhật attribute
-router.put("/:id", validateObjectIdParam("id"), validateUpdateAttribute, attributeController.updateAttribute);
-
-// DELETE /attributes/:id - Xóa attribute
-router.delete("/:id", validateObjectIdParam("id"), attributeController.deleteAttribute);
-
-// GET /attributes/shop/:shopId/full - Lấy tất cả attributes cho shop
-router.get("/shop/:shopId/full", validateObjectIdParam("shopId"), attributeController.getAttributesForShopFull);
+// ========================= PUBLIC ROUTES =========================
+const publicRouter = express.Router();
+publicRouter.get("/:id", validateParamId, AttributeController.getAttributeById);
+publicRouter.delete("/:id", validateParamId, AttributeController.deleteGlobalAttribute);
+publicRouter.patch("/toggle/:id", validateParamId, AttributeController.toggleGlobalAttribute);
+router.use("/", authMiddleware, publicRouter);
 
 export default router;

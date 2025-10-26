@@ -8,12 +8,14 @@ import { fileURLToPath } from "url";
 import {
   AccountRoutes,
   AuthRoutes,
-  ShopRoutes,
   UserInfoRoutes,
+  ShopRoutes,
   CartRoutes,
+  OrderRoutes,
+  AttributeRoutes,
+  AttributeValueRoutes,
 } from "./modules/index.js"; // import cho mongodb
-import { errorHandler } from "./middlewares/errorHandler.js";
-
+import { errorHandler, notFoundHandler } from "./middlewares/errorHandler.js";
 
 // Config
 dotenv.config();
@@ -31,6 +33,8 @@ app.use(express.json());
 
 // Static folder
 app.use("/assets", express.static(path.join(__dirname, "assets")));
+console.log("Serving static from:", path.join(__dirname, "uploads"));
+
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Routes
@@ -39,6 +43,13 @@ app.use("/api/auth", AuthRoutes);
 app.use("/api/users", UserInfoRoutes);
 app.use("/api/shops", ShopRoutes);
 app.use("/api/carts", CartRoutes);
+app.use("/api/orders", OrderRoutes);
+app.use("/api/attributes", AttributeRoutes);
+app.use("/api/attribute-value", AttributeValueRoutes);
+// 404 handler - phải đặt trước errorHandler
+app.use(notFoundHandler);
+
+// Error handling middleware (phải đặt cuối cùng)
 app.use(errorHandler);
 // Connect MongoDB and start server
 connectDB(process.env.MONGO_URI)
