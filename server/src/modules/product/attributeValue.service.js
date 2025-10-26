@@ -1,171 +1,215 @@
 import AttributeValue from "./attributeValue.model.js";
 import Attribute from "./attribute.model.js";
 import mongoose from "mongoose";
+import { withTransaction } from "../../utils/transaction.helper.js";
+import Shop from "../shop/shop.model.js";
+import fs from "fs";
+import path from "path";
 
-const toObjectId = (id) =>
-  mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : null;
+const attributeUploadDir = path.resolve("src/uploads/attributes");
 
-/**
- * Lấy danh sách giá trị theo attributeId hoặc shop
- * Query: ?attributeId=&shopId=&page=&limit=
- */
-export const getValues = async ({ attributeId, shopId, page = 1, limit = 50 }) => {
+// Chuyển id sang ObjectId, trả về null nếu không hợp lệ
+export const toObjectId = (id) => {
+  if (!id) return null;
   try {
-    const filter = {};
-    if (attributeId && toObjectId(attributeId)) filter.attributeId = attributeId;
-    if (shopId && toObjectId(shopId)) filter.shopId = shopId;
-
-    const skip = (Math.max(1, page) - 1) * limit;
-
-    const [items, total] = await Promise.all([
-      AttributeValue.find(filter).skip(skip).limit(limit).lean(),
-      AttributeValue.countDocuments(filter),
-    ]);
-
-    return {
-      success: true,
-      message: "Lấy danh sách giá trị thuộc tính thành công!",
-      data: { items, total, page, limit },
-    };
-  } catch (error) {
-    return { success: false, message: error.message };
+    return new mongoose.Types.ObjectId(id);
+  } catch {
+    return null;
   }
 };
 
-/**
- * Lấy danh sách giá trị toàn cục (attribute.global = true)
- */
-export const getGlobalValues = async () => {
-  try {
-    const globalAttributes = await Attribute.find({ isGlobal: true }, "_id");
-    const ids = globalAttributes.map((a) => a._id);
-
-    const values = await AttributeValue.find({ attributeId: { $in: ids } }).lean();
-
-    return {
-      success: true,
-      message: "Lấy danh sách giá trị toàn cục thành công!",
-      data: values,
-    };
-  } catch (error) {
-    return { success: false, message: error.message };
-  }
+const validateAttributeValue = (value) => {
+  if (!value || typeof value !== "object") throw new Error("Giá trị attribute không hợp lệ");
+  if (!value.value || value.value.trim() === "") throw new Error("Giá trị attribute không được để trống");
+  return true;
 };
 
-/**
- * Lấy chi tiết 1 giá trị
- */
-export const getValueById = async (id) => {
-  try {
-    if (!toObjectId(id)) throw new Error("ID không hợp lệ!");
-    const val = await AttributeValue.findById(id)
-      .populate("attributeId", "label isGlobal")
-      .lean();
-    if (!val) throw new Error("Không tìm thấy giá trị thuộc tính!");
-    return { success: true, message: "Lấy chi tiết giá trị thành công!", data: val };
-  } catch (error) {
-    return { success: false, message: error.message };
-  }
+const _fetchAttributeWithValues = async (attributeId, session = null) => {
+  const attribute = await Attribute.findById(attributeId).session(session).lean();
+  if (!attribute) return null;
+
+  const values = await AttributeValue.find({
+    attributeId,
+    isActive: { $ne: false },
+  })
+    .session(session)
+    .lean();
+
+  return { ...attribute, values };
 };
 
-/**
- * Tạo 1 hoặc nhiều giá trị mới cho attribute
- * body: { attributeId, values: [ { value, priceAdjustment, image, shopId? } ] }
- */
-export const createValues = async (body) => {
-  try {
-    const { attributeId, values } = body;
-    if (!attributeId || !toObjectId(attributeId)) throw new Error("attributeId không hợp lệ!");
+// Tạo nhiều value cho 1 attribute đã có (admin hoặc shop)
+// Lưu ý: shop có thể tạo value cho thuộc tính global nhưng chỉ riêng shop đó
+export const createAttributeValues = async (attributeId, values = [], accountId = null) => {
+  if (!toObjectId(attributeId)) throw new Error("attributeId không hợp lệ");
 
-    const attribute = await Attribute.findById(attributeId);
-    if (!attribute) throw new Error("Thuộc tính không tồn tại!");
+  return withTransaction(async (session) => {
+    const attribute = await Attribute.findById(attributeId).session(session);
+    if (!attribute) throw new Error("Không tìm thấy attribute");
 
-    if (!Array.isArray(values) || !values.length)
-      throw new Error("Không có giá trị nào để tạo!");
+    let shopId = null;
+    let isAdmin = false;
 
+    if (accountId) {
+      // Shop
+      const shop = await Shop.findOne({ accountId: toObjectId(accountId), isDeleted: false }).session(session);
+      if (!shop) throw new Error("Không tìm thấy cửa hàng cho tài khoản này");
+      shopId = shop._id;
+
+      // Shop chỉ bị hạn chế khi thêm value cho attribute của shop khác
+      if (attribute.shopId && attribute.shopId.toString() !== shopId.toString()) {
+        throw new Error("Bạn không có quyền thêm value cho thuộc tính của shop khác");
+      }
+      // Nếu attribute là global (shopId = null), shop có thể thêm value với shopId = shop._id
+    } else {
+      // Admin
+      isAdmin = true;
+      shopId = null;
+
+      if (!attribute.isGlobal) {
+        throw new Error("Admin chỉ được thêm value cho thuộc tính global");
+      }
+    }
+
+    if (!Array.isArray(values) || values.length === 0) throw new Error("Danh sách values trống");
+
+    // Validate từng value
+    values.forEach(validateAttributeValue);
+
+    // Chuẩn bị docs
     const docs = values.map((v) => ({
-      attributeId,
-      value: v.value?.trim(),
+      attributeId: attribute._id,
+      value: v.value.trim(),
       image: v.image || "",
-      priceAdjustment: v.priceAdjustment ?? 0,
-      shopId: v.shopId || null,
+      shopId: isAdmin ? null : shopId, // Nếu shop tạo global value thì gán shopId
+      isActive: true,
     }));
 
-    const inserted = await AttributeValue.insertMany(docs);
+    await AttributeValue.insertMany(docs, { session });
+
+    // Trả về attribute kèm toàn bộ value (cả global và shop-specific)
+    const result = await _fetchAttributeWithValues(attribute._id, session);
     return {
       success: true,
-      message: "Tạo giá trị thuộc tính thành công!",
-      data: inserted,
+      message: "Tạo value thành công",
+      data: result,
     };
-  } catch (error) {
-    if (error.code === 11000)
-      return { success: false, message: "Một hoặc nhiều giá trị bị trùng!" };
+  }).catch((error) => {
     return { success: false, message: error.message };
-  }
+  });
 };
 
-/**
- * Cập nhật giá trị
- */
-export const updateValue = async (id, body) => {
-  try {
-    if (!toObjectId(id)) throw new Error("ID không hợp lệ!");
+// Cập nhật 1 value
+export const updateAttributeValue = async (valueId, payload, accountId = null, session) => {
+  const oldValue = await AttributeValue.findById(valueId).session(session);
+  if (!oldValue) throw new Error(`Không tìm thấy value với id ${valueId}`);
 
-    const update = {};
-    ["value", "image", "priceAdjustment", "shopId"].forEach((key) => {
-      if (body[key] !== undefined) update[key] = body[key];
-    });
+  const attribute = await Attribute.findById(oldValue.attributeId).session(session);
+  if (!attribute) throw new Error("Không tìm thấy attribute của value");
 
-    const updated = await AttributeValue.findByIdAndUpdate(id, update, { new: true });
-    if (!updated) throw new Error("Không tìm thấy giá trị để cập nhật!");
+  let isAdmin = false;
+  let currentShopId = null;
 
-    return {
-      success: true,
-      message: "Cập nhật giá trị thành công!",
-      data: updated,
-    };
-  } catch (error) {
-    if (error.code === 11000)
-      return { success: false, message: "Giá trị bị trùng lặp!" };
-    return { success: false, message: error.message };
+  if (accountId) {
+    const shop = await Shop.findOne({ accountId: toObjectId(accountId), isDeleted: false }).session(session);
+    if (!shop) throw new Error("Không tìm thấy cửa hàng cho tài khoản này");
+    currentShopId = shop._id;
+
+    if (attribute.isGlobal)
+      throw new Error("Shop không được phép chỉnh sửa thuộc tính toàn cục");
+    if (attribute.shopId?.toString() !== currentShopId.toString())
+      throw new Error("Bạn không có quyền sửa thuộc tính của shop khác!");
+  } else {
+    isAdmin = true;
+    if (!attribute.isGlobal)
+      throw new Error("Admin chỉ được phép chỉnh sửa thuộc tính toàn cục");
   }
+
+  // Validate nếu có thay đổi
+  const hasValueChange =
+    (payload.value && payload.value.trim() !== oldValue.value);
+
+  if (hasValueChange) validateAttributeValue(payload);
+
+  // Xử lý ảnh
+  const removeImage = payload.image === "" && oldValue.image;
+  const hasNewImage = payload.image && payload.image !== oldValue.image;
+
+  if (hasNewImage && oldValue.image) {
+    const oldPath = path.join(attributeUploadDir, path.basename(oldValue.image));
+    if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+  } else if (removeImage) {
+    const oldPath = path.join(attributeUploadDir, path.basename(oldValue.image));
+    if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+  }
+
+  const newImage =
+    removeImage ? "" :
+    hasNewImage ? payload.image :
+    oldValue.image ?? "";
+
+  // Cập nhật
+  oldValue.value = payload.value !== undefined ? payload.value.trim() : oldValue.value;
+  oldValue.image = newImage;
+  oldValue.shopId = isAdmin ? null : currentShopId;
+  oldValue.isActive = true;
+
+  await oldValue.save({ session });
+
+  return oldValue;
 };
 
-/**
- * Lấy tất cả giá trị theo attributeId
- */
-export const getValuesByAttribute = async (attributeId) => {
-  try {
-    if (!attributeId || !toObjectId(attributeId)) throw new Error("attributeId không hợp lệ!");
-    const list = await AttributeValue.find({ attributeId }).lean();
-    return {
-      success: true,
-      message: "Lấy danh sách giá trị của thuộc tính thành công!",
-      data: list,
-    };
-  } catch (error) {
-    return { success: false, message: error.message };
+// Chuyển trạng thái 1 value 
+export const toggleAttributeValueStatus = async (valueId, accountId = null, session) => {
+  const oldValue = await AttributeValue.findById(valueId).session(session);
+  if (!oldValue) throw new Error(`Không tìm thấy value với id ${valueId}`);
+
+  const attribute = await Attribute.findById(oldValue.attributeId).session(session);
+  if (!attribute) throw new Error("Không tìm thấy attribute của value");
+
+  if (accountId) {
+    const shop = await Shop.findOne({ accountId: toObjectId(accountId), isDeleted: false }).session(session);
+    if (!shop) throw new Error("Không tìm thấy cửa hàng cho tài khoản này");
+    if (attribute.isGlobal)
+      throw new Error("Shop không được phép chỉnh sửa thuộc tính toàn cục");
+    if (attribute.shopId?.toString() !== shop._id.toString())
+      throw new Error("Bạn không có quyền chỉnh sửa thuộc tính của shop khác!");
+  } else {
+    if (!attribute.isGlobal)
+      throw new Error("Admin chỉ được phép chỉnh sửa thuộc tính toàn cục");
   }
+
+  oldValue.isActive = !oldValue.isActive;
+  await oldValue.save({ session });
+  return oldValue;
 };
 
-/**
- * Bật / tắt hoạt động của giá trị
- */
-export const toggleValueActive = async (id) => {
-  try {
-    if (!toObjectId(id)) throw new Error("ID không hợp lệ!");
-    const value = await AttributeValue.findById(id);
-    if (!value) throw new Error("Không tìm thấy giá trị!");
+// Xóa 1 value (bao gồm ảnh)
+export const deleteAttributeValue = async (valueId, accountId = null, session) => {
+  const oldValue = await AttributeValue.findById(valueId).session(session);
+  if (!oldValue) throw new Error(`Không tìm thấy value với id ${valueId}`);
 
-    value.isActive = value.isActive === false ? true : false;
-    await value.save();
+  const attribute = await Attribute.findById(oldValue.attributeId).session(session);
+  if (!attribute) throw new Error("Không tìm thấy attribute của value");
 
-    return {
-      success: true,
-      message: `Giá trị đã được ${value.isActive ? "bật" : "tắt"} hoạt động!`,
-      data: value,
-    };
-  } catch (error) {
-    return { success: false, message: error.message };
+  if (accountId) {
+    const shop = await Shop.findOne({ accountId: toObjectId(accountId), isDeleted: false }).session(session);
+    if (!shop) throw new Error("Không tìm thấy cửa hàng cho tài khoản này");
+    if (attribute.isGlobal)
+      throw new Error("Shop không được phép xóa thuộc tính toàn cục");
+    if (attribute.shopId?.toString() !== shop._id.toString())
+      throw new Error("Bạn không có quyền xóa thuộc tính của shop khác!");
+  } else {
+    if (!attribute.isGlobal)
+      throw new Error("Admin chỉ được phép xóa thuộc tính toàn cục");
   }
+
+  // Xóa ảnh nếu có
+  if (oldValue.image) {
+    const imagePath = path.join(attributeUploadDir, path.basename(oldValue.image));
+    if (fs.existsSync(imagePath)) fs.unlinkSync(imagePath);
+  }
+
+  await AttributeValue.deleteOne({ _id: valueId }).session(session);
+  return { success: true, message: "Đã xóa value" };
 };

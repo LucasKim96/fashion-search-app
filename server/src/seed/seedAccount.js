@@ -22,20 +22,20 @@ const seedAccounts = async () => {
     const zeropwd = await bcrypt.hash("1816109070", 10);
 
     const accounts = [
-      // {
-      //   username: "sellerC",
-      //   phoneNumber: "0901000003",
-      //   password: passwordHash,
-      //   status: "active",
-      //   roles: [], // thêm sau nếu có role model
-      // },
-      // {
-      //   username: "sellerD",
-      //   phoneNumber: "0901000004",
-      //   password: passwordHash,
-      //   status: "active",
-      //   roles: [],
-      // },
+      {
+        username: "sellerE",
+        phoneNumber: "0901000005",
+        password: passwordHash,
+        status: "active",
+        roles: [], // thêm sau nếu có role model
+      },
+      {
+        username: "sellerF",
+        phoneNumber: "0901000006",
+        password: passwordHash,
+        status: "active",
+        roles: [],
+      },
       // {
       //   username: "ZeroAdmin",
       //   phoneNumber: "0916613912",

@@ -1,173 +1,94 @@
-import { body, param, query } from "express-validator";
+import { body, param } from "express-validator";
 
-// Validate ObjectId parameter
-export const validateObjectIdParam = (paramName = "id") => [
-  param(paramName)
-    .isMongoId()
-    .withMessage(`${paramName} không hợp lệ`)
+
+export const validateParamId = [
+  param("id").isMongoId().withMessage("Id không hợp lệ"),
 ];
 
-// Validate create attribute
+// Validate cho việc tạo mới attribute
 export const validateCreateAttribute = [
   body("label")
-    .notEmpty()
-    .withMessage("Label attribute không được để trống")
     .trim()
-    .isLength({ min: 2, max: 50 })
-    .withMessage("Label attribute phải có từ 2-50 ký tự"),
-
-  body("isGlobal")
-    .optional()
-    .isBoolean()
-    .withMessage("isGlobal phải là boolean"),
-
-  body("shopId")
-    .optional({ nullable: true })
-    .isMongoId()
-    .withMessage("Shop ID không hợp lệ"),
+    .notEmpty()
+    .withMessage("Tên thuộc tính (label) là bắt buộc")
+    .isLength({ max: 100 })
+    .withMessage("Tên thuộc tính không được dài quá 100 ký tự"),
 
   body("values")
     .optional()
-    .isArray({ max: 50 })
-    .withMessage("Values phải là mảng và không quá 50 phần tử"),
+    .isArray()
+    .withMessage("Values phải là mảng"),
 
   body("values.*.value")
-    .optional()
-    .notEmpty()
-    .withMessage("Giá trị attribute không được để trống")
+    .if(body("values").exists())
     .trim()
-    .isLength({ min: 1, max: 100 })
-    .withMessage("Giá trị attribute phải có từ 1-100 ký tự"),
+    .notEmpty()
+    .withMessage("Giá trị value không được để trống"),
 
-  body("values.*.priceAdjustment")
-    .optional()
-    .isNumeric()
-    .withMessage("priceAdjustment phải là số")
-    .isFloat({ min: -999999, max: 999999 })
-    .withMessage("priceAdjustment phải trong khoảng -999,999 đến 999,999"),
 
   body("values.*.image")
     .optional()
-    .trim()
-    .isLength({ max: 500 })
-    .withMessage("URL ảnh không được vượt quá 500 ký tự"),
-
-  body("values.*.shopId")
-    .optional({ nullable: true })
-    .isMongoId()
-    .withMessage("Shop ID trong value không hợp lệ"),
+    .isString()
+    .withMessage("image phải là chuỗi URL hoặc base64"),
 ];
 
-// Validate update attribute
+export const validateCreateAttributeValue = [
+  body("values")
+    .optional()
+    .isArray()
+    .withMessage("Values phải là mảng"),
+
+  body("values.*.value")
+    .if(body("values").exists())
+    .trim()
+    .notEmpty()
+    .withMessage("Giá trị value không được để trống"),
+
+  body("values.*.image")
+    .optional()
+    .isString()
+    .withMessage("image phải là chuỗi URL hoặc base64"),
+];
+// Validate cho việc cập nhật attribute
 export const validateUpdateAttribute = [
   body("label")
     .optional()
-    .notEmpty()
-    .withMessage("Label không được để trống")
     .trim()
-    .isLength({ min: 2, max: 50 })
-    .withMessage("Label phải có từ 2-50 ký tự"),
-
-  body("isGlobal")
-    .optional()
-    .isBoolean()
-    .withMessage("isGlobal phải là boolean"),
-
-  body("shopId")
-    .optional({ nullable: true })
-    .isMongoId()
-    .withMessage("Shop ID không hợp lệ"),
+    .notEmpty()
+    .withMessage("Tên thuộc tính không được để trống nếu có"),
 
   body("values")
     .optional()
-    .isArray({ max: 50 })
-    .withMessage("Values phải là mảng và không quá 50 phần tử"),
+    .isArray()
+    .withMessage("Values phải là mảng"),
+
+  body("values.*._id")
+    .optional()
+    .isString()
+    .withMessage("_id của value phải là chuỗi"),
+
+  body("values.*._action")
+    .optional()
+    .isIn(["toggle-status", "delete", "update", "insert"])
+    .withMessage("_action không hợp lệ (chỉ nhận toggle-status|delete|update|insert)"),
 
   body("values.*.value")
     .optional()
-    .notEmpty()
-    .withMessage("Giá trị attribute không được để trống")
     .trim()
-    .isLength({ min: 1, max: 100 })
-    .withMessage("Giá trị attribute phải có từ 1-100 ký tự"),
+    .notEmpty()
+    .withMessage("Giá trị value không được để trống"),
 
-  body("values.*.priceAdjustment")
-    .optional()
-    .isNumeric()
-    .withMessage("priceAdjustment phải là số")
-    .isFloat({ min: -999999, max: 999999 })
-    .withMessage("priceAdjustment phải trong khoảng -999,999 đến 999,999"),
 
   body("values.*.image")
     .optional()
-    .trim()
-    .isLength({ max: 500 })
-    .withMessage("URL ảnh không được vượt quá 500 ký tự"),
-
-  body("values.*.shopId")
-    .optional({ nullable: true })
-    .isMongoId()
-    .withMessage("Shop ID trong value không hợp lệ"),
+    .isString()
+    .withMessage("image phải là chuỗi URL hoặc base64"),
 ];
 
-// Validate get attributes query
-export const validateGetAttributes = [
-  query("isGlobal")
-    .optional()
-    .isBoolean()
-    .withMessage("isGlobal phải là boolean"),
-
-  query("shopId")
-    .optional()
-    .isMongoId()
-    .withMessage("Shop ID không hợp lệ"),
-
-  query("page")
-    .optional()
-    .isInt({ min: 1, max: 10000 })
-    .withMessage("Page phải là số từ 1 đến 10,000"),
-
-  query("limit")
-    .optional()
-    .isInt({ min: 1, max: 100 })
-    .withMessage("Limit phải là số từ 1 đến 100"),
-
-  query("sortBy")
-    .optional()
-    .isIn(["createdAt", "updatedAt", "label"])
-    .withMessage("sortBy chỉ được là: createdAt, updatedAt, label"),
-
-  query("sortOrder")
-    .optional()
-    .isIn(["asc", "desc"])
-    .withMessage("sortOrder chỉ được là: asc, desc"),
-];
-
-// Validate search attributes query
-export const validateSearchAttributes = [
-  query("query")
-    .optional()
+export const validateUpdateAttributeLabel = [
+  body("label")
+    .exists({ checkFalsy: true })
     .trim()
-    .isLength({ max: 100 })
-    .withMessage("Từ khóa tìm kiếm không được vượt quá 100 ký tự"),
-
-  query("isGlobal")
-    .optional()
-    .isBoolean()
-    .withMessage("isGlobal phải là boolean"),
-
-  query("shopId")
-    .optional()
-    .isMongoId()
-    .withMessage("Shop ID không hợp lệ"),
-
-  query("page")
-    .optional()
-    .isInt({ min: 1, max: 10000 })
-    .withMessage("Page phải là số từ 1 đến 10,000"),
-
-  query("limit")
-    .optional()
-    .isInt({ min: 1, max: 100 })
-    .withMessage("Limit phải là số từ 1 đến 100"),
+    .notEmpty()
+    .withMessage("Tên thuộc tính không được để trống"),
 ];
