@@ -178,42 +178,37 @@ export const updateShop = async (shopId, accountId, updateData) => {
   }
 };
 
-export const updateLogo = async (shopId, accountId, logo) => {
-  const shop = await Shop.findOne({
-    _id: shopId,
-    isDeleted: { $ne: true },
-  });
+/**
+ * Cập nhật logo hoặc cover — tự xóa file cũ
+ */
+export const updateShopImage = async (
+  shopId,
+  accountId,
+  newUrl,
+  type = "logo"
+) => {
+  const shop = await Shop.findById(shopId);
   if (!shop) throw ApiError.notFound("Không tìm thấy shop");
 
   if (shop.accountId.toString() !== accountId)
-    throw ApiError.forbidden("Không có quyền cập nhật avatar shop này");
+    throw ApiError.forbidden("Không có quyền cập nhật shop này");
 
-  if (shop.logoUrl) {
-    const oldPath = path.resolve(shop.logoUrl);
-    if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+  // Xóa ảnh cũ (nếu có và khác ảnh mới)
+  const oldPath = shop[type + "Url"];
+  if (oldPath && oldPath !== newUrl) {
+    const filePath = path.join(process.cwd(), oldPath);
+    if (fs.existsSync(filePath)) {
+      fs.unlink(filePath, (err) => {
+        if (err) console.error("⚠️ Không thể xóa ảnh cũ:", err);
+      });
+    }
   }
 
-  shop.logoUrl = logo.replace(/\\/g, "/");
-  return await shop.save();
-};
+  // Cập nhật ảnh mới
+  shop[type + "Url"] = newUrl;
+  await shop.save();
 
-export const updateCoverImage = async (shopId, accountId, cover) => {
-  const shop = await Shop.findOne({
-    _id: shopId,
-    isDeleted: { $ne: true },
-  });
-  if (!shop) throw ApiError.notFound("Không tìm thấy shop");
-
-  if (shop.accountId.toString() !== accountId)
-    throw ApiError.forbidden("Không có quyền cập nhật cover image shop này");
-
-  if (shop.coverUrl) {
-    const oldPath = path.resolve(shop.coverUrl);
-    if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
-  }
-
-  shop.coverUrl = cover.replace(/\\/g, "/");
-  return await shop.save();
+  return shop;
 };
 
 /**

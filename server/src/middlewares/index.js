@@ -3,6 +3,7 @@ import errorMiddleware from "./error.middleware.js";
 import loggerMiddleware from "./logger.middleware.js";
 import { validateShop } from "./shop.middleware.js";
 import { errorHandler, notFoundHandler } from "./errorHandler.js";
+import { upload } from "./upload.middleware.js";
 
 export {
   authMiddleware,
@@ -11,4 +12,5 @@ export {
   validateShop,
   errorHandler,
   notFoundHandler,
+  upload,
 };
