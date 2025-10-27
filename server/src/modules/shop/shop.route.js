@@ -17,6 +17,8 @@ router.post("/", validateShop, ShopController.addShop);
 router.put("/:id", validateShop, ShopController.editShop);
 router.delete("/:id", ShopController.removeShop);
 router.put("/:id/status", ShopController.changeStatus);
+router.put("/:id/logo", ShopController.updateLogo);
+router.put("/:id/cover", ShopController.updateCoverImage);
 
 // Admin
 router.use(isAdminOrSuperAdmin);
