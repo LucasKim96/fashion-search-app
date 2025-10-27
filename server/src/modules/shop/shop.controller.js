@@ -138,8 +138,8 @@ export const updateCover = async (req, res, next) => {
 
 export const updateDefaultLogo = async (req, res, next) => {
   try {
-    console.log("-> updateDefaultLogo triggered");
-    console.log("file?", req.file);
+    // console.log("-> updateDefaultLogo triggered");
+    // console.log("file?", req.file);
 
     if (!req.file) {
       throw ApiError.badRequest("Chưa upload file logo mặc định mới");
