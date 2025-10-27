@@ -10,6 +10,7 @@ import {
   AuthRoutes,
   UserInfoRoutes,
   ShopRoutes,
+  UserInfoRoutes,
   CartRoutes,
   OrderRoutes,
 } from "./modules/index.js"; // import cho mongodb

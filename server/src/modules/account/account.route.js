@@ -18,8 +18,10 @@ router.get("/banned", authMiddleware, isAdminOrSuperAdmin, AccountController.get
 router.get("/unbanned", authMiddleware, isAdminOrSuperAdmin, AccountController.getUnbannedAccounts);
 // Chặn hoặc mở chặn tài khoản
 router.put("/ban-toggle/:id", authMiddleware, isAdminOrSuperAdmin, AccountController.toggleBanAccount);
-// Cập nhật vai trò tài khoản
+// Cập nhật vai trò tài khoản (ghi đè toàn bộ mảng)
 router.put("/update-roles/:id", authMiddleware, isSelfOrAdmin, AccountController.updateRoles);
+// Cập nhật (thêm / xóa) vai trò tài khoản linh hoạt
+router.put("/modify-roles/:id", authMiddleware, isAdminOrSuperAdmin, AccountController.modifyRoles);
 // Thống kê số lượng tài khoản theo trạng thái
 router.get("/stats/status", authMiddleware, isAdminOrSuperAdmin, AccountController.countByStatus);
 // Thống kê số lượng tài khoản bị khóa / không bị khóa
