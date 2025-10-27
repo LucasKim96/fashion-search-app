@@ -4,20 +4,19 @@ import { ApiError, withTransaction } from "../../utils/index.js";
 import { Account, Role } from "../account/index.js";
 import { Product, ProductVariant } from "../product/index.js";
 import { removeProductsFromAllCarts } from "../cart/cart.service.js";
+import path from "path";
+import fs from "fs";
 
 /**
  * Lấy danh sách shop với phân trang + filter
  */
 export const getShops = async (filters = {}, options = {}) => {
-  let { page = 1, limit = 10 } = options;
+  let { page = 1, limit = 20 } = options;
   const query = { isDeleted: { $ne: true } };
 
   // ép kiểu an toàn
   page = Number(page) > 0 ? Number(page) : 1;
   limit = Math.min(Math.max(Number(limit) || 20, 1), 100);
-
-  const maxLimit = 100;
-  if (limit > maxLimit) limit = maxLimit;
 
   // validate & chuẩn hóa filters
   if (filters.status) {
@@ -146,7 +145,7 @@ export const updateShop = async (shopId, accountId, updateData) => {
     throw ApiError.forbidden("Không có quyền cập nhật shop này");
 
   // chỉ cho phép update whitelist fields
-  const allowedFields = ["shopName", "logoUrl", "coverUrl", "description"];
+  const allowedFields = ["shopName", "description"];
   const safeUpdates = {};
   for (const key of allowedFields) {
     if (updateData[key] !== undefined) {
@@ -177,6 +176,44 @@ export const updateShop = async (shopId, accountId, updateData) => {
 
     throw error;
   }
+};
+
+export const updateLogo = async (shopId, accountId, logo) => {
+  const shop = await Shop.findOne({
+    _id: shopId,
+    isDeleted: { $ne: true },
+  });
+  if (!shop) throw ApiError.notFound("Không tìm thấy shop");
+
+  if (shop.accountId.toString() !== accountId)
+    throw ApiError.forbidden("Không có quyền cập nhật avatar shop này");
+
+  if (shop.logoUrl) {
+    const oldPath = path.resolve(shop.logoUrl);
+    if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+  }
+
+  shop.logoUrl = logo.replace(/\\/g, "/");
+  return await shop.save();
+};
+
+export const updateCoverImage = async (shopId, accountId, cover) => {
+  const shop = await Shop.findOne({
+    _id: shopId,
+    isDeleted: { $ne: true },
+  });
+  if (!shop) throw ApiError.notFound("Không tìm thấy shop");
+
+  if (shop.accountId.toString() !== accountId)
+    throw ApiError.forbidden("Không có quyền cập nhật cover image shop này");
+
+  if (shop.coverUrl) {
+    const oldPath = path.resolve(shop.coverUrl);
+    if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+  }
+
+  shop.coverUrl = cover.replace(/\\/g, "/");
+  return await shop.save();
 };
 
 /**

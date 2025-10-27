@@ -1,14 +1,14 @@
 // server/src/modules/shop/shop.controller.js
 import * as ShopService from "./shop.service.js";
 import { apiResponse } from "../../utils/index.js";
-import { validateObjectId } from "../../utils/index.js";
+import { validateObjectId, validateURL } from "../../utils/index.js";
 
 const { successResponse, errorResponse } = apiResponse;
 
 /**
  * Lấy danh sách tất cả shop
  */
-export const getShops = async (req, res) => {
+export const getShops = async (req, res, next) => {
   try {
     const { page, limit, status, shopName } = req.query;
 
@@ -26,14 +26,14 @@ export const getShops = async (req, res) => {
     return successResponse(res, result, "Lấy danh sách shop thành công");
   } catch (error) {
     // ApiError sẽ được xử lý bởi errorHandler middleware
-    throw error;
+    next(error);
   }
 };
 
 /**
  * Lấy thông tin chi tiết shop theo ID
  */
-export const getShop = async (req, res) => {
+export const getShop = async (req, res, next) => {
   try {
     const { id } = req.params;
 
@@ -43,14 +43,14 @@ export const getShop = async (req, res) => {
     return successResponse(res, shop, "Lấy thông tin shop thành công");
   } catch (error) {
     // ApiError sẽ được xử lý bởi errorHandler middleware
-    throw error;
+    next(error);
   }
 };
 
 /**
  * Tạo shop mới
  */
-export const addShop = async (req, res) => {
+export const addShop = async (req, res, next) => {
   try {
     const accountId = req.user?.id; // || req.body.accountId;
     const shopData = { ...req.body, accountId };
@@ -61,14 +61,14 @@ export const addShop = async (req, res) => {
     return successResponse(res, newShop, "Tạo shop thành công", 201);
   } catch (error) {
     // ApiError sẽ được xử lý bởi errorHandler middleware
-    throw error;
+    next(error);
   }
 };
 
 /**
  * Cập nhật shop (chỉ chủ shop)
  */
-export const editShop = async (req, res) => {
+export const editShop = async (req, res, next) => {
   try {
     const { id } = req.params;
     const accountId = req.user?.id; // || req.body.accountId;
@@ -83,14 +83,56 @@ export const editShop = async (req, res) => {
     return successResponse(res, updatedShop, "Cập nhật shop thành công");
   } catch (error) {
     // ApiError sẽ được xử lý bởi errorHandler middleware
-    throw error;
+    next(error);
+  }
+};
+
+export const updateLogo = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const accountId = req.user?.id; // || req.body.accountId;
+    const { logoUrl } = req.body;
+
+    validateObjectId(id, "shopID");
+    validateObjectId(accountId, "accID");
+    validateURL(logoUrl, "logo", true);
+
+    const updatedShop = await ShopService.updateLogo(id, accountId, logoUrl);
+    return successResponse(res, updatedShop, "Cập nhật avatar shop thành công");
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateCoverImage = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const accountId = req.user?.id; // || req.body.accountId;
+    const { coverUrl } = req.body;
+
+    validateObjectId(id, "shopID");
+    validateObjectId(accountId, "accID");
+    validateURL(coverUrl, "coverImage", true);
+
+    const updatedShop = await ShopService.updateCoverImage(
+      id,
+      accountId,
+      coverUrl
+    );
+    return successResponse(
+      res,
+      updatedShop,
+      "Cập nhật cover image shop thành công"
+    );
+  } catch (error) {
+    next(error);
   }
 };
 
 /**
  * Xóa shop (chỉ chủ shop)
  */
-export const removeShop = async (req, res) => {
+export const removeShop = async (req, res, next) => {
   try {
     const { id } = req.params;
     const accountId = req.user?.id; // || req.body.accountId;
@@ -102,7 +144,7 @@ export const removeShop = async (req, res) => {
     return successResponse(res, result, "Xóa shop thành công");
   } catch (error) {
     // ApiError sẽ được xử lý bởi errorHandler middleware
-    throw error;
+    next(error);
   }
 };
 
@@ -140,7 +182,7 @@ export const changeStatus = async (req, res, next) => {
 /**
  * Xóa các shop có accountId null (chỉ Super Admin)
  */
-export const deleteNullShops = async (req, res) => {
+export const deleteNullShops = async (req, res, next) => {
   try {
     const adminAccountId = req.user?.id; // || req.body.accountId;
     validateObjectId(adminAccountId, "adminID");
@@ -157,7 +199,7 @@ export const deleteNullShops = async (req, res) => {
     );
   } catch (error) {
     // ApiError sẽ được xử lý bởi errorHandler middleware
-    throw error;
+    next(error);
   }
 };
 
