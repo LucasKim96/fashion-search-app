@@ -12,6 +12,7 @@ import { getLastActiveString } from "./getLastActive.js";
 import { handleValidation } from "./validationHandler.js";
 import { handleMongooseError } from "./mongooseError.helper.js";
 import { withTransaction } from "./transaction.helper.js";
+import { createUploader } from "./createUploader.js";
 
 export {
   ApiError,
@@ -26,4 +27,5 @@ export {
   withTransaction,
   handleValidation,
   getLastActiveString,
+  createUploader,
 };
