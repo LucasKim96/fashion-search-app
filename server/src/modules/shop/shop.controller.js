@@ -1,7 +1,6 @@
 // server/src/modules/shop/shop.controller.js
 import * as ShopService from "./shop.service.js";
-import { apiResponse } from "../../utils/index.js";
-import { validateObjectId, validateURL } from "../../utils/index.js";
+import { apiResponse, ApiError, validateObjectId } from "../../utils/index.js";
 
 const { successResponse, errorResponse } = apiResponse;
 
@@ -137,6 +136,65 @@ export const updateCover = async (req, res, next) => {
   }
 };
 
+export const updateDefaultLogo = async (req, res, next) => {
+  try {
+    console.log("-> updateDefaultLogo triggered");
+    console.log("file?", req.file);
+
+    if (!req.file) {
+      throw ApiError.badRequest("Chưa upload file logo mặc định mới");
+    }
+
+    const { filename } = req.file;
+
+    // 🚨 TẠO NEW URL TRONG CONTROLLER
+    const newUrl = `/assets/shop-defaults/${filename}`;
+
+    // Truyền URL và tên file vào Service
+    const result = await ShopService.updateDefaultImageForShops("logo", newUrl);
+
+    return successResponse(
+      res,
+      {
+        newDefaultUrl: result.newDefaultUrl,
+        shopsUpdated: result.shopsUpdated,
+      },
+      `Cập nhật logo mặc định thành công. ${result.shopsUpdated} shop đã được cập nhật.`
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateDefaultCover = async (req, res, next) => {
+  try {
+    if (!req.file) {
+      throw ApiError.badRequest("Chưa upload file cover mặc định mới");
+    }
+
+    const { filename } = req.file;
+
+    // 🚨 TẠO NEW URL TRONG CONTROLLER
+    const newUrl = `/assets/shop-defaults/${filename}`;
+
+    // Truyền URL và tên file vào Service
+    const result = await ShopService.updateDefaultImageForShops(
+      "cover",
+      newUrl
+    );
+
+    return successResponse(
+      res,
+      {
+        newDefaultUrl: result.newDefaultUrl,
+        shopsUpdated: result.shopsUpdated,
+      },
+      `Cập nhật cover mặc định thành công. ${result.shopsUpdated} shop đã được cập nhật.`
+    );
+  } catch (error) {
+    next(error);
+  }
+};
 /**
  * Xóa shop (chỉ chủ shop)
  */

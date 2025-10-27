@@ -52,9 +52,9 @@ connectDB(process.env.MONGO_URI)
   .then(() => {
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`📂 Static folders:`);
-      console.log("📂 __dirname:", __dirname);
-      console.log("📂 ROOT_DIR:", ROOT_DIR);
+      // console.log(`📂 Static folders:`);
+      // console.log("📂 __dirname:", __dirname);
+      // console.log("📂 ROOT_DIR:", ROOT_DIR);
     });
   })
   .catch((err) => {
