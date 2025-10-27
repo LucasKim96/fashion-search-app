@@ -3,7 +3,8 @@ import express from "express";
 import * as ShopController from "./shop.controller.js";
 import { validateShop } from "../../middlewares/index.js";
 import { authMiddleware } from "../../middlewares/index.js";
-import { isShopOrAdmin } from "../../middlewares/role.middleware.js";
+import { isAdminOrSuperAdmin } from "../../middlewares/role.middleware.js";
+import { uploadShopImage } from "../../middlewares/index.js";
 
 const router = express.Router();
 
@@ -17,9 +18,19 @@ router.post("/", validateShop, ShopController.addShop);
 router.put("/:id", validateShop, ShopController.editShop);
 router.delete("/:id", ShopController.removeShop);
 router.put("/:id/status", ShopController.changeStatus);
+router.put(
+  "/:id/logo",
+  uploadShopImage.single("logo"),
+  ShopController.updateLogo
+);
+router.put(
+  "/:id/cover",
+  uploadShopImage.single("cover"),
+  ShopController.updateCover
+);
 
 // Admin
-router.use(isShopOrAdmin);
+router.use(isAdminOrSuperAdmin);
 router.put("/:id/restore", ShopController.restoreShop);
 
 // Super Admin only
