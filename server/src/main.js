@@ -24,6 +24,7 @@ const PORT = process.env.PORT || 5000;
 // Lấy đường dẫn tuyệt đối
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const ROOT_DIR = process.cwd();
 
 // Middleware
 app.use(cors());
@@ -31,7 +32,7 @@ app.use(express.json());
 
 // Static folder
 app.use("/assets", express.static(path.join(__dirname, "assets")));
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use("/uploads", express.static(path.join(ROOT_DIR, "uploads")));
 
 // Routes
 app.use("/api/accounts", AccountRoutes);
@@ -51,14 +52,14 @@ connectDB(process.env.MONGO_URI)
   .then(() => {
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
+      console.log(`📂 Static folders:`);
+      console.log("📂 __dirname:", __dirname);
+      console.log("📂 ROOT_DIR:", ROOT_DIR);
     });
   })
   .catch((err) => {
     console.error("❌ MongoDB connection error:", err);
     process.exit(1);
   });
-
-console.log("📂 Root working directory:", process.cwd());
-console.log("📁 __dirname:", __dirname);
 
 export default app;

@@ -101,9 +101,11 @@ export const updateLogo = async (req, res, next) => {
     const updatedShop = await ShopService.updateShopImage(
       id,
       accountId,
-      logoUrl
+      logoUrl,
+      "logo"
     );
-    return successResponse(res, updatedShop, "Cập nhật avatar shop thành công");
+
+    return successResponse(res, updatedShop, "Cập nhật logo shop thành công");
   } catch (error) {
     next(error);
   }
@@ -122,7 +124,8 @@ export const updateCover = async (req, res, next) => {
     const updatedShop = await ShopService.updateShopImage(
       id,
       accountId,
-      coverUrl
+      coverUrl,
+      "cover"
     );
     return successResponse(
       res,
