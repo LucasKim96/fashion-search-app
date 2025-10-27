@@ -97,9 +97,12 @@ export const updateLogo = async (req, res, next) => {
 
     validateObjectId(id, "shopID");
     validateObjectId(accountId, "accID");
-    validateURL(logoUrl, "logo", true);
 
-    const updatedShop = await ShopService.updateLogo(id, accountId, logoUrl);
+    const updatedShop = await ShopService.updateShopImage(
+      id,
+      accountId,
+      logoUrl
+    );
     return successResponse(res, updatedShop, "Cập nhật avatar shop thành công");
   } catch (error) {
     next(error);
@@ -115,9 +118,8 @@ export const updateCover = async (req, res, next) => {
 
     validateObjectId(id, "shopID");
     validateObjectId(accountId, "accID");
-    validateURL(coverUrl, "coverImage", true);
 
-    const updatedShop = await ShopService.updateCoverImage(
+    const updatedShop = await ShopService.updateShopImage(
       id,
       accountId,
       coverUrl

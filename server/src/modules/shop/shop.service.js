@@ -6,6 +6,18 @@ import { Product, ProductVariant } from "../product/index.js";
 import { removeProductsFromAllCarts } from "../cart/cart.service.js";
 import path from "path";
 import fs from "fs";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const DEFAULT_LOGO = "/assets/shop-defaults/shop-logo.png";
+const DEFAULT_COVER = "/assets/shop-defaults/shop-cover.jpg";
+export const DEFAULT_FOLDER = path.resolve(
+  process.cwd(),
+  "assets",
+  "shop-defaults"
+);
 
 /**
  * Lấy danh sách shop với phân trang + filter
@@ -92,16 +104,17 @@ export const createShop = async (data) => {
 
   const trimmedShopName = shopName.trim();
   const trimmedDescription = description?.trim() || "";
-  const trimmedLogoUrl = logoUrl?.trim() || "";
-  const trimmedCoverUrl = coverUrl?.trim() || "";
+
+  const safeLogoUrl = logoUrl?.trim() || DEFAULT_LOGO;
+  const safeCoverUrl = coverUrl?.trim() || DEFAULT_COVER;
 
   return await withTransaction(async (session) => {
     const shop = await Shop.create(
       [
         {
           shopName: trimmedShopName,
-          logoUrl: trimmedLogoUrl,
-          coverUrl: trimmedCoverUrl,
+          logoUrl: safeLogoUrl,
+          coverUrl: safeCoverUrl,
           description: trimmedDescription,
           accountId,
         },
@@ -193,18 +206,35 @@ export const updateShopImage = async (
   if (shop.accountId.toString() !== accountId)
     throw ApiError.forbidden("Không có quyền cập nhật shop này");
 
-  // Xóa ảnh cũ (nếu có và khác ảnh mới)
   const oldPath = shop[type + "Url"];
+
+  // ✅ Hàm chuẩn hóa đường dẫn an toàn
+  const resolvePath = (urlPath) => {
+    const safePath = urlPath.startsWith("/") ? urlPath.slice(1) : urlPath;
+    return path.join(process.cwd(), safePath);
+  };
+
+  // ✅ Nếu có ảnh cũ và khác ảnh mới → xử lý xóa
   if (oldPath && oldPath !== newUrl) {
-    const filePath = path.join(process.cwd(), oldPath);
-    if (fs.existsSync(filePath)) {
-      fs.unlink(filePath, (err) => {
-        if (err) console.error("⚠️ Không thể xóa ảnh cũ:", err);
-      });
+    const filePath = resolvePath(oldPath);
+
+    // ✅ Không xóa ảnh mặc định
+    const isDefaultImage =
+      oldPath === DEFAULT_LOGO ||
+      oldPath === DEFAULT_COVER ||
+      filePath.startsWith(DEFAULT_FOLDER);
+
+    if (!isDefaultImage && fs.existsSync(filePath)) {
+      try {
+        fs.unlinkSync(filePath);
+        console.log(`🗑️ Đã xóa ảnh ${type} cũ: ${filePath}`);
+      } catch (err) {
+        console.error("⚠️ Không thể xóa ảnh cũ:", err);
+      }
     }
   }
 
-  // Cập nhật ảnh mới
+  // ✅ Cập nhật ảnh mới
   shop[type + "Url"] = newUrl;
   await shop.save();
 

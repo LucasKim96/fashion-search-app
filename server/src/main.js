@@ -10,7 +10,6 @@ import {
   AuthRoutes,
   UserInfoRoutes,
   ShopRoutes,
-  UserInfoRoutes,
   CartRoutes,
   OrderRoutes,
 } from "./modules/index.js"; // import cho mongodb
@@ -58,5 +57,8 @@ connectDB(process.env.MONGO_URI)
     console.error("❌ MongoDB connection error:", err);
     process.exit(1);
   });
+
+console.log("📂 Root working directory:", process.cwd());
+console.log("📁 __dirname:", __dirname);
 
 export default app;
