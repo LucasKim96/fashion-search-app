@@ -214,6 +214,95 @@ export const updateRoles = async (id, roleIds) => {
   }
 };
 
+// action: "add" | "remove"
+// Thêm hoặc xóa role linh hoạt
+export const modifyRoles = async (id, roleIds, action) => {
+  try {
+    const account = await Account.findById(id).populate("roles");
+    if (!account) throw new Error("Không tìm thấy tài khoản!");
+
+    // Lấy danh sách role hợp lệ
+    const validRoles = await Role.find({ _id: { $in: roleIds } });
+    if (validRoles.length !== roleIds.length)
+      throw new Error("Một hoặc nhiều vai trò không hợp lệ!");
+
+    const currentRoleIds = account.roles.map((r) => r._id.toString());
+    const currentRoleNames = account.roles.map((r) => r.roleName);
+
+    if (action === "add") {
+      let addedCount = 0;
+      for (const role of validRoles) {
+        const roleIdStr = role._id.toString();
+        if (!currentRoleIds.includes(roleIdStr)) {
+          currentRoleIds.push(roleIdStr);
+          addedCount++;
+        }
+      }
+
+      if (addedCount === 0)
+        throw new Error("Tất cả vai trò được chọn đã tồn tại trong tài khoản!");
+    }
+
+    else if (action === "remove") {
+      let removedCount = 0;
+      for (const role of validRoles) {
+        const roleIdStr = role._id.toString();
+
+        // Nếu vai trò không có trong account -> bỏ qua
+        if (!currentRoleIds.includes(roleIdStr)) {
+          continue; // có thể thay bằng throw nếu muốn chặt chẽ hơn
+        }
+
+        // Nếu chỉ còn 1 vai trò thì không cho xóa
+        if (currentRoleIds.length === 1) {
+          throw new Error("Không thể xóa, tài khoản phải có ít nhất 1 vai trò!");
+        }
+
+        // Trường hợp đặc biệt: chỉ còn ["Khách hàng", "Chủ shop"]
+        if (
+          currentRoleNames.includes("Khách hàng") &&
+          currentRoleNames.includes("Chủ shop")
+        ) {
+          // Không cho phép xóa "Khách hàng"
+          if (role.roleName === "Khách hàng") {
+            throw new Error(
+              "Không thể xóa vai trò 'Khách hàng' — đây là vai trò mặc định!"
+            );
+          }
+        }
+
+        // Xóa role hợp lệ
+        currentRoleIds.splice(currentRoleIds.indexOf(roleIdStr), 1);
+        removedCount++;
+      }
+
+      if (removedCount === 0)
+        throw new Error("Không có vai trò nào trong danh sách cần xóa thuộc tài khoản này!");
+    }
+
+    else {
+      throw new Error("Hành động không hợp lệ! (chỉ hỗ trợ 'add' hoặc 'remove')");
+    }
+
+    // Cập nhật roles
+    account.roles = currentRoleIds;
+    await account.save();
+
+    const updatedAccount = await Account.findById(id).populate("roles");
+
+    return {
+      success: true,
+      message:
+        action === "add"
+          ? "Đã thêm vai trò cho tài khoản thành công!"
+          : "Đã xóa vai trò cho tài khoản thành công!",
+      data: updatedAccount,
+    };
+  } catch (error) {
+    return { success: false, message: error.message };
+  }
+};
+
 export const countByStatus = async () => {
   try {
     const stats = await Account.aggregate([

@@ -8,7 +8,7 @@ dotenv.config({ path: path.resolve("./server/.env") });
 const MONGO_URI =
   process.env.MONGO_URI || "mongodb://localhost:27017/fashiondb";
 
-// ⚙️ Dữ liệu seed mẫu
+// Dữ liệu seed mẫu
 const cartsSeed = [
   {
     accountId: "68e8bfe2cb715d27f9409f6b", // Account 1
