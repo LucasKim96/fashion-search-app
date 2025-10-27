@@ -13,11 +13,7 @@ const __dirname = path.dirname(__filename);
 
 const DEFAULT_LOGO = "/assets/shop-defaults/shop-logo.png";
 const DEFAULT_COVER = "/assets/shop-defaults/shop-cover.jpg";
-export const DEFAULT_FOLDER = path.resolve(
-  process.cwd(),
-  "assets",
-  "shop-defaults"
-);
+export const DEFAULT_FOLDER = path.join(__dirname, "assets", "shop-defaults");
 
 /**
  * Lấy danh sách shop với phân trang + filter
@@ -208,26 +204,38 @@ export const updateShopImage = async (
 
   const oldPath = shop[type + "Url"];
 
-  // ✅ Hàm chuẩn hóa đường dẫn an toàn
+  // ✅ Chuẩn hóa path an toàn
   const resolvePath = (urlPath) => {
     const safePath = urlPath.startsWith("/") ? urlPath.slice(1) : urlPath;
     return path.join(process.cwd(), safePath);
   };
 
-  // ✅ Nếu có ảnh cũ và khác ảnh mới → xử lý xóa
+  // ✅ Kiểm tra và xóa ảnh cũ (nếu đủ điều kiện)
   if (oldPath && oldPath !== newUrl) {
     const filePath = resolvePath(oldPath);
 
-    // ✅ Không xóa ảnh mặc định
+    // Ảnh mặc định (không xóa)
     const isDefaultImage =
       oldPath === DEFAULT_LOGO ||
       oldPath === DEFAULT_COVER ||
       filePath.startsWith(DEFAULT_FOLDER);
 
-    if (!isDefaultImage && fs.existsSync(filePath)) {
+    // Ảnh đang được field khác dùng (logo ↔ cover)
+    const isUsedByOtherField =
+      (type === "logo" && shop.coverUrl === oldPath) ||
+      (type === "cover" && shop.logoUrl === oldPath);
+
+    // Ảnh không nằm trong thư mục uploads (bảo vệ)
+    const isInsideUploads = filePath.includes(
+      path.join(process.cwd(), "uploads")
+    );
+
+    if (!isDefaultImage && !isUsedByOtherField && isInsideUploads) {
       try {
-        fs.unlinkSync(filePath);
-        console.log(`🗑️ Đã xóa ảnh ${type} cũ: ${filePath}`);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+          console.log(`🗑️ Đã xóa ảnh ${type} cũ: ${filePath}`);
+        }
       } catch (err) {
         console.error("⚠️ Không thể xóa ảnh cũ:", err);
       }
