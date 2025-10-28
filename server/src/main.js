@@ -31,7 +31,7 @@ app.use(cors());
 app.use(express.json());
 
 // Static folder
-app.use("/assets", express.static(path.join(__dirname, "assets")));
+app.use("/assets", express.static(path.join(ROOT_DIR, "assets")));
 app.use("/uploads", express.static(path.join(ROOT_DIR, "uploads")));
 
 // Routes

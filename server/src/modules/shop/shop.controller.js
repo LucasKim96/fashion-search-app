@@ -1,8 +1,12 @@
 // server/src/modules/shop/shop.controller.js
 import * as ShopService from "./shop.service.js";
 import { apiResponse, ApiError, validateObjectId } from "../../utils/index.js";
+import path from "path";
+import fs from "fs";
 
 const { successResponse, errorResponse } = apiResponse;
+const DEFAULT_LOGO = "assets/shop/default-logo.png";
+const DEFAULT_COVER = "assets/shop/default-cover.jpg";
 
 /**
  * Lấy danh sách tất cả shop
@@ -138,63 +142,51 @@ export const updateCover = async (req, res, next) => {
 
 export const updateDefaultLogo = async (req, res, next) => {
   try {
-    // console.log("-> updateDefaultLogo triggered");
-    // console.log("file?", req.file);
+    if (!req.file)
+      return next(ApiError.badRequest("Up cái logo lên coi bro 😎"));
 
-    if (!req.file) {
-      throw ApiError.badRequest("Chưa upload file logo mặc định mới");
+    const targetPath = path.join(process.cwd(), DEFAULT_LOGO);
+
+    // 1. Xóa file cũ nếu tồn tại
+    if (fs.existsSync(targetPath)) {
+      fs.unlinkSync(targetPath);
     }
 
-    const { filename } = req.file;
+    // 2. Ghi đè file mới vào đúng tên
+    fs.renameSync(req.file.path, targetPath);
 
-    // 🚨 TẠO NEW URL TRONG CONTROLLER
-    const newUrl = `/assets/shop-defaults/${filename}`;
-
-    // Truyền URL và tên file vào Service
-    const result = await ShopService.updateDefaultImageForShops("logo", newUrl);
-
-    return successResponse(
-      res,
-      {
-        newDefaultUrl: result.newDefaultUrl,
-        shopsUpdated: result.shopsUpdated,
-      },
-      `Cập nhật logo mặc định thành công. ${result.shopsUpdated} shop đã được cập nhật.`
-    );
-  } catch (error) {
-    next(error);
+    return successResponse(res, {
+      message: "Logo mới fresh như bug-free code 💅",
+      logoUrl: DEFAULT_LOGO,
+    });
+  } catch (err) {
+    next(err);
   }
 };
 
 export const updateDefaultCover = async (req, res, next) => {
   try {
-    if (!req.file) {
-      throw ApiError.badRequest("Chưa upload file cover mặc định mới");
+    if (!req.file) throw ApiError.badRequest("Up cover đi bạn eyyy");
+
+    const targetPath = path.join(process.cwd(), DEFAULT_COVER);
+
+    // Delete old one
+    if (fs.existsSync(targetPath)) {
+      fs.unlinkSync(targetPath);
     }
 
-    const { filename } = req.file;
+    // Replace new image with fixed filename
+    fs.renameSync(req.file.path, targetPath);
 
-    // 🚨 TẠO NEW URL TRONG CONTROLLER
-    const newUrl = `/assets/shop-defaults/${filename}`;
-
-    // Truyền URL và tên file vào Service
-    const result = await ShopService.updateDefaultImageForShops(
-      "cover",
-      newUrl
-    );
-
-    return successResponse(
-      res,
-      {
-        newDefaultUrl: result.newDefaultUrl,
-        shopsUpdated: result.shopsUpdated,
-      },
-      `Cập nhật cover mặc định thành công. ${result.shopsUpdated} shop đã được cập nhật.`
-    );
-  } catch (error) {
-    next(error);
+    return successResponse(res, {
+      message: "Ảnh cover default mới đã được cập nhật 🎉",
+      coverUrl: DEFAULT_COVER,
+    });
+  } catch (err) {
+    next(err);
   }
 };
+
 /**
  * Xóa shop (chỉ chủ shop)
  */

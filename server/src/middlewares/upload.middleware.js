@@ -30,11 +30,7 @@ export const uploadShopImage = createUploader({
 
 export const uploadShopDefaultImage = createUploader({
   destinationGenerator: (req) => {
-    // KHÔNG TÁCH THƯ MỤC CON, CHỈ TRẢ VỀ THƯ MỤC GỐC CHUNG
-    // Đường dẫn cuối cùng sẽ là: src/assets/shop-defaults/
-    // console.log("-> Multer catching default image...");
-
-    return "shop-defaults";
+    return "shop";
   },
   useAssets: true, // Vẫn giữ nguyên là TRUE để lưu vào src/assets
 });
