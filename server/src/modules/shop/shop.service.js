@@ -8,12 +8,12 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// const __filename = fileURLToPath(import.meta.url);
+// const __dirname = path.dirname(__filename);
 
 const DEFAULT_LOGO = "/assets/shop/shop-logo.png";
 const DEFAULT_COVER = "/assets/shop/shop-cover.jpg";
-const ASSETS_ROOT = path.join(process.cwd(), "src", "assets");
+const ASSETS_ROOT = path.join(process.cwd(), "assets");
 export const DEFAULT_FOLDER = path.join(ASSETS_ROOT, "shop");
 
 /**
@@ -229,9 +229,7 @@ export const updateShopImage = async (
 
     // Ảnh mặc định (không xóa)
     const isDefaultImage =
-      oldPath === DEFAULT_LOGO ||
-      oldPath === DEFAULT_COVER ||
-      filePath.startsWith(DEFAULT_FOLDER);
+      oldPath === DEFAULT_LOGO || oldPath === DEFAULT_COVER;
 
     // Ảnh đang được field khác dùng (logo ↔ cover)
     const isUsedByOtherField =
