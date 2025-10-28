@@ -140,7 +140,12 @@ export const createShop = async (data) => {
  */
 export const updateShop = async (shopId, accountId, updateData) => {
   // kiểm tra accountId có tồn tại trong database không
-  const account = await Account.findById(accountId);
+  const account = await Account.findById(accountId).populate("roles");
+  const isOwner = shop.accountId?._id?.toString() === accountId.toString();
+  const isAdmin = account.roles.some(
+    (r) => r.roleName === "Super Admin" || r.level >= 3
+  );
+
   if (!account) {
     throw ApiError.notFound("Tài khoản không tồn tại");
   }
@@ -151,9 +156,9 @@ export const updateShop = async (shopId, accountId, updateData) => {
   });
   if (!shop) throw ApiError.notFound("Không tìm thấy shop");
 
-  if (shop.accountId.toString() !== accountId)
+  if (!isAdmin && !isOwner) {
     throw ApiError.forbidden("Không có quyền cập nhật shop này");
-
+  }
   // chỉ cho phép update whitelist fields
   const allowedFields = ["shopName", "description"];
   const safeUpdates = {};
@@ -273,8 +278,9 @@ export const deleteShop = async (shopId, accountId) => {
   const isSuperAdmin = account.roles.some(
     (r) => r.roleName === "Super Admin" || r.level >= 4
   );
+  const isOwner = shop.accountId?._id?.toString() === accountId.toString();
 
-  if (!isSuperAdmin && shop.accountId.toString() !== accountId)
+  if (!isSuperAdmin && !isOwner)
     throw ApiError.forbidden("Không có quyền xóa shop này");
 
   return await withTransaction(async (session) => {
