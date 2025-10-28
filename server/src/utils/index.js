@@ -9,6 +9,8 @@ import { handleMongooseError } from "./mongooseError.helper.js";
 import { withTransaction } from "./transaction.helper.js";
 import { attachImagesToValues } from "./attachImagesToValues.js"
 import { rollbackFiles } from "./rollbackFiles.js"
+import { generateVariantsCombinations } from "./generateVariantsCombinations.js"
+
 export {
   ApiError,
   apiResponse,
@@ -21,4 +23,5 @@ export {
   getLastActiveString,
   attachImagesToValues,
   rollbackFiles,
+  generateVariantsCombinations,
 };

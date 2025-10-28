@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import Attribute from "./attribute.model.js";
 import AttributeValue from "./attributeValue.model.js";
 import Shop from "../shop/shop.model.js";
-import { withTransaction } from "../../utils/transaction.helper.js";
+import { withTransaction } from "../../utils/index.js";
 import fs from "fs";
 import path from "path";
 
@@ -33,20 +33,6 @@ const _fetchAttributeWithValues = async (attributeId, session = null) => {
   return { ...attribute, values };
 };
 
-const _mergeValuesWithShopOverrides = (values, shopOverrides = []) => {
-  const overridesMap = new Map(shopOverrides.map((o) => [String(o.attributeValueId), o]));
-  return values.map((v) => {
-    const ov = overridesMap.get(String(v._id));
-    return {
-      _id: v._id,
-      value: ov?.customValue ?? v.value,
-      image: ov?.customImage ?? v.image ?? null,
-      isOverridden: !!ov,
-      original: v,
-    };
-  });
-};
-
 /**
  * Lấy danh sách Attribute + AttributeValue linh hoạt
  * @param {Object} options
@@ -61,7 +47,7 @@ const _mergeValuesWithShopOverrides = (values, shopOverrides = []) => {
 export const getAttributesFlexible = async ({
   accountId,
   isAdmin = false,
-  includeInactive = false,
+  includeInactive = false, 
   page = 1,
   limit = 20,
   sortBy = "createdAt",

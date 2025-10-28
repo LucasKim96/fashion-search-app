@@ -1,508 +1,481 @@
-// server/src/modules/product/product.service.js
 import mongoose from "mongoose";
-import Product from "./product.model.js";
 import ProductVariant from "./productVariant.model.js";
+import Product from "./product.model.js";
 import Attribute from "./attribute.model.js";
 import AttributeValue from "./attributeValue.model.js";
-import ShopAttributeValue from "./shopAttributeValue.model.js";
-import { generateVariantKey } from "../../utils/generateVariantKey.js";
+import { createProductVariantsBulk } from "./productVariant.service.js";
+import Shop from "../shop/shop.model.js";
+import fs from "fs";
+import path from "path";
+import { withTransaction, generateVariantsCombinations} from "../../utils/index.js";
+
+const productUploadDir = path.resolve("src/uploads/products");
+const productTrashDir = path.resolve("src/uploads/trash/products");
+if (!fs.existsSync(productTrashDir)) fs.mkdirSync(productTrashDir, { recursive: true });
 
 const toObjectId = (id) => (mongoose.Types.ObjectId.isValid(id) ? mongoose.Types.ObjectId(id) : null);
 
 /**
- * Helper: compute effective price for a variant
- * - attributes: [{ attributeId, valueId }]
- * - basePrice: number
- * - shopId: shop of the product (to check overrides)
+ * Lấy danh sách sản phẩm
+ * @param {Object} options
+ * @param {String|ObjectId} [options.shopId] - Lọc sản phẩm theo shopId (nếu có)
+ * @param {String|ObjectId} [options.accountId] - Nếu không có shopId, có thể truyền accountId để xác định shop
+ * @param {Boolean} [options.includeInactive=false] - true => lấy cả sản phẩm ẩn; false => chỉ lấy isActive=true
+ * @returns {Object} { success, message, data }
  */
-const computeVariantPrice = async (attributes, basePrice, shopId) => {
+export const getAllProducts = async ({ shopId, accountId, includeInactive = false }) => {
   try {
-    let total = basePrice || 0;
-    for (const a of attributes) {
-      const val = await AttributeValue.findById(a.valueId).lean();
-      if (!val) continue;
-      // check override
-      const ov = await ShopAttributeValue.findOne({ shopId, attributeValueId: val._id }).lean();
-      const adj = ov?.customPriceAdjustment ?? val.priceAdjustment ?? 0;
-      total += adj;
-    }
-    return total;
-  } catch (err) {
-    throw err;
-  }
-};
+    const filter = {};
 
-/**
- * Helper: build populated variant object with computed price and merged override info
- */
-const buildPopulatedVariant = async (variant) => {
-  // variant is a ProductVariant doc (or plain object)
-  const v = variant.toObject ? variant.toObject() : variant;
-  await Product.populate(v, { path: "productId", select: "pdName basePrice shopId images isActive" });
+    // --- Xác định shopId ---
+    let resolvedShopId = null;
 
-  // populate attributes value and attribute
-  await ProductVariant.populate(v, [
-    { path: "attributes.attributeId", model: "Attribute" },
-    { path: "attributes.valueId", model: "AttributeValue" },
-  ]);
-
-  const product = v.productId;
-  const shopId = product?.shopId;
-
-  // compute price
-  const price = await computeVariantPrice(v.attributes, product?.basePrice ?? 0, shopId);
-  v.calculatedPrice = price;
-
-  // attach display names and check overrides
-  v.attributes = await Promise.all(
-    v.attributes.map(async (a) => {
-      const valueDoc = a.valueId || (await AttributeValue.findById(a.valueId).lean());
-      const attrDoc = a.attributeId || (await Attribute.findById(a.attributeId).lean());
-      const override = await ShopAttributeValue.findOne({ shopId, attributeValueId: valueDoc._id }).lean();
-      return {
-        attributeId: attrDoc?._id,
-        attributeLabel: attrDoc?.label ?? null,
-        valueId: valueDoc?._id,
-        value: override?.customValue ?? valueDoc?.value,
-        valueOriginal: valueDoc?.value,
-        override: !!override,
-        overrideData: override || null,
-      };
-    })
-  );
-
-  return v;
-};
-
-/* ============================
-   Product Service Functions
-   ============================ */
-
-export const getProductsFull = async ({ page = 1, limit = 20, filter = {} }) => {
-  try {
-    const skip = (Math.max(1, page) - 1) * limit;
-    const q = { ...filter };
-    const total = await Product.countDocuments(q);
-    const products = await Product.find(q).skip(skip).limit(limit).lean();
-
-    // For each product, populate variants + merged attributes
-    const items = [];
-    for (const p of products) {
-      const variants = await ProductVariant.find({ productId: p._id }).lean();
-      // populate attributes & values & overrides per variant
-      const populated = await Promise.all(variants.map((v) => buildPopulatedVariant(v)));
-      items.push({ ...p, variants: populated });
-    }
-
-    return { success: true, message: "Lấy danh sách sản phẩm (full) thành công", data: { items, total, page, limit } };
-  } catch (error) {
-    return { success: false, message: error.message };
-  }
-};
-
-export const getProductByIdFull = async (id) => {
-  try {
-    if (!toObjectId(id)) throw new Error("Id sản phẩm không hợp lệ");
-    const product = await Product.findById(id).lean();
-    if (!product) throw new Error("Không tìm thấy sản phẩm");
-
-    const variants = await ProductVariant.find({ productId: id }).lean();
-    const populated = await Promise.all(variants.map((v) => buildPopulatedVariant(v)));
-
-    // also include merged attributes for product's shop (use Attribute/AttributeValue/ShopAttributeValue)
-    const attrIds = await Attribute.find({ $or: [{ isGlobal: true }, { shopId: product.shopId }] }).select("_id").lean();
-    // but better to rely on attributeService.getAttributesForShopFull if exists. Here simplify:
-    // We'll fetch attributes that have values related to this product's variants (practical)
-    const valueIds = [];
-    populated.forEach((pv) => pv.attributes.forEach((a) => valueIds.push(a.valueId)));
-    const distinctAttrIds = [...new Set(valueIds.map((v) => String(v)))];
-
-    return { success: true, message: "Lấy sản phẩm thành công", data: { product, variants: populated } };
-  } catch (error) {
-    return { success: false, message: error.message };
-  }
-};
-
-/**
- * Generate Cartesian product of arrays of arrays
- * e.g. [[a,b],[1,2]] -> [[a,1],[a,2],[b,1],[b,2]]
- */
-const cartesianProduct = (arrays) => {
-  if (!arrays.length) return [];
-  return arrays.reduce((acc, curr) => {
-    const res = [];
-    acc.forEach((a) => {
-      curr.forEach((c) => {
-        res.push(a.concat([c]));
-      });
-    });
-    return res;
-  }, [[]]);
-};
-
-/**
- * Generate variants for a product from given attribute value lists
- * attributesList: [{ attributeId, values: [{ valueId, ... }] }, ...]
- */
-export const generateVariantsForProduct = async (productId, attributesList = []) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-  try {
-    if (!toObjectId(productId)) throw new Error("productId không hợp lệ");
-    const product = await Product.findById(productId).session(session);
-    if (!product) throw new Error("Không tìm thấy product");
-
-    // prepare arrays of valueId arrays
-    const arrays = attributesList.map((a) => a.values.map((v) => ({ attributeId: a.attributeId, valueId: v.valueId })));
-    // cartesian product -> each combo is array of {attributeId, valueId}
-    const combos = cartesianProduct(arrays);
-
-    const created = [];
-    for (const combo of combos) {
-      // generate variantKey (call helper with attributes)
-      const key = await generateVariantKey(combo);
-      // ensure uniqueness per product
-      const exists = await ProductVariant.findOne({ productId, variantKey: key }).session(session);
-      if (exists) {
-        created.push({ existing: true, variant: exists });
-        continue;
+    if (shopId) {
+      if (!mongoose.Types.ObjectId.isValid(shopId)) {
+        throw new Error("shopId không hợp lệ");
       }
-      const v = await ProductVariant.create([{
-        productId,
-        variantKey: key,
-        attributes: combo,
-        stock: 0,
-        images: [],
-      }], { session });
-      created.push({ existing: false, variant: v[0] });
-    }
-
-    await session.commitTransaction();
-    session.endSession();
-
-    // return populated variants
-    const result = await Promise.all(created.map(async (c) => ({ existing: c.existing, variant: await buildPopulatedVariant(c.variant) })));
-    return { success: true, message: "Sinh variants thành công", data: result };
-  } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
-    return { success: false, message: error.message };
-  }
-};
-
-/**
- * Full-create product: create product + attributes/values (TH1-TH4) + optionally generate variants
- * Payload as described in your spec.
- */
-export const fullCreateProduct = async (payload) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-  try {
-    const {
-      pdName,
-      basePrice,
-      description,
-      images = [],
-      shopId,
-      attributes = [],
-      autoGenerateVariants = true,
-    } = payload;
-
-    if (!pdName) throw new Error("Thiếu tên sản phẩm");
-    if (!shopId || !toObjectId(shopId)) throw new Error("shopId không hợp lệ");
-
-    // 1) create product
-    const product = await Product.create([{
-      pdName,
-      basePrice,
-      description: description || "",
-      images,
-      shopId,
-    }], { session });
-    const createdProduct = product[0];
-
-    // 2) process each attribute (TH1-TH4)
-    // We'll build a list attributesList = [{ attributeId, values: [{ valueId, value }] }, ...]
-    const attributesList = [];
-
-    for (const attr of attributes) {
-      const mode = attr.mode; // "create" | "use_global" | "use_global_and_add_shop_values"
-      let attributeDoc = null;
-
-      if (mode === "create") {
-        // create attribute under this shop
-        const a = await Attribute.create([{ label: attr.label, isGlobal: false, shopId }], { session });
-        attributeDoc = a[0];
-      } else if (mode === "use_global" || mode === "use_global_and_add_shop_values") {
-        // expect attributeId provided
-        if (!attr.attributeId) throw new Error(`Thiếu attributeId cho ${attr.label}`);
-        attributeDoc = await Attribute.findById(attr.attributeId).session(session);
-        if (!attributeDoc) throw new Error(`Attribute ${attr.attributeId} không tồn tại`);
-      } else {
-        // fallback: if attributeId provided, use it; else create
-        if (attr.attributeId) {
-          attributeDoc = await Attribute.findById(attr.attributeId).session(session);
-          if (!attributeDoc) throw new Error(`Attribute ${attr.attributeId} không tồn tại`);
-        } else {
-          const a = await Attribute.create([{ label: attr.label, isGlobal: false, shopId }], { session });
-          attributeDoc = a[0];
-        }
+      resolvedShopId = mongoose.Types.ObjectId(shopId);
+    } else if (accountId) {
+      // Nếu không truyền shopId, dùng accountId để tra ra shop
+      if (!mongoose.Types.ObjectId.isValid(accountId)) {
+        throw new Error("accountId không hợp lệ");
       }
 
-      // now process values array
-      const valuesOut = [];
-      for (const v of attr.values || []) {
-        // three possible v.mode values:
-        // - "use_global": use existing valueId required
-        // - "create_shop": create new AttributeValue with shopId
-        // - unspecified -> if v.valueId exists, use it; else create new shop value
-        if (v.mode === "use_global") {
-          if (!v.valueId) throw new Error(`Thiếu valueId cho global value ${v.value}`);
-          // verify existence
-          const valDoc = await AttributeValue.findById(v.valueId).session(session);
-          if (!valDoc) throw new Error(`AttributeValue ${v.valueId} không tồn tại`);
-          valuesOut.push({ valueId: valDoc._id, value: valDoc.value });
-        } else if (v.mode === "create_shop") {
-          // create new value bound to shop
-          const newVal = await AttributeValue.create([{
-            attributeId: attributeDoc._id,
-            value: v.value,
-            image: v.image || "",
-            priceAdjustment: v.priceAdjustment ?? 0,
-            shopId,
-          }], { session });
-          valuesOut.push({ valueId: newVal[0]._id, value: newVal[0].value });
-        } else if (v.mode === "use_global_and_add_shop") {
-          // use provided global valueId if exists; else create new shop value
-          if (v.valueId) {
-            const valDoc = await AttributeValue.findById(v.valueId).session(session);
-            if (!valDoc) throw new Error(`AttributeValue ${v.valueId} không tồn tại`);
-            valuesOut.push({ valueId: valDoc._id, value: valDoc.value });
-          } else {
-            const newVal = await AttributeValue.create([{
-              attributeId: attributeDoc._id,
-              value: v.value,
-              image: v.image || "",
-              priceAdjustment: v.priceAdjustment ?? 0,
-              shopId,
-            }], { session });
-            valuesOut.push({ valueId: newVal[0]._id, value: newVal[0].value });
-          }
-        } else {
-          // default behavior: if valueId provided -> use it, else create shop value
-          if (v.valueId) {
-            const valDoc = await AttributeValue.findById(v.valueId).session(session);
-            if (!valDoc) throw new Error(`AttributeValue ${v.valueId} không tồn tại`);
-            valuesOut.push({ valueId: valDoc._id, value: valDoc.value });
-          } else {
-            const newVal = await AttributeValue.create([{
-              attributeId: attributeDoc._id,
-              value: v.value,
-              image: v.image || "",
-              priceAdjustment: v.priceAdjustment ?? 0,
-              shopId,
-            }], { session });
-            valuesOut.push({ valueId: newVal[0]._id, value: newVal[0].value });
-          }
-        }
-
-        // If user requested shop-level override (TH4), create ShopAttributeValue
-        if (v.override && v.valueId) {
-          // create or update override
-          await ShopAttributeValue.findOneAndUpdate(
-            { shopId, attributeValueId: v.valueId },
-            {
-              $set: {
-                customValue: v.override.customValue ?? undefined,
-                customImage: v.override.customImage ?? undefined,
-                customPriceAdjustment: v.override.customPriceAdjustment ?? undefined,
-                isActive: v.override.isActive ?? true,
-              },
-            },
-            { upsert: true, new: true, session }
-          );
-        }
-      } // end values loop
-
-      attributesList.push({ attributeId: attributeDoc._id, label: attributeDoc.label, values: valuesOut });
-    } // end attributes loop
-
-    // 3) optionally auto-generate variants
-    let generatedVariants = [];
-    if (autoGenerateVariants && attributesList.length) {
-      // prepare arrays as expected by generateVariantsForProduct
-      const arrays = attributesList.map((a) => ({
-        attributeId: a.attributeId,
-        values: a.values.map((v) => ({ valueId: v.valueId })),
-      }));
-      const genRes = await generateVariantsForProduct(createdProduct._id, arrays);
-      if (!genRes.success) throw new Error(genRes.message);
-      generatedVariants = genRes.data;
+      const shop = await Shop.findOne({ accountId }).select("_id").lean();
+      if (!shop) {
+        throw new Error("Không tìm thấy shop tương ứng với accountId này");
+      }
+      resolvedShopId = shop._id;
     }
 
-    await session.commitTransaction();
-    session.endSession();
+    if (resolvedShopId) {
+      filter.shopId = resolvedShopId;
+    }
 
-    // prepare response: product + attributesList + generatedVariants
+    // --- Lọc theo trạng thái hoạt động ---
+    if (!includeInactive) {
+      filter.isActive = true;
+    }
+
+    // --- Truy vấn dữ liệu ---
+    const products = await Product.find(filter)
+      .sort({ createdAt: -1 }) // mới nhất lên trước
+      .select("_id pdName basePrice images isActive shopId createdAt updatedAt") // chọn cột cần thiết
+      .lean();
+
     return {
       success: true,
-      message: "Tạo sản phẩm hoàn chỉnh thành công",
+      message: "Lấy danh sách sản phẩm thành công",
+      data: products,
+    };
+  } catch (error) {
+    console.error("getAllProducts error:", error);
+    return {
+      success: false,
+      message: error.message || "Lỗi khi lấy danh sách sản phẩm",
+      data: [],
+    };
+  }
+};
+
+/**
+ * Lấy chi tiết 1 sản phẩm kèm toàn bộ biến thể
+ * @param {String} productId
+ */
+export const getProductDetail = async (productId) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(productId))
+      throw new Error("ID sản phẩm không hợp lệ");
+
+    //  Lấy sản phẩm chính 
+    const product = await Product.findById(productId)
+      .populate("shopId", "shopName", "logoUrl")
+      .lean();
+    if (!product) throw new Error("Không tìm thấy sản phẩm");
+
+    // Lấy danh sách biến thể 
+    const variants = await ProductVariant.find({ productId })
+      .populate({
+        path: "attributes.attributeId",
+        select: "label",
+      })
+      .populate({
+        path: "attributes.valueId",
+        select: "value",
+      })
+      .lean();
+
+    // Map lại để dễ đọc 
+    const mappedVariants = variants.map((v) => ({
+      _id: v._id,
+      variantKey: v.variantKey,
+      stock: v.stock,
+      image: v.image,
+      priceAdjustment: v.priceAdjustment,
+      attributes: v.attributes.map((a) => ({
+        attributeId: a.attributeId?._id,
+        attributeLabel: a.attributeId?.label || null,
+        valueId: a.valueId?._id,
+        valueLabel: a.valueId?.value || null,
+      })),
+    }));
+
+
+    return {
+      success: true,
+      message: "Lấy chi tiết sản phẩm thành công",
       data: {
-        product: createdProduct,
-        attributes: attributesList,
-        variants: generatedVariants,
+        ...product,
+        variants: mappedVariants,
       },
     };
   } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
-    return { success: false, message: error.message };
+    // console.error("Lỗi getProductDetail:", error);
+    return {
+      success: false,
+      message: error.message || "Không thể lấy chi tiết sản phẩm",
+    };
   }
 };
 
-export const createProduct = async (payload) => {
-  try {
-    const { pdName, basePrice, description = "", images = [], shopId } = payload;
-    if (!pdName || basePrice === undefined) throw new Error("Thiếu tên hoặc basePrice");
-    const p = await Product.create({ pdName, basePrice, description, images, shopId });
-    return { success: true, message: "Tạo product thành công", data: p };
-  } catch (error) {
-    return { success: false, message: error.message };
-  }
-};
+/**
+ * Tạo sản phẩm mới kèm biến thể
+ *
+ * @param {Object} payload
+ *   {
+ *     pdName: String,
+ *     basePrice: Number,
+ *     description?: String,
+ *     images?: [String],          // danh sách ảnh sản phẩm
+ *     accountId: String|ObjectId, // để xác định shopId
+ *     variantsPayload?: Array     // nếu FE đã sinh tổ hợp biến thể
+ *   }
+ *
+ * @returns { success, message, data }  // data = { product, variants }
+ */
+export const createProductWithVariantsService = async (payload) => {
+  let createdProduct = null;
+  let createdVariants = [];
 
-export const updateProduct = async (id, body) => {
   try {
-    if (!toObjectId(id)) throw new Error("Id không hợp lệ");
-    const update = {};
-    const allowed = ["pdName", "basePrice", "description", "images", "isActive"];
-    allowed.forEach((k) => {
-      if (body[k] !== undefined) update[k] = body[k];
+    const { pdName, basePrice, description = "", images = [], accountId, variantsPayload = [] } = payload;
+
+    if (!pdName || typeof pdName !== "string") throw new Error("Thiếu tên sản phẩm hợp lệ");
+    if (isNaN(basePrice) || basePrice < 0) throw new Error("Giá sản phẩm không hợp lệ");
+    if (!accountId) throw new Error("Thiếu accountId để xác định shop");
+
+    // --- Lấy shopId từ accountId ---
+    const shop = await Shop.findOne({ accountId }).select("_id").lean();
+    if (!shop) throw new Error("Không tìm thấy shop của tài khoản này");
+    const shopId = shop._id;
+
+    // --- Transaction để tạo sản phẩm và các biến thể ---
+    await withTransaction(async (session) => {
+      // Tạo sản phẩm
+      createdProduct = await Product.create([{
+        pdName,
+        basePrice,
+        description,
+        images,
+        shopId,
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }], { session });
+
+      createdProduct = createdProduct[0]; // vì insertMany trả về mảng
+
+      // Tạo biến thể nếu có variantsPayload
+      if (Array.isArray(variantsPayload) && variantsPayload.length > 0) {
+        // gọi service đã viết trước: createProductVariantsBulk
+        const variantResult = await createProductVariantsBulk(
+          createdProduct._id,
+          accountId,
+          variantsPayload
+        );
+
+        if (!variantResult.success) throw new Error(variantResult.message);
+        createdVariants = variantResult.data;
+      }
     });
-    const p = await Product.findByIdAndUpdate(id, update, { new: true });
-    if (!p) throw new Error("Không tìm thấy product");
-    return { success: true, message: "Cập nhật product thành công", data: p };
+
+    return {
+      success: true,
+      message: "Tạo sản phẩm mới thành công",
+      data: { product: createdProduct, variants: createdVariants },
+    };
+  } catch (error) {
+    // Nếu có lỗi, xóa ảnh đã upload nếu có (rollback)
+    if (images?.length) {
+      for (const img of images) {
+        try {
+          const fullPath = path.isAbsolute(img) ? img : path.join(productUploadDir, img);
+          if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath);
+        } catch (e) {
+          console.warn("Không xóa được ảnh rollback:", img, e.message);
+        }
+      }
+    }
+
+    return { success: false, message: error.message, data: {} };
+  }
+};
+
+
+/**
+ * Cập nhật thông tin cơ bản của sản phẩm
+ * @param {String} productId
+ * @param {Object} updates { pdName?, basePrice?, description? }
+ */
+export const updateProductBasicInfoService = async (productId, updates) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(productId))
+      throw new Error("ID sản phẩm không hợp lệ");
+
+    const allowedFields = ["pdName", "basePrice", "description"];
+    const updateData = {};
+
+    for (const key of allowedFields) {
+      if (updates[key] !== undefined && updates[key] !== null) {
+        updateData[key] = updates[key];
+      }
+    }
+
+    if (Object.keys(updateData).length === 0)
+      throw new Error("Không có dữ liệu cần cập nhật");
+
+    // Kiểm tra giá nếu có basePrice
+    if (updateData.basePrice != null) {
+      if (isNaN(updateData.basePrice))
+        throw new Error("Giá sản phẩm phải là số hợp lệ");
+      if (updateData.basePrice < 0)
+        throw new Error("Giá sản phẩm phải lớn hơn hoặc bằng 0");
+    }
+
+    const product = await Product.findByIdAndUpdate(
+      productId,
+      { $set: updateData },
+      { new: true }
+    ).lean();
+
+    if (!product) throw new Error("Không tìm thấy sản phẩm");
+
+    return {
+      success: true,
+      message: "Cập nhật thông tin sản phẩm thành công",
+      data: product,
+    };
+  } catch (error) {
+    // console.error("Lỗi updateProductBasicInfoService:", error);
+    return { success: false, message: error.message };
+  }
+};
+
+/**
+ * Cập nhật danh sách ảnh của sản phẩm (xóa ảnh cũ khỏi thư mục nếu có)
+ * @param {String} productId
+ * @param {Array<String>} images Danh sách ảnh mới
+ */
+export const updateProductImagesService = async (productId, newImages = []) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(productId))
+      throw new Error("ID sản phẩm không hợp lệ");
+
+    if (!Array.isArray(newImages))
+      throw new Error("Danh sách ảnh không hợp lệ");
+
+    const product = await Product.findById(productId);
+    if (!product) throw new Error("Không tìm thấy sản phẩm");
+
+    const oldImages = product.images || [];
+
+    // --- Xóa ảnh cũ không còn trong danh sách mới ---
+    for (const oldImg of oldImages) {
+      // Nếu ảnh cũ không nằm trong danh sách mới
+      if (!newImages.includes(oldImg)) {
+        const oldPath = path.join(productUploadDir, path.basename(oldImg));
+        try {
+          if (fs.existsSync(oldPath)) {
+            fs.unlinkSync(oldPath);
+            // console.log("Đã xóa ảnh cũ:", oldPath);
+          }
+        } catch (err) {
+          console.warn(`Không thể xóa ảnh: ${oldPath}`, err.message);
+        }
+      }
+    }
+
+    // --- Cập nhật DB ---
+    product.images = newImages;
+    await product.save();
+
+    return {
+      success: true,
+      message: "Cập nhật ảnh sản phẩm thành công",
+      data: product.toObject(),
+    };
+  } catch (error) {
+    // console.error("Lỗi updateProductImagesService:", error);
+    return { success: false, message: error.message };
+  }
+};
+
+export const toggleProductActiveAutoService = async (productId) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(productId))
+      throw new Error("ID sản phẩm không hợp lệ");
+
+    const product = await Product.findById(productId);
+    if (!product) throw new Error("Không tìm thấy sản phẩm");
+
+    product.isActive = !product.isActive;
+    await product.save();
+
+    return {
+      success: true,
+      message: product.isActive
+        ? "Sản phẩm đã được hiển thị"
+        : "Sản phẩm đã bị ẩn",
+      data: product,
+    };
   } catch (error) {
     return { success: false, message: error.message };
   }
 };
 
-export const deleteProduct = async (id) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
+/**
+ * Di chuyển file ảnh sang thư mục tạm (trash)
+ */
+const moveImagesToTrash = (imagePaths = []) => {
+  const movedFiles = [];
+  for (const imgPath of imagePaths) {
+    try {
+      const fullPath = path.isAbsolute(imgPath)
+        ? imgPath
+        : path.join(productUploadDir, imgPath);
+
+      if (fs.existsSync(fullPath)) {
+        const destPath = path.join(productTrashDir, path.basename(fullPath));
+        fs.renameSync(fullPath, destPath); // di chuyển
+        movedFiles.push({ from: fullPath, to: destPath });
+      }
+    } catch (err) {
+      console.warn(`Không thể di chuyển ảnh: ${imgPath} (${err.message})`);
+    }
+  }
+  return movedFiles;
+};
+/**
+ * Khôi phục ảnh từ trash nếu transaction rollback
+ */
+const restoreImagesFromTrash = (movedFiles = []) => {
+  for (const f of movedFiles) {
+    try {
+      if (fs.existsSync(f.to)) {
+        fs.renameSync(f.to, f.from);
+      }
+    } catch (err) {
+      console.warn(`Không thể khôi phục ảnh: ${f.from} (${err.message})`);
+    }
+  }
+};
+
+/**
+ * Xóa hẳn ảnh sau khi transaction commit thành công
+ */
+const permanentlyDeleteTrashImages = (movedFiles = []) => {
+  for (const f of movedFiles) {
+    try {
+      if (fs.existsSync(f.to)) fs.unlinkSync(f.to);
+    } catch (err) {
+      console.warn(`Không thể xóa ảnh trong trash: ${f.to} (${err.message})`);
+    }
+  }
+};
+
+/**
+ * Xóa sản phẩm và các biến thể liên quan, rollback ảnh nếu lỗi
+ */
+export const deleteProductWithVariantsService = async (productId) => {
+  let movedFiles = [];
+
   try {
-    if (!toObjectId(id)) throw new Error("Id không hợp lệ");
-    // remove variants
-    await ProductVariant.deleteMany({ productId: id }).session(session);
-    // remove product
-    const p = await Product.findByIdAndDelete(id).session(session);
-    if (!p) throw new Error("Không tìm thấy product để xóa");
-    await session.commitTransaction();
-    session.endSession();
-    return { success: true, message: "Xóa product và variants thành công" };
+    if (!mongoose.Types.ObjectId.isValid(productId))
+      throw new Error("ID sản phẩm không hợp lệ");
+
+    const result = await withTransaction(async (session) => {
+      const product = await Product.findById(productId).session(session);
+      if (!product) throw new Error("Không tìm thấy sản phẩm");
+
+      const variants = await ProductVariant.find({ productId }).session(session);
+
+      // Di chuyển ảnh sang thư mục tạm (backup)
+      const allImages = [
+        ...(product.images || []),
+        ...(variants.map((v) => v.image).filter(Boolean) || []),
+      ];
+      movedFiles = moveImagesToTrash(allImages);
+
+      // Xóa dữ liệu trong DB
+      await ProductVariant.deleteMany({ productId }).session(session);
+      await Product.findByIdAndDelete(productId).session(session);
+
+      return {
+        success: true,
+        message: `Đã xóa sản phẩm "${product.pdName}" và các biến thể liên quan.`,
+      };
+    });
+
+    // Transaction thành công → xóa ảnh trong trash
+    setImmediate(() => permanentlyDeleteTrashImages(movedFiles));
+
+    return result;
   } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
+    // Transaction thất bại → khôi phục ảnh
+    restoreImagesFromTrash(movedFiles);
     return { success: false, message: error.message };
   }
 };
 
-export const toggleProductActive = async (id) => {
+/**
+ * Thống kê số lượng sản phẩm
+ * @param {Object} options
+ * @param {String|ObjectId} [options.shopId] - ID cửa hàng
+ * @param {String|ObjectId} [options.accountId] - ID tài khoản (nếu cần suy ra shop)
+ * @param {Boolean} [options.includeInactive=false] - true => lấy cả sản phẩm ẩn
+ * @returns {Object} { success, message, total }
+ */
+export const countProductsService = async ({ shopId, accountId, includeInactive = false }) => {
   try {
-    if (!toObjectId(id)) throw new Error("Id không hợp lệ");
-    const p = await Product.findById(id);
-    if (!p) throw new Error("Không tìm thấy product");
-    p.isActive = p.isActive === false ? true : false;
-    await p.save();
-    return { success: true, message: "Cập nhật trạng thái product thành công", data: p };
-  } catch (error) {
-    return { success: false, message: error.message };
-  }
-};
+    let finalShopId = shopId;
 
-export const getProductsByShop = async ({ shopId, page = 1, limit = 20 }) => {
-  try {
-    if (!toObjectId(shopId)) throw new Error("shopId không hợp lệ");
-    const skip = (Math.max(1, page) - 1) * limit;
-    const total = await Product.countDocuments({ shopId });
-    const items = await Product.find({ shopId }).skip(skip).limit(limit).lean();
-    // optionally populate variants count
-    const itemsWithVariants = await Promise.all(items.map(async (p) => {
-      const variants = await ProductVariant.find({ productId: p._id }).lean();
-      return { ...p, variantCount: variants.length };
-    }));
-    return { success: true, message: "Lấy sản phẩm của shop thành công", data: { items: itemsWithVariants, total, page, limit } };
-  } catch (error) {
-    return { success: false, message: error.message };
-  }
-};
+    // Nếu không có shopId mà có accountId → tìm shop theo account
+    if (!finalShopId && accountId) {
+      const shop = await Shop.findOne({ accountId }).select("_id");
+      if (!shop) throw new Error("Không tìm thấy cửa hàng của tài khoản này.");
+      finalShopId = shop._id;
+    }
 
-export const searchProducts = async ({ q, page = 1, limit = 20 }) => {
-  try {
-    const skip = (Math.max(1, page) - 1) * limit;
-    const regex = new RegExp(q || "", "i");
-    // search name or description
-    const filter = { $or: [{ pdName: regex }, { description: regex }] };
-    const total = await Product.countDocuments(filter);
-    const items = await Product.find(filter).skip(skip).limit(limit).lean();
-    return { success: true, message: "Tìm kiếm sản phẩm thành công", data: { items, total, page, limit } };
-  } catch (error) {
-    return { success: false, message: error.message };
-  }
-};
-
-export const filterProducts = async ({ minPrice, maxPrice, categoryId, page = 1, limit = 20 }) => {
-  try {
-    const skip = (Math.max(1, page) - 1) * limit;
+    // Xây filter
     const filter = {};
-    // Note: filtering by price requires computing variant prices or basePrice only.
-    if (minPrice !== undefined) filter.basePrice = { $gte: minPrice };
-    if (maxPrice !== undefined) filter.basePrice = { ...filter.basePrice, $lte: maxPrice };
-    if (categoryId) filter.categoryId = categoryId;
+    if (finalShopId) filter.shopId = finalShopId;
+    if (!includeInactive) filter.isActive = true;
+
+    // Đếm số lượng sản phẩm
     const total = await Product.countDocuments(filter);
-    const items = await Product.find(filter).skip(skip).limit(limit).lean();
-    return { success: true, message: "Lọc sản phẩm thành công", data: { items, total, page, limit } };
-  } catch (error) {
-    return { success: false, message: error.message };
-  }
-};
 
-export const getProductVariants = async (productId) => {
-  try {
-    if (!toObjectId(productId)) throw new Error("productId không hợp lệ");
-    const variants = await ProductVariant.find({ productId }).lean();
-    const populated = await Promise.all(variants.map((v) => buildPopulatedVariant(v)));
-    return { success: true, message: "Lấy variants thành công", data: populated };
+    return {
+      success: true,
+      message: finalShopId
+        ? `Tổng số sản phẩm của cửa hàng: ${total}`
+        : `Tổng số sản phẩm toàn hệ thống: ${total}`,
+      total,
+    };
   } catch (error) {
-    return { success: false, message: error.message };
+    return {
+      success: false,
+      message: error.message || "Lỗi khi thống kê sản phẩm",
+      total: 0,
+    };
   }
-};
-
-export const updateBasePrice = async (productId, newBasePrice) => {
-  try {
-    if (!toObjectId(productId)) throw new Error("productId không hợp lệ");
-    const p = await Product.findById(productId);
-    if (!p) throw new Error("Không tìm thấy product");
-    p.basePrice = newBasePrice;
-    await p.save();
-    return { success: true, message: "Cập nhật basePrice thành công", data: p };
-  } catch (error) {
-    return { success: false, message: error.message };
-  }
-};
-
-export default {
-  getProductsFull,
-  getProductByIdFull,
-  generateVariantsForProduct,
-  fullCreateProduct,
-  createProduct,
-  updateProduct,
-  deleteProduct,
-  toggleProductActive,
-  getProductsByShop,
-  searchProducts,
-  filterProducts,
-  getProductVariants,
-  updateBasePrice,
-};
+}
