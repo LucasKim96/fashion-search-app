@@ -4,207 +4,291 @@ import ProductVariant from "./productVariant.model.js";
 import Product from "./product.model.js";
 import Attribute from "./attribute.model.js";
 import AttributeValue from "./attributeValue.model.js";
-import ShopAttributeValue from "./shopAttributeValue.model.js";
-import { generateVariantKey } from "../../utils/generateVariantKey.js";
+import Shop from "../shop/shop.model.js";
+import fs from "fs";
+import path from "path";
+import { withTransaction, generateVariantsCombinations} from "../../utils/index.js";
+
+const productUploadDir = path.resolve("src/uploads/products");
 
 const toObjectId = (id) => (mongoose.Types.ObjectId.isValid(id) ? mongoose.Types.ObjectId(id) : null);
 
-/**
- * Helper: build populated variant similar to product.service
- */
-const buildPopulatedVariant = async (variant) => {
-  const v = variant.toObject ? variant.toObject() : variant;
-  await Product.populate(v, { path: "productId", select: "pdName basePrice shopId images isActive" });
-  await ProductVariant.populate(v, [
-    { path: "attributes.attributeId", model: "Attribute" },
-    { path: "attributes.valueId", model: "AttributeValue" },
-  ]);
-  const product = v.productId;
-  const shopId = product?.shopId;
-  // compute price
-  let total = product?.basePrice ?? 0;
-  for (const a of v.attributes) {
-    const valDoc = a.valueId;
-    const override = await ShopAttributeValue.findOne({ shopId, attributeValueId: valDoc._id }).lean();
-    const adj = override?.customPriceAdjustment ?? valDoc.priceAdjustment ?? 0;
-    total += adj;
-  }
-  v.calculatedPrice = total;
+// Sinh tổ hợp biến thể mới (chưa có trong DB dùng cho việc thêm sp biến thể)
+export const generateNewVariantCombinations = async (productId, attributes) => {
+  try {
+    if (!productId) throw new Error("Thiếu productId");
+    if (!Array.isArray(attributes) || attributes.length === 0)
+      throw new Error("Danh sách thuộc tính không hợp lệ");
 
-  v.attributes = v.attributes.map((a) => {
-    const attr = a.attributeId;
-    const val = a.valueId;
+    const product = await Product.findById(productId);
+    if (!product) throw new Error("Không tìm thấy sản phẩm");  // Lấy danh sách variantKey đã tồn tại trong DB (đã lưu cho sản phẩm này)
+    
+    const existingKeys = await ProductVariant.find({ productId }).distinct("variantKey");
+
+    // Sinh tất cả các tổ hợp từ danh sách attribute & value người dùng chọn
+    const allCombinations = generateVariantsCombinations(attributes);
+
+    // Giữ lại những tổ hợp chưa có trong DB
+    const availableCombinations = allCombinations.filter(
+      combo => !existingKeys.includes(combo.variantKey)
+    );
+
     return {
-      attributeId: attr?._id,
-      attributeLabel: attr?.label,
-      valueId: val?._id,
-      value: val?.value,
+      success: true,
+      message: "Sinh tổ hợp biến thể mới thành công",
+      data: availableCombinations.map((c) => ({
+        attributes: c.attributes, // [{ attributeId, valueId }]
+        variantKey: c.variantKey, // ví dụ "1|2"
+      })),
     };
-  });
-
-  return v;
-};
-
-export const getVariantsByProduct = async (productId) => {
-  try {
-    if (!toObjectId(productId)) throw new Error("productId không hợp lệ");
-    const variants = await ProductVariant.find({ productId }).lean();
-    const populated = await Promise.all(variants.map((v) => buildPopulatedVariant(v)));
-    return { success: true, message: "Lấy variants thành công", data: populated };
   } catch (error) {
-    return { success: false, message: error.message };
+    // console.error("generateNewVariantCombinations error:", error);
+    return {
+      success: false,
+      message: error.message || "Lỗi khi sinh tổ hợp biến thể mới",
+      data: [],
+    };
   }
 };
 
-export const getVariantById = async (id) => {
-  try {
-    if (!toObjectId(id)) throw new Error("id không hợp lệ");
-    const variant = await ProductVariant.findById(id);
-    if (!variant) throw new Error("Không tìm thấy variant");
-    const populated = await buildPopulatedVariant(variant);
-    return { success: true, message: "Lấy variant thành công", data: populated };
+//Lấy danh sách attribute + value (có đánh dấu isUsed) cho 1 sản phẩm (dùng cho việc thêm sp biến thể)
+export const getProductAttributesWithValues = async (productId, accountId) => {
+   try {
+    if (!productId) throw new Error("Thiếu productId");
+    if (!accountId) throw new Error("Thiếu accountId của shop");
+    
+    // Lấy shopId tương ứng với accountId
+    const shop = await Shop.findOne({ accountId }).select("_id").lean();
+    if (!shop) throw new Error("Không tìm thấy shop tương ứng với tài khoản này");
+    const shopId = shop._id;
+    
+    //Kiểm tra sản phẩm có tồn tại không
+    const product = await Product.findById(productId).lean();
+    if (!product) throw new Error("Không tìm thấy sản phẩm");
+    
+    // Lấy tất cả các biến thể hiện có
+    const variants = await ProductVariant.find({ productId }).lean();
+
+    // Nếu sản phẩm chưa có biến thể
+    if (!variants.length) {
+      return {
+        success: true,
+        message: "Sản phẩm chưa có biến thể",
+        data: [],
+      };
+    }
+
+    // Thu thập các attributeId & valueId đã dùng
+    const usedAttributeIds = new Set();
+    const usedValueIds = new Set();
+
+    variants.forEach((v) => {
+      (v.attributes || []).forEach((a) => {
+        if (a.attributeId) usedAttributeIds.add(a.attributeId.toString());
+        if (a.valueId) usedValueIds.add(a.valueId.toString());
+      });
+    });
+
+    // Lấy chi tiết attribute và value
+    const attributes = await Attribute.find({
+      _id: { $in: [...usedAttributeIds] },
+    }).lean();
+
+    //Lấy giá trị (value) tương ứng — xử lý khác nhau cho global / shop
+    const allAttributeValues = [];
+
+    for (const attr of attributes) {
+      let values;
+
+      if (attr.isGlobal) {
+        // Attribute toàn cục → lấy value global (shopId=null) và value riêng shop
+        values = await AttributeValue.find({
+          attributeId: attr._id,
+          isActive: true,
+          $or: [{ shopId: null }, { shopId }],
+        }).lean();
+      } else {
+        // Attribute của shop → chỉ lấy value thuộc shop đó
+        values = await AttributeValue.find({
+          attributeId: attr._id,
+          shopId,
+          isActive: true,
+        }).lean();
+      }
+
+      allAttributeValues.push(...values);
+    }
+
+    // Gom nhóm value theo attribute và đánh dấu isUsed
+    const data = attributes.map((attr) => ({
+      attributeId: attr._id,
+      label: attr.label,
+      isGlobal: attr.isGlobal,
+      values: attributeValues
+        .filter((v) => v.attributeId.toString() === attr._id.toString())
+        .map((v) => ({
+          valueId: v._id,
+          value: v.value,
+          image: v.image || "",
+          isUsed: usedValueIds.has(v._id.toString()), // FE sẽ disable nếu true
+        })),
+    }));
+
+    return {
+      success: true,
+      message: "Lấy danh sách thuộc tính và giá trị thành công",
+      data,
+    };
   } catch (error) {
-    return { success: false, message: error.message };
+    console.error("getProductAttributesWithValues error:", error);
+    return {
+      success: false,
+      message: error.message || "Lỗi khi lấy danh sách thuộc tính và giá trị",
+      data: [],
+    };
+  }
+};
+
+
+/**
+ * Tạo nhiều ProductVariant cùng lúc (bulk create)
+ *
+ * @param {String|ObjectId} productId
+ * @param {String|ObjectId} accountId  // để xác định shopId
+ * @param {Array} variantsPayload - mỗi phần tử:
+ *   {
+ *     variantKey: "1|2",                 // chuỗi key (nên có, nếu không có thì backend có thể compute trước khi gọi)
+ *     attributes: [{ attributeId, valueId }, ...],
+ *     stock?: Number,
+ *     priceAdjustment?: Number,
+ *     image?: [String]
+ *   }
+ *
+ * @returns { success, message, data } -- data = createdVariants (array)
+ */
+export const createProductVariantsBulk = async (productId, accountId, variantsPayload = []) => {
+  try {
+    // --- Validate cơ bản ---
+    if (!productId) throw new Error("Thiếu productId");
+    if (!accountId) throw new Error("Thiếu accountId");
+    if (!Array.isArray(variantsPayload) || variantsPayload.length === 0)
+      throw new Error("Danh sách biến thể rỗng hoặc không hợp lệ");
+
+    const productObjectId = toObjectId(productId);
+    if (!productObjectId) throw new Error("productId không hợp lệ");
+
+    // --- Lấy shopId từ accountId ---
+    const shop = await Shop.findOne({ accountId }).select("_id").lean();
+    if (!shop) throw new Error("Không tìm thấy shop tương ứng với tài khoản này");
+    const shopId = shop._id;
+
+    // --- Kiểm tra product hợp lệ ---
+    const product = await Product.findById(productObjectId).lean();
+    if (!product) throw new Error("Không tìm thấy sản phẩm");
+
+    if (product.shopId && product.shopId.toString() !== shopId.toString()) {
+      throw new Error("Không có quyền tạo biến thể cho sản phẩm này");
+    }
+
+    // --- Kiểm tra variantKey ---
+    const payloadKeys = variantsPayload.map((v) => v.variantKey?.trim()).filter(Boolean);
+    const dupInPayload = payloadKeys.filter((k, i, arr) => arr.indexOf(k) !== i);
+    if (dupInPayload.length) {
+      throw new Error(`Tồn tại variantKey trùng trong payload: ${[...new Set(dupInPayload)].join(", ")}`);
+    }
+
+    const existingKeys = await ProductVariant.find({ productId: productObjectId }).distinct("variantKey");
+    const conflictKeys = payloadKeys.filter((k) => existingKeys.includes(k));
+    if (conflictKeys.length) {
+      throw new Error(`Các variantKey sau đã tồn tại: ${conflictKeys.join(", ")}`);
+    }
+
+    // --- Chuẩn bị dữ liệu insert ---
+    const toInsert = variantsPayload.map((v) => ({
+      productId: productObjectId,
+      variantKey: v.variantKey,
+      attributes: v.attributes.map((a) => ({
+        attributeId: toObjectId(a.attributeId),
+        valueId: toObjectId(a.valueId),
+      })),
+      stock: typeof v.stock === "number" ? v.stock : 0,
+      image: typeof v.image === "string" ? v.image : "",
+      priceAdjustment: typeof v.priceAdjustment === "number" ? v.priceAdjustment : 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }));
+
+    // --- Transaction ---
+    let createdDocs = [];
+    await withTransaction(async (session) => {
+      const exist = await ProductVariant.find({
+        productId: productObjectId,
+        variantKey: { $in: payloadKeys },
+      })
+        .session(session)
+        .lean();
+
+      if (exist.length) {
+        throw new Error(
+          `Một số variantKey đã tồn tại: ${exist.map((e) => e.variantKey).join(", ")}`
+        );
+      }
+
+      const inserted = await ProductVariant.insertMany(toInsert, { session });
+      createdDocs = inserted;
+    });
+
+    return {
+      success: true,
+      message: "Tạo biến thể sản phẩm hàng loạt thành công",
+      data: createdDocs,
+    };
+  } catch (error) {
+    console.error("createProductVariantsBulk error:", error);
+    return {
+      success: false,
+      message: error.message || "Lỗi khi tạo biến thể sản phẩm hàng loạt",
+      data: [],
+    };
   }
 };
 
 /**
- * Create a single variant for a product
- * payload: { productId, attributes: [{ attributeId, valueId }], stock?, images? }
+ * Cập nhật 1 biến thể sản phẩm
+ * @param {ObjectId} variantId - ID biến thể cần cập nhật
+ * @param {Object} payload - dữ liệu cập nhật (stock, image, priceAdjustment)
+ * @returns {Object} { success, message, data }
  */
-export const createVariant = async (payload) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-  try {
-    const { productId, attributes = [], stock = 0, images = [] } = payload;
-    if (!productId || !toObjectId(productId)) throw new Error("productId không hợp lệ");
-    const product = await Product.findById(productId).session(session);
-    if (!product) throw new Error("Không tìm thấy product");
+export const updateProductVariant = async (variantId, payload) => {
+  return withTransaction(async (session) => {
+    if (!variantId) throw new Error("Thiếu ID biến thể cần cập nhật");
 
-    // validate attributes exist and belong to proper attribute
-    for (const a of attributes) {
-      if (!toObjectId(a.attributeId) || !toObjectId(a.valueId)) throw new Error("attributeId hoặc valueId không hợp lệ");
-      const val = await AttributeValue.findById(a.valueId).session(session);
-      if (!val) throw new Error(`Không tìm thấy AttributeValue ${a.valueId}`);
-      if (String(val.attributeId) !== String(a.attributeId)) throw new Error("valueId không thuộc attributeId tương ứng");
-    }
+    const variant = await ProductVariant.findById(variantId).session(session);
+    if (!variant) throw new Error("Không tìm thấy biến thể sản phẩm");
 
-    // generate variantKey
-    const key = await generateVariantKey(attributes);
+    // --- Kiểm tra dữ liệu đầu vào ---
+    const { stock, image, priceAdjustment } = payload;
 
-    // check unique
-    const exists = await ProductVariant.findOne({ productId, variantKey: key }).session(session);
-    if (exists) throw new Error("Variant đã tồn tại");
+    if (stock != null && (isNaN(stock) || stock < 0))
+      throw new Error("Số lượng phải là số >= 0");
 
-    const created = await ProductVariant.create([{
-      productId,
-      variantKey: key,
-      attributes,
-      stock,
-      images,
-    }], { session });
+    if (priceAdjustment != null && isNaN(priceAdjustment))
+      throw new Error("Giá điều chỉnh không hợp lệ");
 
-    await session.commitTransaction();
-    session.endSession();
+    if (image && typeof image !== "string")
+      throw new Error("Ảnh biến thể phải là chuỗi (URL hoặc tên file)");
 
-    const populated = await buildPopulatedVariant(created[0]);
-    return { success: true, message: "Tạo variant thành công", data: populated };
-  } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
-    return { success: false, message: error.message };
-  }
-};
-
-export const updateVariant = async (id, body) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-  try {
-    if (!toObjectId(id)) throw new Error("id không hợp lệ");
-    const variant = await ProductVariant.findById(id).session(session);
-    if (!variant) throw new Error("Không tìm thấy variant");
-
-    // allow updating attributes (careful to regenerate variantKey), stock, images
-    if (body.attributes) {
-      // validate and set
-      for (const a of body.attributes) {
-        if (!toObjectId(a.attributeId) || !toObjectId(a.valueId)) throw new Error("attributeId hoặc valueId không hợp lệ");
-        const val = await AttributeValue.findById(a.valueId).session(session);
-        if (!val) throw new Error(`Không tìm thấy AttributeValue ${a.valueId}`);
-        if (String(val.attributeId) !== String(a.attributeId)) throw new Error("valueId không thuộc attributeId tương ứng");
-      }
-      const newKey = await generateVariantKey(body.attributes);
-      // ensure uniqueness
-      const other = await ProductVariant.findOne({ productId: variant.productId, variantKey: newKey, _id: { $ne: variant._id } }).session(session);
-      if (other) throw new Error("Một variant với tổ hợp thuộc tính này đã tồn tại");
-      variant.attributes = body.attributes;
-      variant.variantKey = newKey;
-    }
-    if (body.stock !== undefined) variant.stock = body.stock;
-    if (body.images !== undefined) variant.images = body.images;
+    // --- Cập nhật các trường ---
+    if (stock != null) variant.stock = stock;
+    if (priceAdjustment != null) variant.priceAdjustment = priceAdjustment;
+    if (image) variant.image = image;
 
     await variant.save({ session });
-    await session.commitTransaction();
-    session.endSession();
 
-    const populated = await buildPopulatedVariant(variant);
-    return { success: true, message: "Cập nhật variant thành công", data: populated };
-  } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
-    return { success: false, message: error.message };
-  }
-};
-
-export const deleteVariant = async (id) => {
-  try {
-    if (!toObjectId(id)) throw new Error("id không hợp lệ");
-    const v = await ProductVariant.findByIdAndDelete(id);
-    if (!v) throw new Error("Không tìm thấy variant để xóa");
-    return { success: true, message: "Xóa variant thành công" };
-  } catch (error) {
-    return { success: false, message: error.message };
-  }
-};
-
-export const updateVariantStock = async (id, deltaOrValue, mode = "set") => {
-  // mode: "set" or "inc" or "dec"
-  try {
-    if (!toObjectId(id)) throw new Error("id không hợp lệ");
-    const v = await ProductVariant.findById(id);
-    if (!v) throw new Error("Không tìm thấy variant");
-    if (mode === "set") v.stock = deltaOrValue;
-    else if (mode === "inc") v.stock = v.stock + Math.abs(Number(deltaOrValue));
-    else if (mode === "dec") v.stock = Math.max(0, v.stock - Math.abs(Number(deltaOrValue)));
-    await v.save();
-    const populated = await buildPopulatedVariant(v);
-    return { success: true, message: "Cập nhật tồn kho thành công", data: populated };
-  } catch (error) {
-    return { success: false, message: error.message };
-  }
-};
-
-export const getAvailableVariants = async (productId) => {
-  try {
-    if (!toObjectId(productId)) throw new Error("productId không hợp lệ");
-    const vals = await ProductVariant.find({ productId, stock: { $gt: 0 } }).lean();
-    const populated = await Promise.all(vals.map((v) => buildPopulatedVariant(v)));
-    return { success: true, message: "Lấy variants còn hàng thành công", data: populated };
-  } catch (error) {
-    return { success: false, message: error.message };
-  }
-};
-
-export const getLowStockVariants = async (shopId, threshold = 5) => {
-  try {
-    if (!toObjectId(shopId)) throw new Error("shopId không hợp lệ");
-    // get products of shop
-    const prods = await Product.find({ shopId }).select("_id").lean();
-    const pids = prods.map((p) => p._id);
-    const vals = await ProductVariant.find({ productId: { $in: pids }, stock: { $lt: threshold } }).lean();
-    const populated = await Promise.all(vals.map((v) => buildPopulatedVariant(v)));
-    return { success: true, message: "Lấy variants tồn kho thấp thành công", data: populated };
-  } catch (error) {
-    return { success: false, message: error.message };
-  }
+    return {
+      success: true,
+      message: "Cập nhật biến thể thành công",
+      data: variant,
+    };
+  });
 };

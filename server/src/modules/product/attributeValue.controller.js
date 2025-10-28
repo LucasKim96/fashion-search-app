@@ -10,7 +10,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const attributeUploadDir = path.resolve(__dirname, "../../uploads/attributes");
 
-
 // --- Helper lưu ảnh ---
 /**
  * Lưu file ảnh an toàn (tạo folder nếu chưa có)
@@ -19,6 +18,7 @@ const attributeUploadDir = path.resolve(__dirname, "../../uploads/attributes");
  * @param {string} filename - Tên file
  * @returns {{ filePath: string, fileName: string }} - Trả về cả đường dẫn và tên file
  */
+
 const saveFileAtomic = (buffer, folder, filename) => {
   if (!buffer) return null;
   if (!fs.existsSync(folder)) fs.mkdirSync(folder, { recursive: true });

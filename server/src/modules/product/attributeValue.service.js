@@ -1,12 +1,12 @@
 import AttributeValue from "./attributeValue.model.js";
 import Attribute from "./attribute.model.js";
 import mongoose from "mongoose";
-import { withTransaction } from "../../utils/transaction.helper.js";
+import { withTransaction } from "../../utils/index.js";
 import Shop from "../shop/shop.model.js";
 import fs from "fs";
 import path from "path";
 
-const attributeUploadDir = path.resolve("src/uploads/attributes");
+const attributeUploadDir = path.resolve("src/uploads/products");
 
 // Chuyển id sang ObjectId, trả về null nếu không hợp lệ
 export const toObjectId = (id) => {
@@ -101,115 +101,138 @@ export const createAttributeValues = async (attributeId, values = [], accountId 
 
 // Cập nhật 1 value
 export const updateAttributeValue = async (valueId, payload, accountId = null, session) => {
-  const oldValue = await AttributeValue.findById(valueId).session(session);
-  if (!oldValue) throw new Error(`Không tìm thấy value với id ${valueId}`);
+  try {
+    const oldValue = await AttributeValue.findById(valueId).session(session);
+    if (!oldValue) throw new Error(`Không tìm thấy value với id ${valueId}`);
 
-  const attribute = await Attribute.findById(oldValue.attributeId).session(session);
-  if (!attribute) throw new Error("Không tìm thấy attribute của value");
+    const attribute = await Attribute.findById(oldValue.attributeId).session(session);
+    if (!attribute) throw new Error("Không tìm thấy attribute của value");
 
-  let isAdmin = false;
-  let currentShopId = null;
+    let isAdmin = false;
+    let currentShopId = null;
 
-  if (accountId) {
-    const shop = await Shop.findOne({ accountId: toObjectId(accountId), isDeleted: false }).session(session);
-    if (!shop) throw new Error("Không tìm thấy cửa hàng cho tài khoản này");
-    currentShopId = shop._id;
+    if (accountId) {
+      const shop = await Shop.findOne({ accountId: toObjectId(accountId), isDeleted: false }).session(session);
+      if (!shop) throw new Error("Không tìm thấy cửa hàng cho tài khoản này");
+      currentShopId = shop._id;
 
-    if (attribute.isGlobal)
-      throw new Error("Shop không được phép chỉnh sửa thuộc tính toàn cục");
-    if (attribute.shopId?.toString() !== currentShopId.toString())
-      throw new Error("Bạn không có quyền sửa thuộc tính của shop khác!");
-  } else {
-    isAdmin = true;
-    if (!attribute.isGlobal)
-      throw new Error("Admin chỉ được phép chỉnh sửa thuộc tính toàn cục");
+      if (attribute.isGlobal)
+        throw new Error("Shop không được phép chỉnh sửa thuộc tính toàn cục");
+      if (attribute.shopId?.toString() !== currentShopId.toString())
+        throw new Error("Bạn không có quyền sửa thuộc tính của shop khác!");
+    } else {
+      isAdmin = true;
+      if (!attribute.isGlobal)
+        throw new Error("Admin chỉ được phép chỉnh sửa thuộc tính toàn cục");
+    }
+
+    // Validate nếu có thay đổi
+    const hasValueChange =
+      (payload.value && payload.value.trim() !== oldValue.value);
+
+    if (hasValueChange) validateAttributeValue(payload);
+
+    // Xử lý ảnh
+    const removeImage = payload.image === "" && oldValue.image;
+    const hasNewImage = payload.image && payload.image !== oldValue.image;
+
+    if (hasNewImage && oldValue.image) {
+      const oldPath = path.join(attributeUploadDir, path.basename(oldValue.image));
+      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+    } else if (removeImage) {
+      const oldPath = path.join(attributeUploadDir, path.basename(oldValue.image));
+      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+    }
+
+    const newImage =
+      removeImage ? "" :
+      hasNewImage ? payload.image :
+      oldValue.image ?? "";
+
+    // Cập nhật
+    oldValue.value = payload.value !== undefined ? payload.value.trim() : oldValue.value;
+    oldValue.image = newImage;
+    oldValue.shopId = isAdmin ? null : currentShopId;
+    oldValue.isActive = true;
+
+    await oldValue.save({ session });
+
+    return {
+      success: true,
+      message: "Cập nhật value thành công",
+      data: oldValue,
+    };
+  } catch (error) {
+    return { success: false, message: error.message, data: null };
   }
-
-  // Validate nếu có thay đổi
-  const hasValueChange =
-    (payload.value && payload.value.trim() !== oldValue.value);
-
-  if (hasValueChange) validateAttributeValue(payload);
-
-  // Xử lý ảnh
-  const removeImage = payload.image === "" && oldValue.image;
-  const hasNewImage = payload.image && payload.image !== oldValue.image;
-
-  if (hasNewImage && oldValue.image) {
-    const oldPath = path.join(attributeUploadDir, path.basename(oldValue.image));
-    if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
-  } else if (removeImage) {
-    const oldPath = path.join(attributeUploadDir, path.basename(oldValue.image));
-    if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
-  }
-
-  const newImage =
-    removeImage ? "" :
-    hasNewImage ? payload.image :
-    oldValue.image ?? "";
-
-  // Cập nhật
-  oldValue.value = payload.value !== undefined ? payload.value.trim() : oldValue.value;
-  oldValue.image = newImage;
-  oldValue.shopId = isAdmin ? null : currentShopId;
-  oldValue.isActive = true;
-
-  await oldValue.save({ session });
-
-  return oldValue;
 };
 
 // Chuyển trạng thái 1 value 
 export const toggleAttributeValueStatus = async (valueId, accountId = null, session) => {
-  const oldValue = await AttributeValue.findById(valueId).session(session);
-  if (!oldValue) throw new Error(`Không tìm thấy value với id ${valueId}`);
+  try {
+    const oldValue = await AttributeValue.findById(valueId).session(session);
+    if (!oldValue) throw new Error(`Không tìm thấy value với id ${valueId}`);
 
-  const attribute = await Attribute.findById(oldValue.attributeId).session(session);
-  if (!attribute) throw new Error("Không tìm thấy attribute của value");
+    const attribute = await Attribute.findById(oldValue.attributeId).session(session);
+    if (!attribute) throw new Error("Không tìm thấy attribute của value");
 
-  if (accountId) {
-    const shop = await Shop.findOne({ accountId: toObjectId(accountId), isDeleted: false }).session(session);
-    if (!shop) throw new Error("Không tìm thấy cửa hàng cho tài khoản này");
-    if (attribute.isGlobal)
-      throw new Error("Shop không được phép chỉnh sửa thuộc tính toàn cục");
-    if (attribute.shopId?.toString() !== shop._id.toString())
-      throw new Error("Bạn không có quyền chỉnh sửa thuộc tính của shop khác!");
-  } else {
-    if (!attribute.isGlobal)
-      throw new Error("Admin chỉ được phép chỉnh sửa thuộc tính toàn cục");
+    if (accountId) {
+      const shop = await Shop.findOne({ accountId: toObjectId(accountId), isDeleted: false }).session(session);
+      if (!shop) throw new Error("Không tìm thấy cửa hàng cho tài khoản này");
+      if (attribute.isGlobal)
+        throw new Error("Shop không được phép chỉnh sửa thuộc tính toàn cục");
+      if (attribute.shopId?.toString() !== shop._id.toString())
+        throw new Error("Bạn không có quyền chỉnh sửa thuộc tính của shop khác!");
+    } else {
+      if (!attribute.isGlobal)
+        throw new Error("Admin chỉ được phép chỉnh sửa thuộc tính toàn cục");
+    }
+
+    oldValue.isActive = !oldValue.isActive;
+    await oldValue.save({ session });
+    
+    return {
+      success: true,
+      message: `Đã ${oldValue.isActive ? "kích hoạt" : "vô hiệu hóa"} value thành công`,
+      data: oldValue,
+    };
+  } catch (error) {
+    return { success: false, message: error.message, data: null };
   }
-
-  oldValue.isActive = !oldValue.isActive;
-  await oldValue.save({ session });
-  return oldValue;
 };
 
 // Xóa 1 value (bao gồm ảnh)
 export const deleteAttributeValue = async (valueId, accountId = null, session) => {
-  const oldValue = await AttributeValue.findById(valueId).session(session);
-  if (!oldValue) throw new Error(`Không tìm thấy value với id ${valueId}`);
+  try {
+    const oldValue = await AttributeValue.findById(valueId).session(session);
+    if (!oldValue) throw new Error(`Không tìm thấy value với id ${valueId}`);
 
-  const attribute = await Attribute.findById(oldValue.attributeId).session(session);
-  if (!attribute) throw new Error("Không tìm thấy attribute của value");
+    const attribute = await Attribute.findById(oldValue.attributeId).session(session);
+    if (!attribute) throw new Error("Không tìm thấy attribute của value");
 
-  if (accountId) {
-    const shop = await Shop.findOne({ accountId: toObjectId(accountId), isDeleted: false }).session(session);
-    if (!shop) throw new Error("Không tìm thấy cửa hàng cho tài khoản này");
-    if (attribute.isGlobal)
-      throw new Error("Shop không được phép xóa thuộc tính toàn cục");
-    if (attribute.shopId?.toString() !== shop._id.toString())
-      throw new Error("Bạn không có quyền xóa thuộc tính của shop khác!");
-  } else {
-    if (!attribute.isGlobal)
-      throw new Error("Admin chỉ được phép xóa thuộc tính toàn cục");
+    if (accountId) {
+      const shop = await Shop.findOne({ accountId: toObjectId(accountId), isDeleted: false }).session(session);
+      if (!shop) throw new Error("Không tìm thấy cửa hàng cho tài khoản này");
+      if (attribute.isGlobal)
+        throw new Error("Shop không được phép xóa thuộc tính toàn cục");
+      if (attribute.shopId?.toString() !== shop._id.toString())
+        throw new Error("Bạn không có quyền xóa thuộc tính của shop khác!");
+    } else {
+      if (!attribute.isGlobal)
+        throw new Error("Admin chỉ được phép xóa thuộc tính toàn cục");
+    }
+
+    // Xóa ảnh nếu có
+    if (oldValue.image) {
+      const imagePath = path.join(attributeUploadDir, path.basename(oldValue.image));
+      if (fs.existsSync(imagePath)) fs.unlinkSync(imagePath);
+    }
+
+    await AttributeValue.deleteOne({ _id: valueId }, { session });
+
+    return { success: true, message: "Đã xóa value thành công" };
+  } catch (error) {
+    console.error("deleteAttributeValue error:", error);
+    return { success: false, message: error.message };
   }
-
-  // Xóa ảnh nếu có
-  if (oldValue.image) {
-    const imagePath = path.join(attributeUploadDir, path.basename(oldValue.image));
-    if (fs.existsSync(imagePath)) fs.unlinkSync(imagePath);
-  }
-
-  await AttributeValue.deleteOne({ _id: valueId }).session(session);
-  return { success: true, message: "Đã xóa value" };
 };

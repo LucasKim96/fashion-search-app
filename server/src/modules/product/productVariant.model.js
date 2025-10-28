@@ -8,7 +8,7 @@ const productVariantSchema = new mongoose.Schema({
     valueId: { type: mongoose.Schema.Types.ObjectId, ref: "AttributeValue", required: true },
   }],
   stock: { type: Number, default: 0, min: 0 },
-  images: { type: [String], default: [] }, // ảnh riêng cho biến thể (vd áo trắng size M)
+  image: { type: String, default: "" }, // ảnh riêng cho biến thể (vd áo trắng size M)
   priceAdjustment: { type: Number, default: 0 },// ví dụ +10 hoặc -15 so với basePrice
 }, { timestamps: true });
 
