@@ -11,9 +11,10 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const DEFAULT_LOGO = "/assets/shop-defaults/shop-logo.png";
-const DEFAULT_COVER = "/assets/shop-defaults/shop-cover.jpg";
-export const DEFAULT_FOLDER = path.join(__dirname, "assets", "shop-defaults");
+const DEFAULT_LOGO = "/assets/shop/shop-logo.png";
+const DEFAULT_COVER = "/assets/shop/shop-cover.jpg";
+const ASSETS_ROOT = path.join(process.cwd(), "src", "assets");
+export const DEFAULT_FOLDER = path.join(ASSETS_ROOT, "shop");
 
 /**
  * Lấy danh sách shop với phân trang + filter
@@ -139,7 +140,12 @@ export const createShop = async (data) => {
  */
 export const updateShop = async (shopId, accountId, updateData) => {
   // kiểm tra accountId có tồn tại trong database không
-  const account = await Account.findById(accountId);
+  const account = await Account.findById(accountId).populate("roles");
+  const isOwner = shop.accountId?._id?.toString() === accountId.toString();
+  const isAdmin = account.roles.some(
+    (r) => r.roleName === "Super Admin" || r.level >= 3
+  );
+
   if (!account) {
     throw ApiError.notFound("Tài khoản không tồn tại");
   }
@@ -150,9 +156,9 @@ export const updateShop = async (shopId, accountId, updateData) => {
   });
   if (!shop) throw ApiError.notFound("Không tìm thấy shop");
 
-  if (shop.accountId.toString() !== accountId)
+  if (!isAdmin && !isOwner) {
     throw ApiError.forbidden("Không có quyền cập nhật shop này");
-
+  }
   // chỉ cho phép update whitelist fields
   const allowedFields = ["shopName", "description"];
   const safeUpdates = {};
@@ -199,8 +205,15 @@ export const updateShopImage = async (
   const shop = await Shop.findById(shopId);
   if (!shop) throw ApiError.notFound("Không tìm thấy shop");
 
-  if (shop.accountId.toString() !== accountId)
+  const account = await Account.findById(accountId).populate("roles");
+  const isOwner = shop.accountId?._id?.toString() === accountId.toString();
+  const isAdmin = account.roles.some(
+    (r) => r.roleName === "Super Admin" || r.level >= 3
+  );
+
+  if (!isAdmin && !isOwner) {
     throw ApiError.forbidden("Không có quyền cập nhật shop này");
+  }
 
   const oldPath = shop[type + "Url"];
 
@@ -265,8 +278,9 @@ export const deleteShop = async (shopId, accountId) => {
   const isSuperAdmin = account.roles.some(
     (r) => r.roleName === "Super Admin" || r.level >= 4
   );
+  const isOwner = shop.accountId?._id?.toString() === accountId.toString();
 
-  if (!isSuperAdmin && shop.accountId.toString() !== accountId)
+  if (!isSuperAdmin && !isOwner)
     throw ApiError.forbidden("Không có quyền xóa shop này");
 
   return await withTransaction(async (session) => {

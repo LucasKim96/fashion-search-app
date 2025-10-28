@@ -31,7 +31,7 @@ app.use(cors());
 app.use(express.json());
 
 // Static folder
-app.use("/assets", express.static(path.join(__dirname, "assets")));
+app.use("/assets", express.static(path.join(ROOT_DIR, "assets")));
 app.use("/uploads", express.static(path.join(ROOT_DIR, "uploads")));
 
 // Routes
@@ -52,9 +52,6 @@ connectDB(process.env.MONGO_URI)
   .then(() => {
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`📂 Static folders:`);
-      console.log("📂 __dirname:", __dirname);
-      console.log("📂 ROOT_DIR:", ROOT_DIR);
     });
   })
   .catch((err) => {
