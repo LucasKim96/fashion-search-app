@@ -23,9 +23,9 @@ export const validateShop = (req, res, next) => {
   // if (!description || typeof description !== "string" || !description.trim()) {
   //   throw ApiError.badRequest("Mô tả shop là bắt buộc!");
   // }
-  // if (description.trim().length < 10 || description.trim().length > 500) {
-  //   throw ApiError.badRequest("Mô tả phải từ 10 đến 500 ký tự!");
-  // }
+  if (description.trim().length > 1000) {
+    throw ApiError.badRequest("Mô tả không được vượt quá 1000 ký tự!");
+  }
 
   // Validate logoUrl (nếu có)
   if (logoUrl && !urlRegex.test(logoUrl)) {

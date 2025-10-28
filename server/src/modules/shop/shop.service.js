@@ -4,20 +4,28 @@ import { ApiError, withTransaction } from "../../utils/index.js";
 import { Account, Role } from "../account/index.js";
 import { Product, ProductVariant } from "../product/index.js";
 import { removeProductsFromAllCarts } from "../cart/cart.service.js";
+import path from "path";
+import fs from "fs";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const DEFAULT_LOGO = "/assets/shop/shop-logo.png";
+const DEFAULT_COVER = "/assets/shop/shop-cover.jpg";
+const ASSETS_ROOT = path.join(process.cwd(), "src", "assets");
+export const DEFAULT_FOLDER = path.join(ASSETS_ROOT, "shop");
 
 /**
  * Lấy danh sách shop với phân trang + filter
  */
 export const getShops = async (filters = {}, options = {}) => {
-  let { page = 1, limit = 10 } = options;
+  let { page = 1, limit = 20 } = options;
   const query = { isDeleted: { $ne: true } };
 
   // ép kiểu an toàn
   page = Number(page) > 0 ? Number(page) : 1;
   limit = Math.min(Math.max(Number(limit) || 20, 1), 100);
-
-  const maxLimit = 100;
-  if (limit > maxLimit) limit = maxLimit;
 
   // validate & chuẩn hóa filters
   if (filters.status) {
@@ -93,16 +101,17 @@ export const createShop = async (data) => {
 
   const trimmedShopName = shopName.trim();
   const trimmedDescription = description?.trim() || "";
-  const trimmedLogoUrl = logoUrl?.trim() || "";
-  const trimmedCoverUrl = coverUrl?.trim() || "";
+
+  const safeLogoUrl = logoUrl?.trim() || DEFAULT_LOGO;
+  const safeCoverUrl = coverUrl?.trim() || DEFAULT_COVER;
 
   return await withTransaction(async (session) => {
     const shop = await Shop.create(
       [
         {
           shopName: trimmedShopName,
-          logoUrl: trimmedLogoUrl,
-          coverUrl: trimmedCoverUrl,
+          logoUrl: safeLogoUrl,
+          coverUrl: safeCoverUrl,
           description: trimmedDescription,
           accountId,
         },
@@ -131,7 +140,12 @@ export const createShop = async (data) => {
  */
 export const updateShop = async (shopId, accountId, updateData) => {
   // kiểm tra accountId có tồn tại trong database không
-  const account = await Account.findById(accountId);
+  const account = await Account.findById(accountId).populate("roles");
+  const isOwner = shop.accountId?._id?.toString() === accountId.toString();
+  const isAdmin = account.roles.some(
+    (r) => r.roleName === "Super Admin" || r.level >= 3
+  );
+
   if (!account) {
     throw ApiError.notFound("Tài khoản không tồn tại");
   }
@@ -142,11 +156,11 @@ export const updateShop = async (shopId, accountId, updateData) => {
   });
   if (!shop) throw ApiError.notFound("Không tìm thấy shop");
 
-  if (shop.accountId.toString() !== accountId)
+  if (!isAdmin && !isOwner) {
     throw ApiError.forbidden("Không có quyền cập nhật shop này");
-
+  }
   // chỉ cho phép update whitelist fields
-  const allowedFields = ["shopName", "logoUrl", "coverUrl", "description"];
+  const allowedFields = ["shopName", "description"];
   const safeUpdates = {};
   for (const key of allowedFields) {
     if (updateData[key] !== undefined) {
@@ -180,6 +194,75 @@ export const updateShop = async (shopId, accountId, updateData) => {
 };
 
 /**
+ * Cập nhật logo hoặc cover — tự xóa file cũ
+ */
+export const updateShopImage = async (
+  shopId,
+  accountId,
+  newUrl,
+  type = "logo"
+) => {
+  const shop = await Shop.findById(shopId);
+  if (!shop) throw ApiError.notFound("Không tìm thấy shop");
+
+  const account = await Account.findById(accountId).populate("roles");
+  const isOwner = shop.accountId?._id?.toString() === accountId.toString();
+  const isAdmin = account.roles.some(
+    (r) => r.roleName === "Super Admin" || r.level >= 3
+  );
+
+  if (!isAdmin && !isOwner) {
+    throw ApiError.forbidden("Không có quyền cập nhật shop này");
+  }
+
+  const oldPath = shop[type + "Url"];
+
+  // ✅ Chuẩn hóa path an toàn
+  const resolvePath = (urlPath) => {
+    const safePath = urlPath.startsWith("/") ? urlPath.slice(1) : urlPath;
+    return path.join(process.cwd(), safePath);
+  };
+
+  // ✅ Kiểm tra và xóa ảnh cũ (nếu đủ điều kiện)
+  if (oldPath && oldPath !== newUrl) {
+    const filePath = resolvePath(oldPath);
+
+    // Ảnh mặc định (không xóa)
+    const isDefaultImage =
+      oldPath === DEFAULT_LOGO ||
+      oldPath === DEFAULT_COVER ||
+      filePath.startsWith(DEFAULT_FOLDER);
+
+    // Ảnh đang được field khác dùng (logo ↔ cover)
+    const isUsedByOtherField =
+      (type === "logo" && shop.coverUrl === oldPath) ||
+      (type === "cover" && shop.logoUrl === oldPath);
+
+    // Ảnh không nằm trong thư mục uploads (bảo vệ)
+    const isInsideUploads = filePath.includes(
+      path.join(process.cwd(), "uploads")
+    );
+
+    if (!isDefaultImage && !isUsedByOtherField && isInsideUploads) {
+      try {
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+          console.log(`🗑️ Đã xóa ảnh ${type} cũ: ${filePath}`);
+        }
+      } catch (err) {
+        console.error("⚠️ Không thể xóa ảnh cũ:", err);
+      }
+    }
+  }
+
+  // ✅ Cập nhật ảnh mới
+  shop[type + "Url"] = newUrl;
+  await shop.save();
+
+  return shop;
+};
+
+/**
  * Xóa shop (chỉ chủ shop được phép làm)
  */
 export const deleteShop = async (shopId, accountId) => {
@@ -195,8 +278,9 @@ export const deleteShop = async (shopId, accountId) => {
   const isSuperAdmin = account.roles.some(
     (r) => r.roleName === "Super Admin" || r.level >= 4
   );
+  const isOwner = shop.accountId?._id?.toString() === accountId.toString();
 
-  if (!isSuperAdmin && shop.accountId.toString() !== accountId)
+  if (!isSuperAdmin && !isOwner)
     throw ApiError.forbidden("Không có quyền xóa shop này");
 
   return await withTransaction(async (session) => {

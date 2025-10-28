@@ -26,15 +26,15 @@ const PORT = process.env.PORT || 5000;
 // Lấy đường dẫn tuyệt đối
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const ROOT_DIR = process.cwd();
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 
 // Static folder
-app.use("/assets", express.static(path.join(__dirname, "assets")));
-console.log("Serving static from:", path.join(__dirname, "uploads"));
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use("/assets", express.static(path.join(ROOT_DIR, "assets")));
+app.use("/uploads", express.static(path.join(ROOT_DIR, "uploads")));
 
 // Routes
 app.use("/api/accounts", AccountRoutes);
