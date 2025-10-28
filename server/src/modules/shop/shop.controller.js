@@ -1,9 +1,12 @@
 // server/src/modules/shop/shop.controller.js
 import * as ShopService from "./shop.service.js";
-import { apiResponse } from "../../utils/index.js";
-import { validateObjectId, validateURL } from "../../utils/index.js";
+import { apiResponse, ApiError, validateObjectId } from "../../utils/index.js";
+import path from "path";
+import fs from "fs";
 
 const { successResponse, errorResponse } = apiResponse;
+const DEFAULT_LOGO = "assets/shop/default-logo.png";
+const DEFAULT_COVER = "assets/shop/default-cover.jpg";
 
 /**
  * Lấy danh sách tất cả shop
@@ -137,6 +140,59 @@ export const updateCover = async (req, res, next) => {
   }
 };
 
+export const updateDefaultLogo = async (req, res, next) => {
+  try {
+    if (!req.file)
+      return next(ApiError.badRequest("Up cái logo lên coi bro 😎"));
+
+    const targetPath = path.join(process.cwd(), DEFAULT_LOGO);
+
+    // 1. Xóa file cũ nếu tồn tại
+    if (fs.existsSync(targetPath)) {
+      fs.unlinkSync(targetPath);
+    }
+
+    // 2. Ghi đè file mới vào đúng tên
+    fs.renameSync(req.file.path, targetPath);
+
+    return successResponse(
+      res,
+      {
+        logoUrl: DEFAULT_LOGO,
+      },
+      "Logo mới fresh như bug-free code 💅"
+    );
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const updateDefaultCover = async (req, res, next) => {
+  try {
+    if (!req.file) throw ApiError.badRequest("Up cover đi bạn eyyy");
+
+    const targetPath = path.join(process.cwd(), DEFAULT_COVER);
+
+    // Delete old one
+    if (fs.existsSync(targetPath)) {
+      fs.unlinkSync(targetPath);
+    }
+
+    // Replace new image with fixed filename
+    fs.renameSync(req.file.path, targetPath);
+
+    return successResponse(
+      res,
+      {
+        coverUrl: DEFAULT_COVER,
+      },
+      "Ảnh cover default mới đã được cập nhật 🎉"
+    );
+  } catch (err) {
+    next(err);
+  }
+};
+
 /**
  * Xóa shop (chỉ chủ shop)
  */
@@ -164,9 +220,6 @@ export const changeStatus = async (req, res, next) => {
     const { id } = req.params;
     const accountId = req.user?.id; // || req.body.accountId;
     const { status } = req.body;
-    // console.log("accountId:", accountId);
-    // console.log("status:", status);
-    // console.log("id:", id);
     validateObjectId(id, "shopID");
     validateObjectId(accountId, "accID");
 
