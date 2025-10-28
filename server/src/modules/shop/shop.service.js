@@ -200,8 +200,15 @@ export const updateShopImage = async (
   const shop = await Shop.findById(shopId);
   if (!shop) throw ApiError.notFound("Không tìm thấy shop");
 
-  if (shop.accountId.toString() !== accountId)
+  const account = await Account.findById(accountId).populate("roles");
+  const isOwner = shop.accountId?._id?.toString() === accountId.toString();
+  const isAdmin = account.roles.some(
+    (r) => r.roleName === "Super Admin" || r.level >= 3
+  );
+
+  if (!isAdmin && !isOwner) {
     throw ApiError.forbidden("Không có quyền cập nhật shop này");
+  }
 
   const oldPath = shop[type + "Url"];
 
