@@ -155,10 +155,13 @@ export const updateDefaultLogo = async (req, res, next) => {
     // 2. Ghi đè file mới vào đúng tên
     fs.renameSync(req.file.path, targetPath);
 
-    return successResponse(res, {
-      message: "Logo mới fresh như bug-free code 💅",
-      logoUrl: DEFAULT_LOGO,
-    });
+    return successResponse(
+      res,
+      {
+        logoUrl: DEFAULT_LOGO,
+      },
+      "Logo mới fresh như bug-free code 💅"
+    );
   } catch (err) {
     next(err);
   }
@@ -178,10 +181,13 @@ export const updateDefaultCover = async (req, res, next) => {
     // Replace new image with fixed filename
     fs.renameSync(req.file.path, targetPath);
 
-    return successResponse(res, {
-      message: "Ảnh cover default mới đã được cập nhật 🎉",
-      coverUrl: DEFAULT_COVER,
-    });
+    return successResponse(
+      res,
+      {
+        coverUrl: DEFAULT_COVER,
+      },
+      "Ảnh cover default mới đã được cập nhật 🎉"
+    );
   } catch (err) {
     next(err);
   }
@@ -214,9 +220,6 @@ export const changeStatus = async (req, res, next) => {
     const { id } = req.params;
     const accountId = req.user?.id; // || req.body.accountId;
     const { status } = req.body;
-    // console.log("accountId:", accountId);
-    // console.log("status:", status);
-    // console.log("id:", id);
     validateObjectId(id, "shopID");
     validateObjectId(accountId, "accID");
 

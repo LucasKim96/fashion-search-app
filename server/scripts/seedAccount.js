@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import dotenv from "dotenv";
-import Account from "../modules/account/account.model.js"; // đường dẫn tuỳ theo cấu trúc của bạn
+import Account from "../src/modules/account/account.model.js"; // đường dẫn tuỳ theo cấu trúc của bạn
 import bcrypt from "bcryptjs";
 import path from "path";
 
@@ -19,7 +19,7 @@ const seedAccounts = async () => {
 
     // Băm password mẫu
     const passwordHash = await bcrypt.hash("123456", 10);
-    const zeropwd = await bcrypt.hash("1816109070", 10);
+    const zeropwd = await bcrypt.hash("1316109070", 10);
 
     const accounts = [
       {
