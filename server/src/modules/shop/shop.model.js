@@ -1,6 +1,9 @@
 // Shop Model
 import mongoose from "mongoose";
 
+const DEFAULT_LOGO = "/assets/shop/default-logo.png";
+const DEFAULT_COVER = "/assets/shop/default-cover.jpg";
+
 const shopSchema = new mongoose.Schema(
   {
     shopName: {
@@ -10,12 +13,12 @@ const shopSchema = new mongoose.Schema(
     },
     logoUrl: {
       type: String,
-      default: "",
+      default: DEFAULT_LOGO,
       trim: true,
     },
     coverUrl: {
       type: String,
-      default: "",
+      default: DEFAULT_COVER,
       trim: true,
     },
     description: {

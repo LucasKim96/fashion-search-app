@@ -1,12 +1,36 @@
-import multer from "multer";
+// server/src/middlewares/upload.middleware.js
+
+import { createUploader } from "../utils/index.js";
 import path from "path";
-import fs from "fs";
+// Không cần import process vì logic process.cwd() đã nằm trong createUploader
 
-export const uploadFiles = (folderName) => {
-  const uploadPath = path.join("server", "src", "uploads", folderName);
+// 🧩 Upload avatar user
+export const uploadUserAvatar = createUploader({
+  destinationGenerator: (req) => {
+    // Trả về đường dẫn TƯƠNG ĐỐI từ thư mục GỐC (uploads/)
+    // Lấy ID từ req.user (đã qua authMiddleware)
+    return path.join("users", req.user?.id || "unknown");
+  },
+  useAssets: false, // Mặc định là false (lưu vào uploads)
+});
 
-  if (!fs.existsSync(uploadPath)) fs.mkdirSync(uploadPath, { recursive: true });
+// 🧩 Upload image shop
+export const uploadShopImage = createUploader({
+  destinationGenerator: (req) => {
+    // 🚨 KHÔNG CẦN TẠO THƯ MỤC CON, CHỈ CẦN DÙNG SHOP ID
+    // Path: uploads/shops/:id/
+    return path.join("shops", req.params.id);
+  },
+  useAssets: false,
+});
 
-  const storage = multer.memoryStorage();
-  return multer({ storage });
-};
+// server/src/middlewares/upload.middleware.js
+
+// ... (các middleware khác)
+
+export const uploadShopDefaultImage = createUploader({
+  destinationGenerator: (req) => {
+    return "shop";
+  },
+  useAssets: true, // Vẫn giữ nguyên là TRUE để lưu vào src/assets
+});

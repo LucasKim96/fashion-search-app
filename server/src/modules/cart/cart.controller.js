@@ -10,7 +10,7 @@ const { successResponse, errorResponse } = apiResponse;
  */
 export const getCart = async (req, res) => {
   try {
-    const accountId = req.user?._id || req.body.accountId;
+    const accountId = req.user?.id || req.body.accountId;
 
     if (!accountId) {
       return errorResponse(res, "Chưa đăng nhập", 401);
@@ -37,7 +37,7 @@ export const getCart = async (req, res) => {
  */
 export const addItem = async (req, res) => {
   try {
-    const accountId = req.user?._id || req.body.accountId;
+    const accountId = req.user?.id || req.body.accountId;
     const { productVariantId, quantity } = req.body;
 
     if (!accountId) {
@@ -69,7 +69,7 @@ export const addItem = async (req, res) => {
  */
 export const updateQuantity = async (req, res) => {
   try {
-    const accountId = req.user?._id || req.body.accountId;
+    const accountId = req.user?.id || req.body.accountId;
     const { productVariantId, quantity } = req.body;
 
     if (!accountId) {
@@ -97,7 +97,7 @@ export const updateQuantity = async (req, res) => {
  */
 export const removeItem = async (req, res) => {
   try {
-    const accountId = req.user?._id || req.body.accountId;
+    const accountId = req.user?.id || req.body.accountId;
     const { productVariantId } = req.params;
 
     if (!accountId) {
@@ -124,7 +124,7 @@ export const removeItem = async (req, res) => {
  */
 export const clearCart = async (req, res) => {
   try {
-    const accountId = req.user?._id || req.body.accountId;
+    const accountId = req.user?.id || req.body.accountId;
 
     if (!accountId) {
       return errorResponse(res, "Chưa đăng nhập", 401);

@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import path from "path";
-import { CartModel } from "../modules/cart/index.js"; // hoặc đúng alias module của bạn
+import { CartModel } from "../src/modules/cart/index.js"; // hoặc đúng alias module của bạn
 
 dotenv.config({ path: path.resolve("./server/.env") });
 
