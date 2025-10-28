@@ -14,11 +14,6 @@ export const validateCreateAttribute = [
     .isLength({ max: 100 })
     .withMessage("Tên thuộc tính không được dài quá 100 ký tự"),
 
-  body("values")
-    .optional()
-    .isArray()
-    .withMessage("Values phải là mảng"),
-
   body("values.*.value")
     .if(body("values").exists())
     .trim()
@@ -33,11 +28,6 @@ export const validateCreateAttribute = [
 ];
 
 export const validateCreateAttributeValue = [
-  body("values")
-    .optional()
-    .isArray()
-    .withMessage("Values phải là mảng"),
-
   body("values.*.value")
     .if(body("values").exists())
     .trim()
@@ -56,11 +46,6 @@ export const validateUpdateAttribute = [
     .trim()
     .notEmpty()
     .withMessage("Tên thuộc tính không được để trống nếu có"),
-
-  body("values")
-    .optional()
-    .isArray()
-    .withMessage("Values phải là mảng"),
 
   body("values.*._id")
     .optional()

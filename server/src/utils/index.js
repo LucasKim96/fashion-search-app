@@ -12,10 +12,12 @@ import { getLastActiveString } from "./getLastActive.js";
 import { handleValidation } from "./validationHandler.js";
 import { handleMongooseError } from "./mongooseError.helper.js";
 import { withTransaction } from "./transaction.helper.js";
-import { attachImagesToValues } from "./attachImagesToValues.js"
-import { rollbackFiles } from "./rollbackFiles.js"
-import { generateVariantsCombinations } from "./generateVariantsCombinations.js"
+import { attachImagesToValues } from "./attachImagesToValues.js";
+import { rollbackFiles } from "./rollbackFiles.js";
+import { generateVariantsCombinations } from "./generateVariantsCombinations.js";
 import { createUploader } from "./createUploader.js";
+import { backupFile, restoreFile, removeBackup } from "./backupFile.js";
+import { toObjectId, validateAttributeValue, fetchAttributeWithValues } from "./attribute.helper.js";
 
 export {
   ApiError,
@@ -34,4 +36,10 @@ export {
   rollbackFiles,
   generateVariantsCombinations,
   createUploader,
+  backupFile, 
+  restoreFile,
+  removeBackup,
+  toObjectId, 
+  validateAttributeValue, 
+  fetchAttributeWithValues,
 };

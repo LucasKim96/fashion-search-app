@@ -2,36 +2,22 @@ import mongoose from "mongoose";
 import Attribute from "./attribute.model.js";
 import AttributeValue from "./attributeValue.model.js";
 import Shop from "../shop/shop.model.js";
-import { withTransaction } from "../../utils/index.js";
 import fs from "fs";
 import path from "path";
+import { 
+  rollbackFiles, 
+  backupFile, 
+  restoreFile, 
+  removeBackup, 
+  withTransaction, 
+  toObjectId, 
+  validateAttributeValue, 
+  fetchAttributeWithValues 
+} from "../../utils/index.js";
 
-const attributeUploadDir = path.resolve("src/uploads/attributes");
-// === Helper ======================================================
-const toObjectId = (id) => {
-  if (!id) return null;
-  try { return new mongoose.Types.ObjectId(id); } catch { return null; }
-};
-
-const validateAttributeValue = (value) => {
-  if (!value || typeof value !== "object") throw new Error("Giá trị attribute không hợp lệ");
-  if (!value.value || value.value.trim() === "") throw new Error("Giá trị attribute không được để trống");
-  return true;
-};
-
-const _fetchAttributeWithValues = async (attributeId, session = null) => {
-  const attribute = await Attribute.findById(attributeId).session(session).lean();
-  if (!attribute) return null;
-
-  const values = await AttributeValue.find({
-    attributeId,
-    isActive: { $ne: false },
-  })
-    .session(session)
-    .lean();
-
-  return { ...attribute, values };
-};
+const UPLOADS_ROOT = path.join(process.cwd(), "uploads");
+export const DEFAULT_FOLDER = path.join(UPLOADS_ROOT, "attributes");
+export const ATTRIBUTES_PUBLIC = "/uploads/attributes";
 
 /**
  * Lấy danh sách Attribute + AttributeValue linh hoạt
@@ -260,7 +246,7 @@ export const getAttributesUnified = async ({
 export const getAttributeById = async (id) => {
   try {
     if (!toObjectId(id)) throw new Error("Id không hợp lệ");
-    const attribute = await _fetchAttributeWithValues(id);
+    const attribute = await fetchAttributeWithValues(id);
     if (!attribute) throw new Error("Không tìm thấy thuộc tính");
     return { success: true, message: "Lấy thuộc tính thành công", data: attribute };
   } catch (error) {
@@ -269,7 +255,7 @@ export const getAttributeById = async (id) => {
 };
 
 // Tạo attribute + values
-export const createAttribute = async (payload, accountId = null) => {
+export const createAttribute = async (payload, accountId = null, tempFiles = []) => {
   return withTransaction(async (session) => {
     const label = payload.label;
     let values = payload.values || [];
@@ -322,20 +308,23 @@ export const createAttribute = async (payload, accountId = null) => {
       await AttributeValue.insertMany(docs, { session });
     }
 
-    const result = await _fetchAttributeWithValues(attribute._id, session);
+    const result = await fetchAttributeWithValues(attribute._id, session);
     return {
       success: true,
       message: "Tạo thuộc tính thành công!",
       data: result,
     };
   }).catch((error) => {
+      rollbackFiles(tempFiles);
       return { success: false, message: error.message };
   });
 };
 
 
 // Cập nhật attribute + value (có kiểm tra quyền của shop)
-export const updateAttribute = async (id, body, accountId = null) => {
+export const updateAttribute = async (id, body, accountId = null, tempFiles = []) => {
+  const backups = []; // ← lưu danh sách file backup để khôi phục nếu lỗi
+
   return withTransaction(async (session) => {
     if (!toObjectId(id)) throw new Error("Id không hợp lệ");
 
@@ -345,17 +334,15 @@ export const updateAttribute = async (id, body, accountId = null) => {
     const { label } = body;
     let values = body.values || [];
 
-    // Xác định loại người dùng
+    // --- Xác định quyền ---
     let isAdmin = false;
     let currentShopId = null;
 
     if (accountId) {
-      // --- Shop ---
       const shop = await Shop.findOne({
         accountId: toObjectId(accountId),
         isDeleted: false,
       }).session(session);
-
       if (!shop) throw new Error("Không tìm thấy cửa hàng cho tài khoản này");
       currentShopId = shop._id;
 
@@ -365,7 +352,6 @@ export const updateAttribute = async (id, body, accountId = null) => {
       if (attribute.shopId?.toString() !== currentShopId.toString())
         throw new Error("Bạn không có quyền sửa thuộc tính của shop khác!");
     } else {
-      // --- Admin ---
       isAdmin = true;
       if (!attribute.isGlobal)
         throw new Error("Admin chỉ được phép chỉnh sửa thuộc tính toàn cục (global)");
@@ -376,80 +362,74 @@ export const updateAttribute = async (id, body, accountId = null) => {
       if (!label || label.trim() === "") throw new Error("Label không được để trống");
       attribute.label = label.trim();
     }
-
     await attribute.save({ session });
 
-    // --- Cập nhật hoặc thêm/xóa value ---
+    // --- Xử lý values ---
     if (Array.isArray(values) && values.length) {
       const ops = [];
 
       for (const v of values) {
-        // CHUYỂN TRẠNG THÁI (bật/tắt value)
+        // Toggle status
         if (v._action === "toggle-status" && v._id) {
           const oldValue = await AttributeValue.findById(v._id).lean();
           if (!oldValue) throw new Error(`Không tìm thấy value với id ${v._id}`);
 
-          const newStatus = !oldValue.isActive; // đảo ngược trạng thái hiện tại
-
           ops.push({
             updateOne: {
               filter: { _id: v._id, attributeId: attribute._id },
-              update: { $set: { isActive: newStatus } },
+              update: { $set: { isActive: !oldValue.isActive } },
             },
           });
-
           continue;
         }
 
-        //XÓA CỨNG (xóa record + ảnh)
+        // Delete cứng
         if (v._action === "delete" && v._id) {
-          // Xóa ảnh khi delete value
           const oldValue = await AttributeValue.findById(v._id).lean();
           if (oldValue?.image) {
-            const imagePath = path.join(attributeUploadDir, path.basename(oldValue.image));
+            const imagePath = path.join(DEFAULT_FOLDER, path.basename(oldValue.image));
+
             if (fs.existsSync(imagePath)) {
-              fs.unlinkSync(imagePath);
-              // console.log(`Đã xóa ảnh của value bị xóa: ${imagePath}`);
+              const backupPath = backupFile(imagePath); // → backup trước khi xóa
+              backups.push({ backupPath, originalPath: imagePath });
+
+              fs.unlinkSync(imagePath); // xóa thật
             }
           }
-          
+
           ops.push({
-            deleteOne: {
-              filter: { _id: v._id, attributeId: attribute._id },
-              // update: { $set: { isActive: false } },
-            },
+            deleteOne: { filter: { _id: v._id, attributeId: attribute._id } },
           });
-        } else if (v._id) {
-          // Lấy value cũ từ DB
+          continue;
+        }
+
+        // Update
+        if (v._id) {
           const oldValue = await AttributeValue.findById(v._id).lean();
           if (!oldValue) throw new Error(`Không tìm thấy value với id ${v._id}`);
-          
-          // Nếu chỉ xoá ảnh
+
           const removeImage = v.image === "" && oldValue.image;
           const hasNewImage = v.image && v.image !== oldValue.image;
+          const hasValueChange = v.value && v.value.trim() !== oldValue.value;
 
-          // Chỉ validate nếu có sửa value
-          const hasValueChange =
-            (v.value && v.value.trim() !== oldValue.value);
+          if (hasValueChange) validateAttributeValue(v);
 
-          if (hasValueChange) {
-            validateAttributeValue(v);
-  }
-          if (hasNewImage && oldValue.image) {
-            // Có ảnh mới → xóa ảnh cũ
-            const oldPath = path.join(attributeUploadDir, path.basename(oldValue.image));
-            if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
-          } else if (removeImage) {
-            // Không có ảnh mới, nhưng yêu cầu xóa ảnh cũ
-            const oldPath = path.join(attributeUploadDir, path.basename(oldValue.image));
-            if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+          const oldPath = oldValue.image
+            ? path.join(DEFAULT_FOLDER, path.basename(oldValue.image))
+            : null;
+
+          // Nếu có ảnh mới hoặc xoá ảnh cũ → backup trước
+          if ((hasNewImage || removeImage) && oldPath && fs.existsSync(oldPath)) {
+            const backupPath = backupFile(oldPath);
+            backups.push({ backupPath, originalPath: oldPath });
+            fs.unlinkSync(oldPath);
           }
 
-          // Tính ảnh mới sẽ lưu vào DB
-          const newImage =
-            removeImage ? "" :
-            hasNewImage ? v.image :
-            oldValue.image ?? "";
+          const newImage = removeImage
+            ? ""
+            : hasNewImage
+            ? v.image
+            : oldValue.image ?? "";
 
           if (hasNewImage || hasValueChange || removeImage) {
             ops.push({
@@ -457,7 +437,7 @@ export const updateAttribute = async (id, body, accountId = null) => {
                 filter: { _id: v._id },
                 update: {
                   $set: {
-                    value:v.value !== undefined ? v.value.trim() : oldValue.value,
+                    value: v.value !== undefined ? v.value.trim() : oldValue.value,
                     image: newImage,
                     shopId: isAdmin ? null : currentShopId,
                     isActive: true,
@@ -466,34 +446,40 @@ export const updateAttribute = async (id, body, accountId = null) => {
               },
             });
           }
-        } else {
-          // Insert
-          validateAttributeValue(v);
-          ops.push({
-            insertOne: {
-              document: {
-                attributeId: attribute._id,
-                value: v.value.trim(),
-                image: v.image || "",
-                shopId: isAdmin ? null : currentShopId,
-                isActive: true,
-              },
-            },
-          });
+          continue;
         }
+
+        // Insert mới
+        validateAttributeValue(v);
+        ops.push({
+          insertOne: {
+            document: {
+              attributeId: attribute._id,
+              value: v.value.trim(),
+              image: v.image || "",
+              shopId: isAdmin ? null : currentShopId,
+              isActive: true,
+            },
+          },
+        });
       }
 
       if (ops.length) await AttributeValue.bulkWrite(ops, { session });
     }
 
-    const updated = await _fetchAttributeWithValues(id, session);
+    const updated = await fetchAttributeWithValues(id, session);
+    backups.forEach((b) => removeBackup(b.backupPath)); // xóa backup sau khi thành công
+
     return {
       success: true,
       message: "Cập nhật thuộc tính thành công",
       data: updated,
     };
   }).catch((error) => {
-      return { success: false, message: error.message };
+    // Nếu transaction fail → rollback các file đã backup
+    backups.forEach((b) => restoreFile(b.backupPath, b.originalPath));
+    rollbackFiles(tempFiles);
+    return { success: false, message: error.message };
   });
 };
 
@@ -567,27 +553,44 @@ export const deleteAttribute = async (id) => {
 
     const values = await AttributeValue.find({ attributeId: attribute._id }).session(session);
 
-    for (const val of values) {
-      if (val.image) {
-        try {
-          const imagePath = path.join(attributeUploadDir, path.basename(val.image));
-
+    // === Giai đoạn backup trước khi xóa ===
+    const backupPaths = [];
+    try {
+      for (const val of values) {
+        if (val.image) {
+          const imagePath = path.join(DEFAULT_FOLDER, path.basename(val.image));
           if (fs.existsSync(imagePath)) {
-            fs.unlinkSync(imagePath);
-            // console.log(`Đã xóa ảnh: ${imagePath}`);
-          } else {
-            // console.log(`Không tìm thấy ảnh để xóa: ${imagePath}`);
+            const backupPath = backupFile(imagePath);
+            if (backupPath) backupPaths.push({ imagePath, backupPath });
           }
-        } catch (err) {
-          // console.warn(`Lỗi khi xóa ảnh của value ${val._id}:`, err.message);
         }
       }
+    } catch (err) {
+      throw new Error("Không thể backup ảnh trước khi xóa");
     }
 
-    await AttributeValue.deleteMany({ attributeId: attribute._id }).session(session);
-    await Attribute.findByIdAndDelete(attribute._id).session(session);
+    try {
+      // === Xóa file ảnh ===
+      for (const val of values) {
+        if (val.image) {
+          const imagePath = path.join(DEFAULT_FOLDER, path.basename(val.image));
+          if (fs.existsSync(imagePath)) fs.unlinkSync(imagePath);
+        }
+      }
 
-    return { success: true, message: "Đã xóa thuộc tính và ảnh của các giá trị liên quan" };
+      // === Xóa dữ liệu DB ===
+      await AttributeValue.deleteMany({ attributeId: attribute._id }).session(session);
+      await Attribute.findByIdAndDelete(attribute._id).session(session);
+
+      // === Nếu thành công → xóa file backup ===
+      backupPaths.forEach(({ backupPath }) => removeBackup(backupPath));
+
+      return { success: true, message: "Đã xóa thuộc tính và ảnh của các giá trị liên quan" };
+    } catch (error) {
+      // === Nếu lỗi → khôi phục ảnh từ backup ===
+      backupPaths.forEach(({ backupPath, imagePath }) => restoreFile(backupPath, imagePath));
+      throw error;
+    }
   }).catch((error) => ({ success: false, message: error.message }));
 };
 

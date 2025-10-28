@@ -1,32 +1,34 @@
 import * as AttributeService from "./attribute.service.js";
-import { handleValidation, attachImagesToValues, rollbackFiles} from "../../utils/index.js";
+import { handleValidation, attachImagesToValues} from "../../utils/index.js";
+import path from "path";
 
-const handleCreateAttribute = async (req, res, isAdmin = false) => {
+const UPLOADS_ROOT = path.join(process.cwd(), "uploads");
+export const ATTRIBUTE_FOLDER = path.join(UPLOADS_ROOT, "attributes");
+export const ATTRIBUTE_PUBLIC = "/uploads/attributes";
+
+export const handleCreateAttribute = async (req, res, isAdmin = false) => {
   const tempFiles = [];
   try {
-    // --- Kiểm tra dữ liệu hợp lệ ---
+    // Validate body cơ bản
     const validationError = handleValidation(req);
     if (validationError) return res.status(400).json(validationError);
 
-    // --- Gắn ảnh vào các value (và lưu tạm ảnh ra disk) ---
-    req.body.values = attachImagesToValues(req, tempFiles);
+    // Parse và gắn ảnh vào các value (đồng thời lưu ra thư mục uploads/attributes)
+    req.body.values = attachImagesToValues(req, tempFiles, {
+      baseFolder: ATTRIBUTE_FOLDER,
+      publicPath: ATTRIBUTE_PUBLIC,
+    });
 
-    // --- Lấy accountId (null cho admin) ---
     const accountId = isAdmin ? null : req.user?.id;
     if (!isAdmin && !accountId)
       return res.status(401).json({ success: false, message: "Không xác thực được tài khoản shop" });
 
-    // --- Gọi service xử lý DB ---
-    const result = await AttributeService.createAttribute(req.body, accountId);
+    // Gọi service
+    const result = await AttributeService.createAttribute(req.body, accountId, tempFiles);
 
-    // --- Nếu service lỗi → rollback ảnh ---
-    if (!result.success) {
-      rollbackFiles(tempFiles);
-      return res.status(400).json(result);
-    }
+    if (!result.success) rollbackFiles(tempFiles);
+    return res.status(result.success ? 201 : 400).json(result);
 
-    // --- Nếu thành công: giữ nguyên ảnh ---
-    return res.status(201).json(result);
   } catch (error) {
     console.error("handleCreateAttribute error:", error);
     rollbackFiles(tempFiles);
@@ -34,31 +36,26 @@ const handleCreateAttribute = async (req, res, isAdmin = false) => {
   }
 };
 
-const handleUpdateAttribute = async (req, res, isAdmin = false) => {
+// --- Cập nhật Attribute ---
+export const handleUpdateAttribute = async (req, res, isAdmin = false) => {
   const tempFiles = [];
   try {
-    // Validate dữ liệu
     const validationError = handleValidation(req);
     if (validationError) return res.status(400).json(validationError);
 
-    // Lưu tạm ảnh và gắn vào value (có ghi ra ổ cứng)
-    req.body.values = attachImagesToValues(req, tempFiles);
+    req.body.values = attachImagesToValues(req, tempFiles, {
+      baseFolder: ATTRIBUTE_FOLDER,
+      publicPath: ATTRIBUTE_PUBLIC,
+    });
 
-    // Lấy id và accountId (nếu là shop)
     const { id } = req.params;
     const accountId = isAdmin ? null : req.user?.id;
 
-    // Gọi service xử lý cập nhật
-    const result = await AttributeService.updateAttribute(id, req.body, accountId);
+    const result = await AttributeService.updateAttribute(id, req.body, accountId, tempFiles);
 
-    // Nếu service lỗi → rollback ảnh
-    if (!result.success) {
-      rollbackFiles(tempFiles);
-      return res.status(400).json(result);
-    }
+    if (!result.success) rollbackFiles(tempFiles);
+    return res.status(result.success ? 200 : 400).json(result);
 
-    // Thành công → giữ ảnh
-    return res.status(200).json(result);
   } catch (error) {
     console.error("handleUpdateAttribute error:", error);
     rollbackFiles(tempFiles);

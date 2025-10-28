@@ -9,7 +9,7 @@ import {
   validateUpdateAttributeLabel,
   validateParamId,
 } from "./attribute.validate.js";
-import { uploadAttributeImages } from "../../middlewares/uploadAttribute.middleware.js";
+import { uploadAttributeValueImages } from "../../middlewares/index.js";
 
 const router = express.Router();
 
@@ -17,8 +17,8 @@ const router = express.Router();
 const adminRouter = express.Router();
 adminRouter.get("/", AttributeController.getAttributesFlexible);
 adminRouter.get("/search", AttributeController.searchGlobalAttributes);
-adminRouter.post("/", uploadAttributeImages(),  parseValuesMiddleware, validateCreateAttribute, AttributeController.createGlobalAttribute);
-adminRouter.put("/:id", uploadAttributeImages(),  parseValuesMiddleware, validateUpdateAttribute, AttributeController.updateGlobalAttribute);
+adminRouter.post("/", uploadAttributeValueImages, validateCreateAttribute, AttributeController.createGlobalAttribute);
+adminRouter.put("/:id", uploadAttributeValueImages, validateUpdateAttribute, AttributeController.updateGlobalAttribute);
 adminRouter.put("/label/:id", validateParamId, validateUpdateAttributeLabel, AttributeController.updateGlobalAttributeLabel );
 router.use("/admin", authMiddleware, isAdminOrSuperAdmin, adminRouter);
 
@@ -26,8 +26,8 @@ router.use("/admin", authMiddleware, isAdminOrSuperAdmin, adminRouter);
 const shopRouter = express.Router();
 shopRouter.get("/", AttributeController.getAttributesFlexible);
 shopRouter.get("/search", AttributeController.searchShopAttributes);
-shopRouter.post("/", uploadAttributeImages(),  parseValuesMiddleware, validateCreateAttribute, AttributeController.createShopAttribute);
-shopRouter.put("/:id", uploadAttributeImages(),  parseValuesMiddleware, validateUpdateAttribute, AttributeController.updateShopAttribute);
+shopRouter.post("/", uploadAttributeValueImages, validateCreateAttribute, AttributeController.createShopAttribute);
+shopRouter.put("/:id", uploadAttributeValueImages, validateUpdateAttribute, AttributeController.updateShopAttribute);
 shopRouter.put("/label/:id", validateParamId, validateUpdateAttributeLabel, AttributeController.updateShopAttributeLabel );
 router.use("/shop", authMiddleware, isShopOwner, shopRouter);
 
