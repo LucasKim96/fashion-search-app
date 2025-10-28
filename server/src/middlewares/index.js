@@ -7,6 +7,8 @@ import {
   uploadUserAvatar,
   uploadShopImage,
   uploadShopDefaultImage,
+  uploadAttribute, 
+  uploadAttributeValueImages
 } from "./upload.middleware.js";
 
 export {
@@ -19,4 +21,6 @@ export {
   uploadUserAvatar,
   uploadShopImage,
   uploadShopDefaultImage,
+  uploadAttribute, 
+  uploadAttributeValueImages,
 };

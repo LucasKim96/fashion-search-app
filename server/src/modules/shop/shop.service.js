@@ -13,7 +13,7 @@ const __dirname = path.dirname(__filename);
 
 const DEFAULT_LOGO = "/assets/shop/shop-logo.png";
 const DEFAULT_COVER = "/assets/shop/shop-cover.jpg";
-const ASSETS_ROOT = path.join(process.cwd(), "src", "assets");
+const ASSETS_ROOT = path.join(process.cwd(), "assets");
 export const DEFAULT_FOLDER = path.join(ASSETS_ROOT, "shop");
 
 /**
