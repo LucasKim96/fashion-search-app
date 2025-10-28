@@ -14,13 +14,9 @@ const defaultFileFilter = (req, file, cb) => {
     cb(null, true);
   } else {
     // Dùng MulterError là một practice tốt hơn
-    cb(
-      new multer.MulterError(
-        "FILE_TYPE_REJECTED",
-        "Chỉ cho phép upload file ảnh"
-      ),
-      false
-    );
+    const error = new Error("Chỉ cho phép upload file ảnh");
+    error.code = "FILE_TYPE_REJECTED";
+    cb(error, false);
   }
 };
 
@@ -49,15 +45,22 @@ export const createUploader = ({
       let baseDir; // 1. XÁC ĐỊNH THƯ MỤC GỐC DỰA TRÊN useAssets
       if (useAssets) {
         // Đường dẫn tuyệt đối đến src/assets
-        baseDir = path.join(ROOT_DIR, "src", "assets");
+        baseDir = path.join(ROOT_DIR, "assets");
       } else {
         // Đường dẫn tuyệt đối đến uploads
         baseDir = path.join(ROOT_DIR, "uploads");
       } // Lấy đường dẫn tương đối từ generator
 
-      const relativePath = destinationGenerator(req); // Nối đường dẫn tuyệt đối
-      const folderPath = path.join(baseDir, relativePath); // tạo thư mục nếu chưa có
+      const relativePath = destinationGenerator(req);
 
+      // Ngăn hacker sử dụng ../ để chui ra ngoài folder
+      const safePath = path
+        .normalize(relativePath)
+        .replace(/^(\.\.(\/|\\|$))+/, "");
+
+      const folderPath = path.join(baseDir, safePath);
+
+      // tạo thư mục nếu chưa có
       if (!fs.existsSync(folderPath)) {
         fs.mkdirSync(folderPath, { recursive: true });
       }

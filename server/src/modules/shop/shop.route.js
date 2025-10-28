@@ -4,8 +4,8 @@ import * as ShopController from "./shop.controller.js";
 import {
   validateShop,
   uploadShopImage,
-  uploadShopDefaultImage,
   authMiddleware,
+  uploadShopDefaultImage,
 } from "../../middlewares/index.js";
 import { isAdminOrSuperAdmin } from "../../middlewares/role.middleware.js";
 
@@ -42,6 +42,7 @@ const adminRouter = express.Router();
 adminRouter.use(authMiddleware, isAdminOrSuperAdmin); // xác thực + check quyền
 
 adminRouter.put("/:id/restore", ShopController.restoreShop);
+
 adminRouter.put(
   "/default-logo",
   uploadShopDefaultImage.single("defaultLogo"),

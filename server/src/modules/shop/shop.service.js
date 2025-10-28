@@ -11,10 +11,10 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const DEFAULT_LOGO = "/assets/shop-defaults/shop-logo.png";
-const DEFAULT_COVER = "/assets/shop-defaults/shop-cover.jpg";
+const DEFAULT_LOGO = "/assets/shop/shop-logo.png";
+const DEFAULT_COVER = "/assets/shop/shop-cover.jpg";
 const ASSETS_ROOT = path.join(process.cwd(), "src", "assets");
-export const DEFAULT_FOLDER = path.join(ASSETS_ROOT, "shop-defaults");
+export const DEFAULT_FOLDER = path.join(ASSETS_ROOT, "shop");
 
 /**
  * Lấy danh sách shop với phân trang + filter
@@ -248,15 +248,6 @@ export const updateShopImage = async (
   await shop.save();
 
   return shop;
-};
-
-export const updateDefaultImageForShops = async (type, oldUrl, newUrl) => {
-  const result = await Shop.updateMany(
-    { [`${type}Url`]: oldUrl },
-    { $set: { [`${type}Url`]: newUrl } }
-  );
-
-  return result.modifiedCount;
 };
 
 /**
