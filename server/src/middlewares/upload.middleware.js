@@ -19,7 +19,7 @@ export const uploadDefautlAvatar = createUploader({
   useAssets: true, // Mặc định là false (lưu vào uploads)
 });
 
-// Upload avatar user
+
 export const uploadAttribute = createUploader({
   destinationGenerator: (req) => {
     return "attributes";
@@ -28,9 +28,30 @@ export const uploadAttribute = createUploader({
 });
 
 export const uploadAttributeValueImages = createUploader({
-  destinationGenerator: () => "attributes", // Lưu trong uploads/attributes
+  destinationGenerator: () => "attributes",
   useAssets: false,
 }).any(); // nhận tất cả file, tương ứng với các fileKey khác nhau
+
+// Upload ảnh sản phẩm chính (nhiều ảnh)
+export const uploadProductImages = createUploader({
+  destinationGenerator: () => "products",
+  useAssets: false,
+}).array("images", 50); // Tối đa 50 ảnh sản phẩm
+
+// Upload tất cả file ảnh (bao gồm cả variant images)
+export const uploadProduct = createUploader({
+  destinationGenerator: () => "products",
+  useAssets: false,
+}).any(); // để xử lý cả images và fileKey của variants
+
+//upload variant
+export const uploadVariant = createUploader({
+  destinationGenerator: (req) => {
+    return "products";
+  },
+  useAssets: false, // Mặc định là false (lưu vào uploads)
+});
+
 
 // 🧩 Upload image shop
 export const uploadShopImage = createUploader({

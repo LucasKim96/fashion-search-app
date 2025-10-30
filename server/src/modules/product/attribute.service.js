@@ -425,11 +425,7 @@ export const updateAttribute = async (id, body, accountId = null, tempFiles = []
             fs.unlinkSync(oldPath);
           }
 
-          const newImage = removeImage
-            ? ""
-            : hasNewImage
-            ? v.image
-            : oldValue.image ?? "";
+          const newImage = v.image ?? oldValue.image ?? "";
 
           if (hasNewImage || hasValueChange || removeImage) {
             ops.push({
