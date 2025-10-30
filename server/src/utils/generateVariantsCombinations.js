@@ -8,7 +8,7 @@ export const generateVariantsCombinations = (attributes = []) => {
   const valueLists = attrs.map(attr =>
     attr.values.map((v, idx) => ({
       attributeId: attr.attributeId,
-      valueId: v.valueId,
+      valueId: typeof v === "object" ? v.valueId : v,
       index: idx + 1, // 1-based index
     }))
   );

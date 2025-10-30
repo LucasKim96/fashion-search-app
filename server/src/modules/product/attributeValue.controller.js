@@ -2,7 +2,7 @@
 import fs from "fs";
 import path from "path";
 import * as AttributeValueService from "./attributeValue.service.js";
-import { attachImagesToValues } from "../../utils/index.js";
+import { attachImagesByFileKey, rollbackFiles } from "../../utils/index.js";
 const UPLOADS_ROOT = path.join(process.cwd(), "uploads");
 export const ATTRIBUTE_FOLDER = path.join(UPLOADS_ROOT, "attributes");
 export const ATTRIBUTE_PUBLIC = "/uploads/attributes";
@@ -21,7 +21,7 @@ const handleCreateAttributeValue = async (req, res, isAdmin = false) => {
     const accountId = isAdmin ? null : req.user?.id;
 
     // Gắn ảnh với values — có tempFiles để rollback nếu lỗi
-    const values = attachImagesToValues(req, tempFiles, {
+    const values = attachImagesByFileKey(req, "values", tempFiles, {
       baseFolder: ATTRIBUTE_FOLDER,
       publicPath: ATTRIBUTE_PUBLIC,
     });
@@ -45,8 +45,6 @@ const handleCreateAttributeValue = async (req, res, isAdmin = false) => {
 };
 
 const handleUpdateAttributeValue = async (req, res, { isAdmin = false }) => {
-  const savedFiles = []; // Danh sách file để rollback nếu lỗi
-
   try {
     const valueId = req.params.valueId;
     const accountId = !isAdmin ? req.user?.id : null; // Chỉ có shop mới cần accountId

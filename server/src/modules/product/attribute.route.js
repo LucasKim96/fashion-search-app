@@ -1,8 +1,7 @@
 import express from "express";
 import * as AttributeController from "./attribute.controller.js";
 import { authMiddleware } from "../../middlewares/auth.middleware.js";
-import { parseValuesMiddleware } from "../../middlewares/parseValues.middleware.js";
-import { isAdminOrSuperAdmin, isShopOwner } from "../../middlewares/role.middleware.js";
+import { isAdminOrSuperAdmin, isSelfAndShopOwner } from "../../middlewares/role.middleware.js";
 import {
   validateCreateAttribute,
   validateUpdateAttribute,
@@ -18,7 +17,7 @@ const adminRouter = express.Router();
 adminRouter.get("/", AttributeController.getAttributesFlexible);
 adminRouter.get("/search", AttributeController.searchGlobalAttributes);
 adminRouter.post("/", uploadAttributeValueImages, validateCreateAttribute, AttributeController.createGlobalAttribute);
-adminRouter.put("/:id", uploadAttributeValueImages, validateUpdateAttribute, AttributeController.updateGlobalAttribute);
+// adminRouter.put("/:id", uploadAttributeValueImages, validateUpdateAttribute, AttributeController.updateGlobalAttribute);
 adminRouter.put("/label/:id", validateParamId, validateUpdateAttributeLabel, AttributeController.updateGlobalAttributeLabel );
 router.use("/admin", authMiddleware, isAdminOrSuperAdmin, adminRouter);
 
@@ -27,9 +26,9 @@ const shopRouter = express.Router();
 shopRouter.get("/", AttributeController.getAttributesFlexible);
 shopRouter.get("/search", AttributeController.searchShopAttributes);
 shopRouter.post("/", uploadAttributeValueImages, validateCreateAttribute, AttributeController.createShopAttribute);
-shopRouter.put("/:id", uploadAttributeValueImages, validateUpdateAttribute, AttributeController.updateShopAttribute);
+// shopRouter.put("/:id", uploadAttributeValueImages, validateUpdateAttribute, AttributeController.updateShopAttribute);
 shopRouter.put("/label/:id", validateParamId, validateUpdateAttributeLabel, AttributeController.updateShopAttributeLabel );
-router.use("/shop", authMiddleware, isShopOwner, shopRouter);
+router.use("/shop", authMiddleware, isSelfAndShopOwner, shopRouter);
 
 // ========================= PUBLIC ROUTES =========================
 const publicRouter = express.Router();

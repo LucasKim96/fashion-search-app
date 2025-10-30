@@ -1,5 +1,5 @@
 import * as AttributeService from "./attribute.service.js";
-import { handleValidation, attachImagesToValues} from "../../utils/index.js";
+import { handleValidation, attachImagesByFileKey, rollbackFiles} from "../../utils/index.js";
 import path from "path";
 
 const UPLOADS_ROOT = path.join(process.cwd(), "uploads");
@@ -14,7 +14,7 @@ export const handleCreateAttribute = async (req, res, isAdmin = false) => {
     if (validationError) return res.status(400).json(validationError);
 
     // Parse và gắn ảnh vào các value (đồng thời lưu ra thư mục uploads/attributes)
-    req.body.values = attachImagesToValues(req, tempFiles, {
+    req.body.values = attachImagesByFileKey(req, "values", tempFiles, {
       baseFolder: ATTRIBUTE_FOLDER,
       publicPath: ATTRIBUTE_PUBLIC,
     });
@@ -43,7 +43,7 @@ export const handleUpdateAttribute = async (req, res, isAdmin = false) => {
     const validationError = handleValidation(req);
     if (validationError) return res.status(400).json(validationError);
 
-    req.body.values = attachImagesToValues(req, tempFiles, {
+    req.body.values = attachImagesByFileKey(req, "values", tempFiles, {
       baseFolder: ATTRIBUTE_FOLDER,
       publicPath: ATTRIBUTE_PUBLIC,
     });

@@ -21,6 +21,11 @@ import AttributeValueRoutes from "./attributeValue.route.js";
 
 // ProductVariant service import
 import * as productVariantService from "./productVariant.service.js";
+// ProductVariant controller and routes imports
+import * as productVariantController from "./productVariant.controller.js";
+import ProductVariantRoutes from "./productVariant.route.js";
+// Product validate import
+import * as productValidate from "./product.validate.js";
 
 export {
   productController,
@@ -29,11 +34,14 @@ export {
   Product,
   ProductVariant,
   productVariantService,
+  productVariantController,
+  ProductVariantRoutes,
   attributeController,
   attributeService,
   AttributeRoutes,
   Attribute,
   attributeValidate,
+  productValidate,
   attributeValueController,
   AttributeValue,
   attributeValueService,

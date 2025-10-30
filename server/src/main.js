@@ -14,6 +14,8 @@ import {
   OrderRoutes,
   AttributeRoutes,
   AttributeValueRoutes,
+  ProductRoutes,
+  ProductVariantRoutes,
 } from "./modules/index.js"; // import cho mongodb
 import { errorHandler, notFoundHandler } from "./middlewares/errorHandler.js";
 
@@ -45,6 +47,9 @@ app.use("/api/carts", CartRoutes);
 app.use("/api/orders", OrderRoutes);
 app.use("/api/attributes", AttributeRoutes);
 app.use("/api/attribute-value", AttributeValueRoutes);
+app.use("/api/products", ProductRoutes);
+app.use("/api/product-variants", ProductVariantRoutes);
+
 // 404 handler - phải đặt trước errorHandler
 app.use(notFoundHandler);
 

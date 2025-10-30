@@ -5,13 +5,52 @@ import Product from "./product.model.js";
 import Attribute from "./attribute.model.js";
 import AttributeValue from "./attributeValue.model.js";
 import Shop from "../shop/shop.model.js";
-import fs from "fs";
 import path from "path";
-import { withTransaction, generateVariantsCombinations} from "../../utils/index.js";
+import fs from "fs";
+import { 
+  rollbackFiles, 
+  backupFile, 
+  restoreFile, 
+  removeBackup, 
+  withTransaction, 
+  toObjectId,
+  generateVariantsCombinations,
+} from "../../utils/index.js";
 
-const productUploadDir = path.resolve("src/uploads/products");
+const UPLOADS_ROOT = path.join(process.cwd(), "uploads");
+export const PRODUCT_FOLDER = path.join(UPLOADS_ROOT, "products");
+export const PRODUCTS_PUBLIC = "/uploads/products";
 
-const toObjectId = (id) => (mongoose.Types.ObjectId.isValid(id) ? mongoose.Types.ObjectId(id) : null);
+// Sinh tất cả tổ hợp biến thể (không kiểm tra DB, không cần productId)
+export const generateVariantCombinations = async (attributes) => {
+  try {
+    if (!Array.isArray(attributes) || attributes.length === 0) {
+      return {
+        success: false,
+        message: "Danh sách thuộc tính không hợp lệ!",
+      };
+    }
+
+    // Gọi utils sinh tổ hợp
+    const combinations = generateVariantsCombinations(attributes);
+
+    return {
+      success: true,
+      message: "Sinh tổ hợp biến thể thành công",
+      data: combinations.map((c) => ({
+        attributes: c.attributes, // [{ attributeId, valueId }]
+        variantKey: c.variantKey, // ví dụ: "1|2"
+      })),
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: error.message || "Lỗi khi sinh tổ hợp biến thể",
+    };
+  }
+};
+
+
 
 // Sinh tổ hợp biến thể mới (chưa có trong DB dùng cho việc thêm sp biến thể)
 export const generateNewVariantCombinations = async (productId, attributes) => {
@@ -24,7 +63,6 @@ export const generateNewVariantCombinations = async (productId, attributes) => {
     if (!product) throw new Error("Không tìm thấy sản phẩm");  // Lấy danh sách variantKey đã tồn tại trong DB (đã lưu cho sản phẩm này)
     
     const existingKeys = await ProductVariant.find({ productId }).distinct("variantKey");
-
     // Sinh tất cả các tổ hợp từ danh sách attribute & value người dùng chọn
     const allCombinations = generateVariantsCombinations(attributes);
 
@@ -68,20 +106,13 @@ export const getProductAttributesWithValues = async (productId, accountId) => {
     
     // Lấy tất cả các biến thể hiện có
     const variants = await ProductVariant.find({ productId }).lean();
-
-    // Nếu sản phẩm chưa có biến thể
     if (!variants.length) {
-      return {
-        success: true,
-        message: "Sản phẩm chưa có biến thể",
-        data: [],
-      };
+      return { success: true, message: "Sản phẩm chưa có biến thể", data: [] };
     }
 
     // Thu thập các attributeId & valueId đã dùng
     const usedAttributeIds = new Set();
     const usedValueIds = new Set();
-
     variants.forEach((v) => {
       (v.attributes || []).forEach((a) => {
         if (a.attributeId) usedAttributeIds.add(a.attributeId.toString());
@@ -90,32 +121,19 @@ export const getProductAttributesWithValues = async (productId, accountId) => {
     });
 
     // Lấy chi tiết attribute và value
-    const attributes = await Attribute.find({
-      _id: { $in: [...usedAttributeIds] },
-    }).lean();
+    const attributes = await Attribute.find({ _id: { $in: [...usedAttributeIds] } }).lean();
 
     //Lấy giá trị (value) tương ứng — xử lý khác nhau cho global / shop
     const allAttributeValues = [];
 
     for (const attr of attributes) {
-      let values;
-
-      if (attr.isGlobal) {
-        // Attribute toàn cục → lấy value global (shopId=null) và value riêng shop
-        values = await AttributeValue.find({
-          attributeId: attr._id,
-          isActive: true,
-          $or: [{ shopId: null }, { shopId }],
-        }).lean();
-      } else {
-        // Attribute của shop → chỉ lấy value thuộc shop đó
-        values = await AttributeValue.find({
-          attributeId: attr._id,
-          shopId,
-          isActive: true,
-        }).lean();
-      }
-
+      const values = await AttributeValue.find({
+        attributeId: attr._id,
+        isActive: true,
+        ...(attr.isGlobal
+          ? { $or: [{ shopId: null }, { shopId }] }
+          : { shopId }),
+      }).lean();
       allAttributeValues.push(...values);
     }
 
@@ -124,7 +142,7 @@ export const getProductAttributesWithValues = async (productId, accountId) => {
       attributeId: attr._id,
       label: attr.label,
       isGlobal: attr.isGlobal,
-      values: attributeValues
+      values: allAttributeValues
         .filter((v) => v.attributeId.toString() === attr._id.toString())
         .map((v) => ({
           valueId: v._id,
@@ -134,11 +152,7 @@ export const getProductAttributesWithValues = async (productId, accountId) => {
         })),
     }));
 
-    return {
-      success: true,
-      message: "Lấy danh sách thuộc tính và giá trị thành công",
-      data,
-    };
+    return { success: true, message: "Lấy danh sách thành công", data };
   } catch (error) {
     console.error("getProductAttributesWithValues error:", error);
     return {
@@ -161,12 +175,12 @@ export const getProductAttributesWithValues = async (productId, accountId) => {
  *     attributes: [{ attributeId, valueId }, ...],
  *     stock?: Number,
  *     priceAdjustment?: Number,
- *     image?: [String]
+ *     image?: String
  *   }
  *
  * @returns { success, message, data } -- data = createdVariants (array)
  */
-export const createProductVariantsBulk = async (productId, accountId, variantsPayload = []) => {
+export const createProductVariantsBulk = async (productId, accountId, variantsPayload = [], tempFiles = [], session = null) => {
   try {
     // --- Validate cơ bản ---
     if (!productId) throw new Error("Thiếu productId");
@@ -183,25 +197,19 @@ export const createProductVariantsBulk = async (productId, accountId, variantsPa
     const shopId = shop._id;
 
     // --- Kiểm tra product hợp lệ ---
-    const product = await Product.findById(productObjectId).lean();
+    const product = session
+    ? await Product.findById(productObjectId).session(session).lean()
+    : await Product.findById(productObjectId).lean();
     if (!product) throw new Error("Không tìm thấy sản phẩm");
-
-    if (product.shopId && product.shopId.toString() !== shopId.toString()) {
+    if (product.shopId && product.shopId.toString() !== shopId.toString()) 
       throw new Error("Không có quyền tạo biến thể cho sản phẩm này");
-    }
+    
 
     // --- Kiểm tra variantKey ---
     const payloadKeys = variantsPayload.map((v) => v.variantKey?.trim()).filter(Boolean);
     const dupInPayload = payloadKeys.filter((k, i, arr) => arr.indexOf(k) !== i);
-    if (dupInPayload.length) {
+    if (dupInPayload.length) 
       throw new Error(`Tồn tại variantKey trùng trong payload: ${[...new Set(dupInPayload)].join(", ")}`);
-    }
-
-    const existingKeys = await ProductVariant.find({ productId: productObjectId }).distinct("variantKey");
-    const conflictKeys = payloadKeys.filter((k) => existingKeys.includes(k));
-    if (conflictKeys.length) {
-      throw new Error(`Các variantKey sau đã tồn tại: ${conflictKeys.join(", ")}`);
-    }
 
     // --- Chuẩn bị dữ liệu insert ---
     const toInsert = variantsPayload.map((v) => ({
@@ -218,25 +226,23 @@ export const createProductVariantsBulk = async (productId, accountId, variantsPa
       updatedAt: new Date(),
     }));
 
-    // --- Transaction ---
     let createdDocs = [];
-    await withTransaction(async (session) => {
-      const exist = await ProductVariant.find({
-        productId: productObjectId,
-        variantKey: { $in: payloadKeys },
-      })
-        .session(session)
-        .lean();
+    const exist = await ProductVariant.find({
+      productId: productObjectId,
+      variantKey: { $in: payloadKeys },
+    })
+      .session(session)
+      .lean();
 
-      if (exist.length) {
-        throw new Error(
-          `Một số variantKey đã tồn tại: ${exist.map((e) => e.variantKey).join(", ")}`
-        );
-      }
+    if (exist.length) {
+      throw new Error(
+        `Một số variantKey đã tồn tại: ${exist.map((e) => e.variantKey).join(", ")}`
+      );
+    }
 
-      const inserted = await ProductVariant.insertMany(toInsert, { session });
-      createdDocs = inserted;
-    });
+    const inserted = await ProductVariant.insertMany(toInsert, { session });
+    createdDocs = inserted;
+
 
     return {
       success: true,
@@ -244,7 +250,7 @@ export const createProductVariantsBulk = async (productId, accountId, variantsPa
       data: createdDocs,
     };
   } catch (error) {
-    console.error("createProductVariantsBulk error:", error);
+    rollbackFiles(tempFiles);
     return {
       success: false,
       message: error.message || "Lỗi khi tạo biến thể sản phẩm hàng loạt",
@@ -255,40 +261,170 @@ export const createProductVariantsBulk = async (productId, accountId, variantsPa
 
 /**
  * Cập nhật 1 biến thể sản phẩm
- * @param {ObjectId} variantId - ID biến thể cần cập nhật
- * @param {Object} payload - dữ liệu cập nhật (stock, image, priceAdjustment)
- * @returns {Object} { success, message, data }
+ * @param {ObjectId} variantId
+ * @param {Object} payload - dữ liệu cập nhật (stock, priceAdjustment, image)
+ * @param {ObjectId} accountId - ID tài khoản (Shop)
+ * @param {File} file - file ảnh mới (nếu có)
  */
-export const updateProductVariant = async (variantId, payload) => {
+export const updateProductVariant = async (variantId, payload, accountId = null, file = null) => {
+  const savedFiles = []; // file mới upload
+  let backupPath = null; // file backup cũ
+  let oldPath = null;    // đường dẫn file cũ
+
   return withTransaction(async (session) => {
-    if (!variantId) throw new Error("Thiếu ID biến thể cần cập nhật");
+    try {
+      if (!variantId) throw new Error("Thiếu ID biến thể");
+      if (!mongoose.Types.ObjectId.isValid(variantId)) throw new Error("ID không hợp lệ");
 
-    const variant = await ProductVariant.findById(variantId).session(session);
-    if (!variant) throw new Error("Không tìm thấy biến thể sản phẩm");
+      const variant = await ProductVariant.findById(variantId)
+        .populate("productId")
+        .session(session);
+      if (!variant) throw new Error("Không tìm thấy biến thể");
 
-    // --- Kiểm tra dữ liệu đầu vào ---
-    const { stock, image, priceAdjustment } = payload;
+      const product = variant.productId;
+      if (!product) throw new Error("Biến thể không có sản phẩm liên kết");
 
-    if (stock != null && (isNaN(stock) || stock < 0))
-      throw new Error("Số lượng phải là số >= 0");
+      // --- Quyền shop ---
+      if (accountId) {
+        const shop = await Shop.findOne({ accountId: toObjectId(accountId), isDeleted: false }).session(session);
+        if (!shop) throw new Error("Không tìm thấy shop");
+        if (product.shopId?.toString() !== shop._id.toString())
+          throw new Error("Không có quyền sửa biến thể shop khác");
+      }
 
-    if (priceAdjustment != null && isNaN(priceAdjustment))
-      throw new Error("Giá điều chỉnh không hợp lệ");
+      // --- Backup ảnh cũ trước khi cập nhật ---
+      if (variant.image) {
+        oldPath = path.join(PRODUCT_FOLDER, path.basename(variant.image));
+        if (fs.existsSync(oldPath)) {
+          backupPath = backupFile(oldPath);
+        }
+      }
 
-    if (image && typeof image !== "string")
-      throw new Error("Ảnh biến thể phải là chuỗi (URL hoặc tên file)");
+      // --- Gán ảnh mới nếu có ---
+      if (file) {
+        payload.image = `${PRODUCTS_PUBLIC}/${file.filename}`;
+        savedFiles.push(path.join(PRODUCT_FOLDER, file.filename));
+      }
 
-    // --- Cập nhật các trường ---
-    if (stock != null) variant.stock = stock;
-    if (priceAdjustment != null) variant.priceAdjustment = priceAdjustment;
-    if (image) variant.image = image;
+      // --- Nếu FE muốn xóa ảnh ---
+      const removeImage = payload.image === "" && variant.image;
 
-    await variant.save({ session });
+      // --- Validate ---
+      if (payload.stock != null && (isNaN(payload.stock) || payload.stock < 0))
+        throw new Error("Số lượng >= 0");
+      if (payload.priceAdjustment != null && isNaN(payload.priceAdjustment))
+        throw new Error("Giá điều chỉnh không hợp lệ");
 
-    return {
-      success: true,
-      message: "Cập nhật biến thể thành công",
-      data: variant,
-    };
+      // --- Cập nhật variant ---
+      variant.stock = payload.stock ?? variant.stock;
+      variant.priceAdjustment = payload.priceAdjustment ?? variant.priceAdjustment;
+      variant.image = removeImage ? "" : payload.image ?? variant.image;
+
+      await variant.save({ session });
+
+      await session.commitTransaction();
+
+      // --- Thành công: xóa ảnh cũ ---
+      if ((file || removeImage) && oldPath && fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+      if (backupPath) removeBackup(backupPath);
+
+      return { success: true, message: "Cập nhật thành công", data: variant };
+    } catch (error) {
+      // rollback ảnh mới và restore ảnh cũ
+      rollbackFiles(savedFiles);
+      if (backupPath && oldPath) restoreFile(backupPath, oldPath);
+      return { success: false, message: error.message, data: null };
+    }
   });
 };
+
+
+// export const updateProductVariant = async (variantId, payload, accountId = null, file = null) => {
+//   const savedFiles = []; // Ảnh mới upload để rollback
+//   let backupPath = null; // File backup của ảnh cũ
+//   let oldPath = null; // Đường dẫn ảnh cũ
+
+//   return withTransaction(async (session) => {
+//     try {
+//       if (!variantId) throw new Error("Thiếu ID biến thể cần cập nhật");
+//       if (!mongoose.Types.ObjectId.isValid(variantId)) throw new Error("ID không hợp lệ");
+
+//       const variant = await ProductVariant.findById(variantId)
+//         .populate("productId")
+//         .session(session);
+//       if (!variant) throw new Error("Không tìm thấy biến thể sản phẩm");
+
+//       const product = variant.productId;
+//       if (!product) throw new Error("Biến thể không có sản phẩm liên kết");
+
+//       // --- Xác định quyền ---
+//       let currentShopId = null;
+//       if (accountId) {
+//         const shop = await Shop.findOne({
+//           accountId: toObjectId(accountId),
+//           isDeleted: false,
+//         }).session(session);
+//         if (!shop) throw new Error("Không tìm thấy cửa hàng cho tài khoản này");
+
+//         currentShopId = shop._id;
+//         if (product.shopId?.toString() !== currentShopId.toString())
+//           throw new Error("Bạn không có quyền sửa biến thể của sản phẩm thuộc shop khác!");
+//       }
+
+//       // --- Backup ảnh cũ ---
+//       if (variant.image) {
+//         oldPath = path.join(PRODUCT_FOLDER, path.basename(variant.image));
+//         if (fs.existsSync(oldPath)) {
+//           backupPath = backupFile(oldPath);
+//         }
+//       }
+
+//       // --- Nếu có upload ảnh mới ---
+//       if (file) {
+//         const imagePath = `${PRODUCTS_PUBLIC}/${file.filename}`;
+//         payload.image = imagePath;
+//         savedFiles.push(path.join(PRODUCT_FOLDER, file.filename));
+//       }
+
+//       // --- Nếu FE muốn xóa ảnh ---
+//       const removeImage = payload.image === "" && variant.image;
+
+//       // --- Validate dữ liệu ---
+//       if (payload.stock != null && (isNaN(payload.stock) || payload.stock < 0))
+//         throw new Error("Số lượng phải là số >= 0");
+
+//       if (payload.priceAdjustment != null && isNaN(payload.priceAdjustment))
+//         throw new Error("Giá điều chỉnh không hợp lệ");
+
+//       // --- Gán dữ liệu mới ---
+//       const newImage = removeImage
+//         ? ""
+//         : payload.image
+//         ? payload.image
+//         : variant.image ?? "";
+
+//       variant.stock = payload.stock ?? variant.stock;
+//       variant.priceAdjustment = payload.priceAdjustment ?? variant.priceAdjustment;
+//       variant.image = newImage;
+
+//       await variant.save({ session });
+
+//       await session.commitTransaction();
+
+//       // === Sau khi thành công ===
+//       if ((file || removeImage) && oldPath && fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+//       if (backupPath) removeBackup(backupPath);
+
+//       return {
+//         success: true,
+//         message: "Cập nhật biến thể thành công",
+//         data: variant,
+//       };
+//     } catch (error) {
+//       // === Rollback khi lỗi ===
+//       rollbackFiles(savedFiles);
+//       if (backupPath && oldPath) restoreFile(backupPath, oldPath);
+//       return { success: false, message: error.message, data: null };
+//     }
+//   });
+// };

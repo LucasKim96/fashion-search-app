@@ -7,13 +7,18 @@ import { createProductVariantsBulk } from "./productVariant.service.js";
 import Shop from "../shop/shop.model.js";
 import fs from "fs";
 import path from "path";
-import { withTransaction, generateVariantsCombinations} from "../../utils/index.js";
+import { 
+  rollbackFiles, 
+  backupFile, 
+  restoreFile, 
+  removeBackup, 
+  withTransaction, 
+  toObjectId,
+} from "../../utils/index.js";
 
-const productUploadDir = path.resolve("src/uploads/products");
-const productTrashDir = path.resolve("src/uploads/trash/products");
-if (!fs.existsSync(productTrashDir)) fs.mkdirSync(productTrashDir, { recursive: true });
-
-const toObjectId = (id) => (mongoose.Types.ObjectId.isValid(id) ? mongoose.Types.ObjectId(id) : null);
+const UPLOADS_ROOT = path.join(process.cwd(), "uploads");
+export const PRODUCT_FOLDER = path.join(UPLOADS_ROOT, "products");
+export const PRODUCTS_PUBLIC = "/uploads/products";
 
 /**
  * Lấy danh sách sản phẩm
@@ -89,8 +94,11 @@ export const getProductDetail = async (productId) => {
 
     //  Lấy sản phẩm chính 
     const product = await Product.findById(productId)
-      .populate("shopId", "shopName", "logoUrl")
-      .lean();
+    .populate({
+      path: "shopId",
+      select: "shopName logoUrl"
+    })
+    .lean();
     if (!product) throw new Error("Không tìm thấy sản phẩm");
 
     // Lấy danh sách biến thể 
@@ -153,10 +161,9 @@ export const getProductDetail = async (productId) => {
  *
  * @returns { success, message, data }  // data = { product, variants }
  */
-export const createProductWithVariantsService = async (payload) => {
+export const createProductWithVariantsService = async (payload, tempFiles = []) => {
   let createdProduct = null;
-  let createdVariants = [];
-
+  let createdVariants = [];  
   try {
     const { pdName, basePrice, description = "", images = [], accountId, variantsPayload = [] } = payload;
 
@@ -167,7 +174,6 @@ export const createProductWithVariantsService = async (payload) => {
     // --- Lấy shopId từ accountId ---
     const shop = await Shop.findOne({ accountId }).select("_id").lean();
     if (!shop) throw new Error("Không tìm thấy shop của tài khoản này");
-    const shopId = shop._id;
 
     // --- Transaction để tạo sản phẩm và các biến thể ---
     await withTransaction(async (session) => {
@@ -177,7 +183,7 @@ export const createProductWithVariantsService = async (payload) => {
         basePrice,
         description,
         images,
-        shopId,
+        shopId: shop._id,
         isActive: true,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -186,47 +192,138 @@ export const createProductWithVariantsService = async (payload) => {
       createdProduct = createdProduct[0]; // vì insertMany trả về mảng
 
       // Tạo biến thể nếu có variantsPayload
-      if (Array.isArray(variantsPayload) && variantsPayload.length > 0) {
-        // gọi service đã viết trước: createProductVariantsBulk
-        const variantResult = await createProductVariantsBulk(
-          createdProduct._id,
-          accountId,
-          variantsPayload
-        );
-
-        if (!variantResult.success) throw new Error(variantResult.message);
-        createdVariants = variantResult.data;
+      if (variantsPayload?.length) {
+        const result = await createProductVariantsBulk(createdProduct._id, accountId, variantsPayload, tempFiles, session);
+        if (!result.success) throw new Error(result.message);
+        createdVariants = result.data;
       }
     });
 
-    return {
-      success: true,
-      message: "Tạo sản phẩm mới thành công",
-      data: { product: createdProduct, variants: createdVariants },
-    };
+    return { success: true, message: "Tạo sản phẩm thành công", data: { createdProduct, createdVariants } };
   } catch (error) {
-    // Nếu có lỗi, xóa ảnh đã upload nếu có (rollback)
-    if (images?.length) {
-      for (const img of images) {
-        try {
-          const fullPath = path.isAbsolute(img) ? img : path.join(productUploadDir, img);
-          if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath);
-        } catch (e) {
-          console.warn("Không xóa được ảnh rollback:", img, e.message);
+    rollbackFiles(tempFiles);
+    return { success: false, message: error.message };
+  }
+};
+
+/**
+ * Xử lý tổng hợp ảnh cho mode "add"
+ * @param {String} productId - ID sản phẩm
+ * @param {Array<String>} keepImages - danh sách ảnh FE muốn giữ (có thể rỗng)
+ * @param {Array<String>} uploadedImages - danh sách ảnh upload mới
+ * @returns {Promise<Array<String>>} danh sách ảnh mới sau khi add
+ */
+export const handleAddModeImages = async (productId, keepImages = [], uploadedImages = []) => {
+  const product = await Product.findById(productId).lean();
+  if (!product) throw new Error("Không tìm thấy sản phẩm");
+
+  const existingImages = product.images || [];
+
+  // nếu FE có keepImages → giữ keepImages, nếu không → giữ toàn bộ ảnh cũ
+  const imagesToKeep = keepImages.length > 0 ? keepImages : existingImages;
+
+  // tổng hợp ảnh cuối cùng
+  return [...imagesToKeep, ...uploadedImages];
+};
+/**
+ * Cập nhật danh sách ảnh của sản phẩm (xóa ảnh cũ khỏi thư mục nếu có)
+ * @param {String} productId
+ * @param {Array<String>} images Danh sách ảnh mới
+ */
+export const updateProductImagesService = async (productId, newImages = []) => {
+  const backups = [];
+  const tempFilesToDelete = []; // ảnh mới upload nhưng rollback nếu lỗi
+  try {
+    if (!mongoose.Types.ObjectId.isValid(productId)) throw new Error("ID không hợp lệ");
+    if (!Array.isArray(newImages)) throw new Error("Danh sách ảnh không hợp lệ");
+
+    const product = await Product.findById(productId);
+    if (!product) throw new Error("Không tìm thấy sản phẩm");
+
+    const oldImages = product.images || [];
+
+    // --- Backup và xác định ảnh cũ cần xóa ---
+    for (const old of oldImages) {
+      if (!newImages.includes(old)) {
+        const filePath = path.join(PRODUCT_FOLDER, path.basename(old));
+        if (fs.existsSync(filePath)) {
+          const backup = backupFile(filePath);
+          if (backup) backups.push({ original: filePath, backup });
         }
       }
     }
 
-    return { success: false, message: error.message, data: {} };
+    // --- Xác định file mới cần rollback nếu lỗi ---
+    for (const img of newImages) {
+      if (!oldImages.includes(img)) {
+        tempFilesToDelete.push(path.join(PRODUCT_FOLDER, path.basename(img)));
+      }
+    }
+
+    // --- Cập nhật DB ---
+    product.images = newImages;
+    await product.save();
+
+    // --- Commit thành công → xóa file cũ không dùng ---
+    for (const b of backups) {
+      if (fs.existsSync(b.original)) fs.unlinkSync(b.original);
+      removeBackup(b.backup);
+    }
+
+    return { success: true, message: "Cập nhật ảnh thành công", data: product.toObject() };
+  } catch (error) {
+    // --- Rollback file mới ---
+    rollbackFiles(tempFilesToDelete);
+
+    // --- Restore file cũ nếu backup ---
+    for (const b of backups) restoreFile(b.backup, b.original);
+
+    return { success: false, message: error.message };
   }
 };
 
+// export const updateProductImagesService = async (productId, newImages = []) => {
+//   const backups = [];
+//   try {
+//     if (!mongoose.Types.ObjectId.isValid(productId)) throw new Error("ID không hợp lệ");
+//     if (!Array.isArray(newImages)) throw new Error("Danh sách ảnh không hợp lệ");
+
+//     const product = await Product.findById(productId);
+//     if (!product) throw new Error("Không tìm thấy sản phẩm");
+
+//     const oldImages = product.images || [];
+
+//     // Backup ảnh cũ không còn dùng
+//     for (const old of oldImages) {
+//       if (!newImages.includes(old)) {
+//         const filePath = path.join(PRODUCT_FOLDER, path.basename(old));
+//         const backup = backupFile(filePath);
+//         if (backup) backups.push({ original: filePath, backup });
+//       }
+//     }
+
+//     // Cập nhật DB
+//     product.images = newImages;
+//     await product.save();
+
+//     // Xóa bản backup (commit thành công)
+//     for (const b of backups) removeBackup(b.backup);
+
+//     return { success: true, message: "Cập nhật ảnh thành công", data: product.toObject() };
+//   } catch (error) {
+//     // Khôi phục nếu lỗi
+//     for (const b of backups) restoreFile(b.backup, b.original);
+//     return { success: false, message: error.message };
+//   }
+// };
 
 /**
  * Cập nhật thông tin cơ bản của sản phẩm
  * @param {String} productId
  * @param {Object} updates { pdName?, basePrice?, description? }
  */
+
+
 export const updateProductBasicInfoService = async (productId, updates) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(productId))
@@ -235,95 +332,31 @@ export const updateProductBasicInfoService = async (productId, updates) => {
     const allowedFields = ["pdName", "basePrice", "description"];
     const updateData = {};
 
-    for (const key of allowedFields) {
-      if (updates[key] !== undefined && updates[key] !== null) {
-        updateData[key] = updates[key];
-      }
-    }
+    for (const key of allowedFields) if (updates[key] != null) updateData[key] = updates[key];
 
-    if (Object.keys(updateData).length === 0)
-      throw new Error("Không có dữ liệu cần cập nhật");
+    if (!Object.keys(updateData).length) throw new Error("Không có dữ liệu để cập nhật");
 
     // Kiểm tra giá nếu có basePrice
     if (updateData.basePrice != null) {
       if (isNaN(updateData.basePrice))
-        throw new Error("Giá sản phẩm phải là số hợp lệ");
+        throw new Error("Giá không hợp lệ");
       if (updateData.basePrice < 0)
-        throw new Error("Giá sản phẩm phải lớn hơn hoặc bằng 0");
+        throw new Error("Giá phải lớn hơn hoặc bằng 0");
     }
 
-    const product = await Product.findByIdAndUpdate(
-      productId,
-      { $set: updateData },
-      { new: true }
-    ).lean();
-
+    const product = await Product.findByIdAndUpdate(productId, { $set: updateData }, { new: true }).lean();
     if (!product) throw new Error("Không tìm thấy sản phẩm");
 
-    return {
-      success: true,
-      message: "Cập nhật thông tin sản phẩm thành công",
-      data: product,
-    };
+    return { success: true, message: "Cập nhật sản phẩm thành công", data: product };
   } catch (error) {
     // console.error("Lỗi updateProductBasicInfoService:", error);
     return { success: false, message: error.message };
   }
 };
 
-/**
- * Cập nhật danh sách ảnh của sản phẩm (xóa ảnh cũ khỏi thư mục nếu có)
- * @param {String} productId
- * @param {Array<String>} images Danh sách ảnh mới
- */
-export const updateProductImagesService = async (productId, newImages = []) => {
-  try {
-    if (!mongoose.Types.ObjectId.isValid(productId))
-      throw new Error("ID sản phẩm không hợp lệ");
-
-    if (!Array.isArray(newImages))
-      throw new Error("Danh sách ảnh không hợp lệ");
-
-    const product = await Product.findById(productId);
-    if (!product) throw new Error("Không tìm thấy sản phẩm");
-
-    const oldImages = product.images || [];
-
-    // --- Xóa ảnh cũ không còn trong danh sách mới ---
-    for (const oldImg of oldImages) {
-      // Nếu ảnh cũ không nằm trong danh sách mới
-      if (!newImages.includes(oldImg)) {
-        const oldPath = path.join(productUploadDir, path.basename(oldImg));
-        try {
-          if (fs.existsSync(oldPath)) {
-            fs.unlinkSync(oldPath);
-            // console.log("Đã xóa ảnh cũ:", oldPath);
-          }
-        } catch (err) {
-          console.warn(`Không thể xóa ảnh: ${oldPath}`, err.message);
-        }
-      }
-    }
-
-    // --- Cập nhật DB ---
-    product.images = newImages;
-    await product.save();
-
-    return {
-      success: true,
-      message: "Cập nhật ảnh sản phẩm thành công",
-      data: product.toObject(),
-    };
-  } catch (error) {
-    // console.error("Lỗi updateProductImagesService:", error);
-    return { success: false, message: error.message };
-  }
-};
-
 export const toggleProductActiveAutoService = async (productId) => {
   try {
-    if (!mongoose.Types.ObjectId.isValid(productId))
-      throw new Error("ID sản phẩm không hợp lệ");
+    if (!mongoose.Types.ObjectId.isValid(productId)) throw new Error("ID không hợp lệ");
 
     const product = await Product.findById(productId);
     if (!product) throw new Error("Không tìm thấy sản phẩm");
@@ -333,9 +366,7 @@ export const toggleProductActiveAutoService = async (productId) => {
 
     return {
       success: true,
-      message: product.isActive
-        ? "Sản phẩm đã được hiển thị"
-        : "Sản phẩm đã bị ẩn",
+      message: product.isActive ? "Sản phẩm đã hiển thị" : "Sản phẩm đã bị ẩn",
       data: product,
     };
   } catch (error) {
@@ -343,96 +374,48 @@ export const toggleProductActiveAutoService = async (productId) => {
   }
 };
 
-/**
- * Di chuyển file ảnh sang thư mục tạm (trash)
- */
-const moveImagesToTrash = (imagePaths = []) => {
-  const movedFiles = [];
-  for (const imgPath of imagePaths) {
-    try {
-      const fullPath = path.isAbsolute(imgPath)
-        ? imgPath
-        : path.join(productUploadDir, imgPath);
-
-      if (fs.existsSync(fullPath)) {
-        const destPath = path.join(productTrashDir, path.basename(fullPath));
-        fs.renameSync(fullPath, destPath); // di chuyển
-        movedFiles.push({ from: fullPath, to: destPath });
-      }
-    } catch (err) {
-      console.warn(`Không thể di chuyển ảnh: ${imgPath} (${err.message})`);
-    }
-  }
-  return movedFiles;
-};
-/**
- * Khôi phục ảnh từ trash nếu transaction rollback
- */
-const restoreImagesFromTrash = (movedFiles = []) => {
-  for (const f of movedFiles) {
-    try {
-      if (fs.existsSync(f.to)) {
-        fs.renameSync(f.to, f.from);
-      }
-    } catch (err) {
-      console.warn(`Không thể khôi phục ảnh: ${f.from} (${err.message})`);
-    }
-  }
-};
-
-/**
- * Xóa hẳn ảnh sau khi transaction commit thành công
- */
-const permanentlyDeleteTrashImages = (movedFiles = []) => {
-  for (const f of movedFiles) {
-    try {
-      if (fs.existsSync(f.to)) fs.unlinkSync(f.to);
-    } catch (err) {
-      console.warn(`Không thể xóa ảnh trong trash: ${f.to} (${err.message})`);
-    }
-  }
-};
 
 /**
  * Xóa sản phẩm và các biến thể liên quan, rollback ảnh nếu lỗi
  */
 export const deleteProductWithVariantsService = async (productId) => {
-  let movedFiles = [];
-
+  const backups = [];
   try {
-    if (!mongoose.Types.ObjectId.isValid(productId))
-      throw new Error("ID sản phẩm không hợp lệ");
+    if (!mongoose.Types.ObjectId.isValid(productId)) throw new Error("ID không hợp lệ");
 
-    const result = await withTransaction(async (session) => {
+    await withTransaction(async (session) => {
       const product = await Product.findById(productId).session(session);
       if (!product) throw new Error("Không tìm thấy sản phẩm");
 
       const variants = await ProductVariant.find({ productId }).session(session);
 
-      // Di chuyển ảnh sang thư mục tạm (backup)
       const allImages = [
         ...(product.images || []),
-        ...(variants.map((v) => v.image).filter(Boolean) || []),
+        ...variants.map((v) => v.image).filter(Boolean),
       ];
-      movedFiles = moveImagesToTrash(allImages);
 
-      // Xóa dữ liệu trong DB
+      // Backup ảnh
+      for (const img of allImages) {
+        const filePath = path.join(PRODUCT_FOLDER, path.basename(img));
+        const backup = backupFile(filePath);
+        if (backup) backups.push({ original: filePath, backup });
+
+        // Xóa file gốc
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      }
+
       await ProductVariant.deleteMany({ productId }).session(session);
       await Product.findByIdAndDelete(productId).session(session);
-
-      return {
-        success: true,
-        message: `Đã xóa sản phẩm "${product.pdName}" và các biến thể liên quan.`,
-      };
     });
 
-    // Transaction thành công → xóa ảnh trong trash
-    setImmediate(() => permanentlyDeleteTrashImages(movedFiles));
-
-    return result;
+    // Xóa backup (commit thành công)
+    for (const b of backups) removeBackup(b.backup);
+    return { success: true, message: "Đã xóa sản phẩm và biến thể liên quan" };
   } catch (error) {
-    // Transaction thất bại → khôi phục ảnh
-    restoreImagesFromTrash(movedFiles);
+    // Rollback file nếu lỗi
+    for (const b of backups) restoreFile(b.backup, b.original);
     return { success: false, message: error.message };
   }
 };
@@ -472,10 +455,6 @@ export const countProductsService = async ({ shopId, accountId, includeInactive 
       total,
     };
   } catch (error) {
-    return {
-      success: false,
-      message: error.message || "Lỗi khi thống kê sản phẩm",
-      total: 0,
-    };
+    return { success: false, message: error.message, total: 0 };
   }
 }
