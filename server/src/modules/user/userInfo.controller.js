@@ -19,18 +19,6 @@ export const getUserByEmail = async (req, res) => {
   res.status(result.success ? 200 : 400).json(result);
 };
 
-// Cập nhật ảnh đại diện
-export const updateAvatar = async (req, res) => {
-  const validationError = handleValidation(req);
-  if (validationError) return res.status(400).json(validationError);
-
-  const file = req.file;         // nếu dùng multer
-  const { imageUrl } = req.body; // nếu truyền link
-  const result = await UserInfoService.updateAvatar(req.params.id, file, imageUrl);
-  res.status(result.success ? 200 : 400).json(result);
-};
-
-// Cập nhật thông tin cơ bản
 export const updateBasicUserInfo = async (req, res) => {
   const validationError = handleValidation(req);
   if (validationError) return res.status(400).json(validationError);
@@ -39,19 +27,30 @@ export const updateBasicUserInfo = async (req, res) => {
   res.status(result.success ? 200 : 400).json(result);
 };
 
-// Cập nhật ảnh đại diện mặc định cho toàn bộ user chưa có ảnh riêng
-export const updateDefaultAvatar = async (req, res) => {
+// Cập nhật ảnh đại diện
+export const updateAvatar = async (req, res) => {
   try {
+    const userId = req.params.id;
     const file = req.file;
-    const imageUrl = req.body.imageUrl;
 
-    const result = await UserInfoService.updateDefaultAvatar(file, imageUrl);
+    const result = await UserInfoService.updateAvatar(userId, file);
     res.status(result.success ? 200 : 400).json(result);
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
+// Cập nhật ảnh đại diện mặc định cho toàn bộ user chưa có ảnh riêng
+export const updateDefaultAvatar = async (req, res) => {
+  try {
+    const file = req.file;
+
+    const result = await UserInfoService.updateDefaultAvatar(file);
+    res.status(result.success ? 200 : 400).json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
 
 // Tìm kiếm người dùng theo tên, email
 export const searchUsers = async (req, res) => {

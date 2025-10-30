@@ -1,5 +1,5 @@
 // server/src/modules/account/account.controller.js
-import { handleValidation, getLastActiveString } from "../../utils/index.js";
+import { handleValidation} from "../../utils/index.js";
 import * as AccountService from "./account.service.js";
 
 // [GET] /api/accounts

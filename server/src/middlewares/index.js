@@ -7,6 +7,11 @@ import {
   uploadUserAvatar,
   uploadShopImage,
   uploadShopDefaultImage,
+  uploadAttribute, 
+  uploadAttributeValueImages,
+  uploadProductImages, 
+  uploadProduct,
+  uploadVariant,
 } from "./upload.middleware.js";
 
 export {
@@ -19,4 +24,9 @@ export {
   uploadUserAvatar,
   uploadShopImage,
   uploadShopDefaultImage,
+  uploadAttribute, 
+  uploadVariant,
+  uploadAttributeValueImages,
+  uploadProductImages, 
+  uploadProduct,
 };
