@@ -59,6 +59,62 @@ export const checkSelfOrRoles = (...allowedRoles) => {
   };
 };
 
+// Middleware: chỉ cho phép chủ shop (hoặc super admin) thao tác trong phạm vi của mình
+export const isSelfAndShopOwner = (req, res, next) => {
+  try {
+    const user = req.user;
+    if (!user)
+      return res.status(401).json({
+        success: false,
+        message: "Token không hợp lệ hoặc đã hết hạn!",
+      });
+
+    const userIdFromToken = user.id?.toString();            // ID tài khoản (Account)
+    const userInfoIdFromToken = user.userInfoId?.toString(); // ID thông tin người dùng (NguoiDung)
+
+    // Xác định có vai trò hợp lệ
+    const isShopOwner =
+      user.roleNames?.includes("Chủ shop") ||
+      user.roleNames?.includes("Super Admin");
+
+    if (!isShopOwner) {
+      return res.status(403).json({
+        success: false,
+        message: "Chỉ chủ shop hoặc Super Admin mới được phép truy cập!",
+      });
+    }
+
+    // Nếu route có id (vd: /users/:id) thì kiểm tra thêm chính chủ
+    const idFromRequest =
+      req.params.id?.toString() ||
+      req.body.id?.toString() ||
+      req.query.id?.toString();
+
+    if (idFromRequest) {
+      const isSelf =
+        userIdFromToken === idFromRequest ||
+        userInfoIdFromToken === idFromRequest;
+
+      if (!isSelf && !user.roleNames.includes("Super Admin")) {
+        return res.status(403).json({
+          success: false,
+          message: "Bạn không thể truy cập tài nguyên của người khác!",
+        });
+      }
+    }
+
+    // Nếu không có id trong request → coi như shop đang thao tác trong phạm vi của mình
+    return next();
+  } catch (err) {
+    console.error("Lỗi kiểm tra quyền chủ shop:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Lỗi kiểm tra quyền chủ shop!",
+    });
+  }
+};
+
+
 
 // Các middleware chính chủ or nhóm người dùng
 export const isSelf = checkSelfOrRoles();

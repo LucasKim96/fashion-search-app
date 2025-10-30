@@ -2,12 +2,11 @@
 import UserInfo from "./userInfo.model.js";
 import fs from "fs";
 import path from "path";
+import { rollbackFiles, backupFile, restoreFile, removeBackup } from "../../utils/index.js";
 
-const uploadDir = path.resolve("src/uploads/avatars");
-const assetsDir = path.resolve("src/assets");
-
-// Đảm bảo thư mục uploads tồn tại
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+const DEFAULT_AVATAR = "/assets/avatars/default-avatar.jpg";
+const ASSETS_ROOT = path.join(process.cwd(), "assets");
+export const DEFAULT_FOLDER = path.join(ASSETS_ROOT, "avatars");
 
 // Lấy danh sách tất cả người dùng (Admin)
 export const getAll = async () => {
@@ -38,38 +37,6 @@ export const getByEmail = async (email) => {
     const user = await UserInfo.findOne({ email });
     if (!user) throw new Error("Không tìm thấy người dùng!");
     return { success: true, message: "Lấy thông tin người dùng thành công!", data: user };
-  } catch (error) {
-    // Sửa đổi: Bắt lỗi và trả về object { success: false, message: ... }
-    return { success: false, message: error.message };
-  }
-};
-
-// Cập nhật ảnh đại diện
-export const updateAvatar = async (id, file, imageUrl) => {
-  try {
-    const user = await UserInfo.findById(id);
-    if (!user) throw new Error("Không tìm thấy người dùng!");
-
-    let newAvatar = user.avatar;
-    if (file) {
-      const filename = `${Date.now()}_${file.originalname}`;
-      const filePath = path.join(uploadDir, filename);
-      fs.writeFileSync(filePath, file.buffer);
-      newAvatar = `/uploads/avatars/${filename}`;
-
-      // Xóa ảnh cũ nếu không phải mặc định
-      if (user.avatar && !user.avatar.includes("default-avatar.jpg")) {
-        const oldPath = path.join(uploadDir, path.basename(user.avatar));
-        if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
-      }
-    } else if (imageUrl) {
-      newAvatar = imageUrl;
-    }
-
-    user.avatar = newAvatar;
-    await user.save();
-
-    return { success: true, message: "Cập nhật ảnh đại diện thành công!", data: user };
   } catch (error) {
     // Sửa đổi: Bắt lỗi và trả về object { success: false, message: ... }
     return { success: false, message: error.message };
@@ -112,39 +79,171 @@ export const updateBasicUserInfo = async (id, updateData) => {
     return { success: false, message: error.message };
   }
 };
+// Cập nhật ảnh đại diện
+// export const updateAvatar = async (id, file, imageUrl) => {
+//   try {
+//     const user = await UserInfo.findById(id);
+//     if (!user) throw new Error("Không tìm thấy người dùng!");
 
-export const updateDefaultAvatar = async (file, imageUrl) => {
+//     let newAvatar = user.avatar;
+//     if (file) {
+//       const filename = `${Date.now()}_${file.originalname}`;
+//       const filePath = path.join(uploadDir, filename);
+//       fs.writeFileSync(filePath, file.buffer);
+//       newAvatar = `/uploads/avatars/${filename}`;
+
+//       // Xóa ảnh cũ nếu không phải mặc định
+//       if (user.avatar && !user.avatar.includes("default-avatar.jpg")) {
+//         const oldPath = path.join(uploadDir, path.basename(user.avatar));
+//         if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+//       }
+//     } else if (imageUrl) {
+//       newAvatar = imageUrl;
+//     }
+
+//     user.avatar = newAvatar;
+//     await user.save();
+
+//     return { success: true, message: "Cập nhật ảnh đại diện thành công!", data: user };
+//   } catch (error) {
+//     // Sửa đổi: Bắt lỗi và trả về object { success: false, message: ... }
+//     return { success: false, message: error.message };
+//   }
+// };
+
+/**
+ * Cập nhật ảnh đại diện của người dùng
+ * @param {String} id - ID người dùng
+ * @param {Object|null} file - file từ multer (req.file)
+ */
+export const updateAvatar = async (id, file) => {
+  const rollbackList = []; 
+  let backupPath = null;
+
   try {
-    const defaultAvatarPath = path.join(assetsDir, "default-avatar.jpg");
+    const user = await UserInfo.findById(id);
+    if (!user) throw new Error("Không tìm thấy người dùng!");
+    if (!file) throw new Error("Chưa có file upload!");
 
-    // Xóa ảnh cũ nếu tồn tại
-    if (fs.existsSync(defaultAvatarPath)) {
-      fs.unlinkSync(defaultAvatarPath);
+    // Đường dẫn ảnh mới (tương đối)
+    const relativePath = file.path.replace(process.cwd(), "").replace(/\\/g, "/");
+    const newAvatar = relativePath.startsWith("/") ? relativePath : `/${relativePath}`;
+    rollbackList.push(file.path); // nếu lỗi thì xóa file mới này
+
+    // Backup ảnh cũ nếu không phải mặc định
+    let oldPath = null;
+    if (user.avatar && !user.avatar.includes("default-avatar.jpg")) {
+      oldPath = path.join(process.cwd(), user.avatar);
+      if (fs.existsSync(oldPath)) {
+        backupPath = backupFile(oldPath); // tạo .bak
+        fs.unlinkSync(oldPath); // xóa ảnh cũ thật
+      }
     }
 
-    // Lưu ảnh mới
-    if (file) {
-      fs.writeFileSync(defaultAvatarPath, file.buffer);
-    } else if (imageUrl) {
-      const response = await fetch(imageUrl);
-      if (!response.ok) throw new Error("Không tải được ảnh từ URL!");
-      const buffer = Buffer.from(await response.arrayBuffer());
-      fs.writeFileSync(defaultAvatarPath, buffer);
-    } else {
-      throw new Error("Chưa có ảnh mới để cập nhật!");
-    }
+    // Cập nhật DB
+    user.avatar = newAvatar;
+    await user.save();
 
-    return { 
-      success: true, 
-      message: "Cập nhật ảnh đại diện mặc định thành công cho tất cả người dùng!" 
-    };
+    // Thành công → xóa file backup
+    removeBackup(backupPath);
+
+    return { success: true, message: "Cập nhật ảnh đại diện thành công!", data: user };
   } catch (error) {
+    // rollback file mới
+    rollbackFiles(rollbackList);
+
+    // khôi phục file cũ từ backup
+    if (backupPath) {
+      const originalPath = backupPath.replace(".bak", "");
+      restoreFile(backupPath, originalPath);
+    }
+
     return { success: false, message: error.message };
   }
 };
 
 
+
+
+/**
+ * Cập nhật ảnh đại diện mặc định
+ * @param {Object|null} file - file từ multer (req.file)
+ */
+export const updateDefaultAvatar = async (file) => {
+  const rollbackList = [];
+  let backupPath = null;
+
+  try {
+    if (!file) throw new Error("Chưa có file upload!");
+    rollbackList.push(file.path);
+
+    const defaultAvatarPath = path.join(DEFAULT_FOLDER, "default-avatar.jpg");
+
+    // Nếu đã có ảnh mặc định → backup trước khi xóa
+    if (fs.existsSync(defaultAvatarPath)) {
+      backupPath = backupFile(defaultAvatarPath);
+      fs.unlinkSync(defaultAvatarPath);
+    }
+
+    // Đổi tên file upload thành default-avatar.jpg
+    fs.renameSync(file.path, defaultAvatarPath);
+
+    // Thành công → xóa bản backup
+    removeBackup(backupPath);
+
+    return {
+      success: true,
+      message: "Cập nhật ảnh đại diện mặc định thành công!",
+      data: { defaultAvatar: DEFAULT_AVATAR },
+    };
+  } catch (error) {
+    // rollback file mới
+    rollbackFiles(rollbackList);
+
+    // khôi phục file mặc định cũ nếu có
+    if (backupPath) {
+      const originalPath = backupPath.replace(".bak", "");
+      restoreFile(backupPath, originalPath);
+    }
+
+    return { success: false, message: error.message };
+  }
+};
+
+// export const updateDefaultAvatar = async (file, imageUrl) => {
+//   try {
+//     const defaultAvatarPath = path.join(assetsDir, "default-avatar.jpg");
+
+//     // Xóa ảnh cũ nếu tồn tại
+//     if (fs.existsSync(defaultAvatarPath)) {
+//       fs.unlinkSync(defaultAvatarPath);
+//     }
+
+//     // Lưu ảnh mới
+//     if (file) {
+//       fs.writeFileSync(defaultAvatarPath, file.buffer);
+//     } else if (imageUrl) {
+//       const response = await fetch(imageUrl);
+//       if (!response.ok) throw new Error("Không tải được ảnh từ URL!");
+//       const buffer = Buffer.from(await response.arrayBuffer());
+//       fs.writeFileSync(defaultAvatarPath, buffer);
+//     } else {
+//       throw new Error("Chưa có ảnh mới để cập nhật!");
+//     }
+
+//     return { 
+//       success: true, 
+//       message: "Cập nhật ảnh đại diện mặc định thành công cho tất cả người dùng!" 
+//     };
+//   } catch (error) {
+//     return { success: false, message: error.message };
+//   }
+// };
+
+
 // Tìm kiếm người dùng theo tên hoặc email
+
+
 export const search = async (query) => {
   try {
     if (!query || query.trim() === "") throw new Error("Vui lòng nhập từ khóa tìm kiếm!");
