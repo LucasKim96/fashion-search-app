@@ -23,26 +23,19 @@ const seedAccounts = async () => {
 
     const accounts = [
       {
-        username: "sellerE",
-        phoneNumber: "0901000005",
+        username: "userA",
+        phoneNumber: "0901000001",
         password: passwordHash,
         status: "active",
-        roles: [], // thêm sau nếu có role model
+        roles: ["68e76a6a3c683a928eb104ee"], // khach hang
       },
       {
-        username: "sellerF",
-        phoneNumber: "0901000006",
+        username: "userB",
+        phoneNumber: "0901000002",
         password: passwordHash,
         status: "active",
-        roles: [],
+        roles: ["68e76a6a3c683a928eb104ee"],
       },
-      // {
-      //   username: "ZeroAdmin",
-      //   phoneNumber: "0916613912",
-      //   password: zeropwd,
-      //   status: "active",
-      //   roles: ["68e76a6a3c683a928eb104f1"],
-      // },
     ];
 
     const createdAccounts = await Account.insertMany(accounts);
