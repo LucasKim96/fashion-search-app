@@ -5,7 +5,7 @@ import "./account/account.model.js";
 import "./order/order.model.js";
 import "./user/userInfo.model.js";
 import "./product/product.model.js";
-import "./product/productVariant.model";
+import "./product/productVariant.model.js";
 import "./product/attribute.model.js";
 import "./product/attributeValue.model.js";
 import "./product/shopAttributeValue.model.js";
