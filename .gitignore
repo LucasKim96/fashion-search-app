@@ -39,3 +39,5 @@ Thumbs.db
 
 # Package manager cache
 .pnpm-store/
+
+face.evoLVe/outputs/weights/
