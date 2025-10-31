@@ -6,10 +6,6 @@ import { Product, ProductVariant } from "../product/index.js";
 import { removeProductsFromAllCarts } from "../cart/cart.service.js";
 import path from "path";
 import fs from "fs";
-import { fileURLToPath } from "url";
-
-// const __filename = fileURLToPath(import.meta.url);
-// const __dirname = path.dirname(__filename);
 
 const DEFAULT_LOGO = "/assets/shop/shop-logo.png";
 const DEFAULT_COVER = "/assets/shop/shop-cover.jpg";
