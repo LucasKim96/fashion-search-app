@@ -204,20 +204,55 @@ export const refreshCart = async (accountId) => {
   const cart = await getCartWithDetails(accountId);
   if (!cart) throw ApiError.notFound("Không tìm thấy giỏ hàng");
 
+  // Lấy toàn bộ variant đang nằm trong cart
   const variantIds = cart.cartItems.map((i) => i.productVariantId);
   const variants = await ProductVariant.find({
     _id: { $in: variantIds },
-  }).populate("productId");
-
-  const validItems = cart.cartItems.filter((item) => {
-    const variant = variants.find((v) => v._id.equals(item.productVariantId));
-    return variant && variant.stock > 0 && variant.productId;
+  }).populate({
+    path: "productId",
+    populate: { path: "shopId", select: "shopName status" },
   });
+
+  // Lọc ra các item hợp lệ
+  const validItems = [];
+  for (const item of cart.cartItems) {
+    const variant = variants.find((v) => v._id.equals(item.productVariantId));
+    const product = variant?.productId;
+    const shop = product?.shopId;
+
+    if (!variant || !product || !shop) continue; // mất dữ liệu
+    if (shop.status !== "active") continue; // shop bị khóa
+    if (variant.stock <= 0) continue; // hết hàng
+
+    // Đồng bộ lại dữ liệu variant/product hiện tại
+    item.productId = product._id;
+    item.attributes = variant.attributes || [];
+    // Không lưu snapshot, nhưng nếu boss muốn hiển thị luôn ảnh mới thì:
+    // item.image = variant.image || product.thumbnail; (nếu có field image trong cartItem)
+    validItems.push(item);
+  }
 
   cart.cartItems = validItems;
   await cart.save();
 
-  return await cart.populate("cartItems.productVariantId");
+  // Populate lại thông tin sau khi làm mới
+  return await cart.populate({
+    path: "cartItems.productVariantId",
+    populate: {
+      path: "productId",
+      populate: { path: "shopId", select: "shopName status" },
+    },
+  });
+};
+
+export const clearCart = async (accountId) => {
+  const cart = await Cart.findOne({ accountId });
+  if (!cart) throw ApiError.notFound("Không tìm thấy giỏ hàng");
+
+  cart.cartItems = [];
+  await cart.save();
+
+  return cart; // Giỏ hàng rỗng, vẫn giữ accountId
 };
 
 /**
