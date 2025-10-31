@@ -23,10 +23,6 @@ export const addToCart = async (accountId, productVariantId, quantity = 1) => {
     const shop = await Shop.findById(product.shopId).session(session);
     if (!shop) throw ApiError.notFound("Không tìm thấy shop của sản phẩm");
 
-    // 🧮 Tính giá hiện tại
-    const priceAtAdd =
-      (product.basePrice || 0) + (variant.priceAdjustment || 0);
-
     let cart = await Cart.findOne({ accountId }).session(session);
     if (!cart)
       cart = await Cart.create([{ accountId, cartItems: [] }], {
@@ -39,18 +35,11 @@ export const addToCart = async (accountId, productVariantId, quantity = 1) => {
 
     if (existingItem) {
       existingItem.quantity += quantity;
-      existingItem.priceAtAdd = priceAtAdd;
-      existingItem.imageAtAdd = variant.image || product.thumbnail;
-      existingItem.pdNameAtAdd = product.productName;
-      existingItem.attributes = variant.attributes || [];
     } else {
       cart.cartItems.push({
         productId: product._id,
         productVariantId: variant._id,
         quantity,
-        priceAtAdd, // ✅ dùng giá đã tính
-        imageAtAdd: variant.image || product.thumbnail,
-        pdNameAtAdd: product.productName,
         attributes: variant.attributes || [],
       });
     }
@@ -111,42 +100,7 @@ export const removeFromCart = async (accountId, productVariantId) => {
 };
 
 /**
- * Xóa sản phẩm của shop đã bị xóa khỏi tất cả giỏ hàng
- */
-export const removeProductsFromAllCarts = async (productIds) => {
-  if (!productIds || productIds.length === 0) return;
-
-  // Tìm tất cả product variants của các sản phẩm bị xóa
-  const variants = await ProductVariant.find(
-    { productId: { $in: productIds } },
-    { _id: 1 }
-  );
-  const variantIds = variants.map((v) => v._id);
-
-  if (variantIds.length === 0) return;
-
-  // Xóa khỏi tất cả giỏ hàng
-  await Cart.updateMany(
-    {},
-    { $pull: { cartItems: { productVariantId: { $in: variantIds } } } }
-  );
-};
-
-/**
- * Xóa toàn bộ giỏ hàng
- */
-export const clearCart = async (accountId) => {
-  const cart = await Cart.findOneAndUpdate(
-    { accountId },
-    { cartItems: [] },
-    { new: true }
-  );
-  if (!cart) throw ApiError.notFound("Không tìm thấy giỏ hàng");
-  return cart;
-};
-
-/**
- * Lấy giỏ hàng chi tiết (kèm sản phẩm, shop, trạng thái)
+ * Lấy giỏ hàng chi tiết
  */
 export const getCartWithDetails = async (accountId) => {
   if (!accountId) throw ApiError.badRequest("Thiếu accountId");
@@ -177,15 +131,20 @@ export const getCartWithDetails = async (accountId) => {
 };
 
 /**
- * Tính tổng tiền giỏ hàng
+ * Tính tổng tiền giỏ hàng (dùng giá hiện tại)
  */
 export const calculateCartTotal = async (accountId) => {
   const cart = await getCartWithDetails(accountId);
 
   const summary = cart.cartItems.reduce(
     (acc, item) => {
-      const price = item.productVariantId?.price || item.priceAtAdd || 0;
-      acc.total += price * item.quantity;
+      const variant = item.productVariantId;
+      const product = variant?.productId;
+      const price =
+        variant?.price ??
+        (product?.basePrice || 0) + (variant?.priceAdjustment || 0);
+
+      acc.total += (price || 0) * item.quantity;
       acc.itemCount += item.quantity;
       return acc;
     },
@@ -228,9 +187,6 @@ export const bulkAdd = async (accountId, items) => {
           productId: variant.productId._id,
           productVariantId: variant._id,
           quantity,
-          priceAtAdd: variant.price,
-          imageAtAdd: variant.image || variant.productId.thumbnail,
-          pdNameAtAdd: variant.productId.productName,
           attributes: variant.attributes || [],
         });
       }
@@ -242,7 +198,7 @@ export const bulkAdd = async (accountId, items) => {
 };
 
 /**
- * Làm mới giỏ hàng (đồng bộ giá, tồn kho, trạng thái)
+ * Làm mới giỏ hàng (loại bỏ variant hết hàng, ngưng hoạt động)
  */
 export const refreshCart = async (accountId) => {
   const cart = await getCartWithDetails(accountId);
@@ -265,16 +221,28 @@ export const refreshCart = async (accountId) => {
 };
 
 /**
- * Cập nhật tồn kho sau khi đặt hàng
+ * Xóa các sản phẩm (và variant) của những product bị xóa khỏi tất cả giỏ hàng
  */
-export const updateStockAfterOrder = async (orderItems) => {
-  return await withTransaction(async (session) => {
-    for (const item of orderItems) {
-      await ProductVariant.findByIdAndUpdate(
-        item.productVariantId,
-        { $inc: { stock: -item.quantity } },
-        { session }
-      );
-    }
-  });
+export const removeProductsFromAllCarts = async (productIds) => {
+  if (!productIds || !Array.isArray(productIds) || productIds.length === 0)
+    return;
+
+  // Lấy toàn bộ variant thuộc các product bị xóa
+  const variants = await ProductVariant.find(
+    { productId: { $in: productIds } },
+    { _id: 1 }
+  );
+
+  const variantIds = variants.map((v) => v._id);
+  if (variantIds.length === 0) return;
+
+  // Gỡ bỏ tất cả cartItems có chứa variantId thuộc danh sách này
+  const result = await Cart.updateMany(
+    {},
+    { $pull: { cartItems: { productVariantId: { $in: variantIds } } } }
+  );
+
+  console.log(
+    `🧹 Đã xóa ${variantIds.length} variants khỏi ${result.modifiedCount} giỏ hàng`
+  );
 };

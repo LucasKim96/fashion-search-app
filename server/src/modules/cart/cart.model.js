@@ -13,12 +13,7 @@ const cartItemSchema = new mongoose.Schema({
   },
   quantity: { type: Number, required: true, min: 1 },
 
-  // Snapshot dữ liệu lúc thêm (phòng khi Product/Variant bị xóa hoặc đổi)
-  priceAtAdd: { type: Number, required: true },
-  imageAtAdd: { type: String },
-  pdNameAtAdd: { type: String },
-
-  // Các thuộc tính của variant (vd: Color: Red, Size: M)
+  // không lưu giá/image/tên snapshot nữa
   attributes: [
     {
       attributeId: { type: mongoose.Schema.Types.ObjectId, ref: "Attribute" },
@@ -39,6 +34,6 @@ const cartSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-cartSchema.index({ accountId: 1 }); // dễ truy vấn theo người dùng
+cartSchema.index({ accountId: 1 });
 
 export default mongoose.model("Cart", cartSchema);
