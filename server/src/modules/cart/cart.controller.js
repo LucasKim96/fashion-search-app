@@ -1,8 +1,9 @@
 // server/src/modules/cart/cart.controller.js
 import * as CartService from "./cart.service.js";
-import { apiResponse } from "../../utils/index.js";
+import { apiResponse, ApiError } from "../../utils/index.js";
 
-const { successResponse, errorResponse } = apiResponse;
+const { successResponse } = apiResponse;
+
 // Lấy giỏ hàng
 export const getCart = async (req, res, next) => {
   try {
