@@ -1,279 +1,131 @@
-// server/src/modules/shop/shop.controller.js
-import * as ShopService from "./shop.service.js";
-import { apiResponse, ApiError, validateObjectId } from "../../utils/index.js";
-import path from "path";
-import fs from "fs";
+// server/src/modules/cart/cart.controller.js
+import * as CartService from "./cart.service.js";
+import { apiResponse } from "../../utils/index.js";
 
-const { successResponse, errorResponse } = apiResponse;
-const DEFAULT_LOGO = "assets/shop/default-logo.png";
-const DEFAULT_COVER = "assets/shop/default-cover.jpg";
+const { successResponse } = apiResponse;
 
 /**
- * Lấy danh sách tất cả shop
+ * 🛒 Lấy giỏ hàng
  */
-export const getShops = async (req, res, next) => {
+export const getCart = async (req, res, next) => {
   try {
-    const { page, limit, status, shopName } = req.query;
+    const accountId = req.user?.id;
+    const cart = await CartService.getCartWithDetails(accountId);
+    const total = await CartService.calculateCartTotal(accountId);
 
-    // Parse filters
-    const filters = {};
-    if (status) filters.status = status;
-    if (shopName) filters.shopName = shopName;
-
-    // Parse options
-    const options = {};
-    if (page) options.page = page;
-    if (limit) options.limit = limit;
-
-    const result = await ShopService.getShops(filters, options);
-    return successResponse(res, result, "Lấy danh sách shop thành công");
+    return successResponse(
+      res,
+      { cart, summary: total },
+      "Lấy giỏ hàng thành công"
+    );
   } catch (error) {
-    // ApiError sẽ được xử lý bởi errorHandler middleware
     next(error);
   }
 };
 
 /**
- * Lấy thông tin chi tiết shop theo ID
+ * ➕ Thêm sản phẩm vào giỏ
  */
-export const getShop = async (req, res, next) => {
+export const addItem = async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const accountId = req.user?.id;
+    const { productVariantId, quantity } = req.body;
 
-    validateObjectId(id, "ID shop");
-
-    const shop = await ShopService.getShopById(id);
-    return successResponse(res, shop, "Lấy thông tin shop thành công");
-  } catch (error) {
-    // ApiError sẽ được xử lý bởi errorHandler middleware
-    next(error);
-  }
-};
-
-/**
- * Tạo shop mới
- */
-export const addShop = async (req, res, next) => {
-  try {
-    const accountId = req.user?.id; // || req.body.accountId;
-    const shopData = { ...req.body, accountId };
-
-    validateObjectId(accountId, "accID");
-
-    const newShop = await ShopService.createShop(shopData);
-    return successResponse(res, newShop, "Tạo shop thành công", 201);
-  } catch (error) {
-    // ApiError sẽ được xử lý bởi errorHandler middleware
-    next(error);
-  }
-};
-
-/**
- * Cập nhật shop (chỉ chủ shop)
- */
-export const editShop = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const accountId = req.user?.id; // || req.body.accountId;
-    const updateData = req.body;
-    const forbidden = ["accountId", "status"];
-    forbidden.forEach((f) => delete updateData[f]);
-
-    validateObjectId(id, "ID shop");
-    validateObjectId(accountId, "accID");
-
-    const updatedShop = await ShopService.updateShop(id, accountId, updateData);
-    return successResponse(res, updatedShop, "Cập nhật shop thành công");
-  } catch (error) {
-    // ApiError sẽ được xử lý bởi errorHandler middleware
-    next(error);
-  }
-};
-
-export const updateLogo = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const accountId = req.user?.id; // || req.body.accountId;
-
-    if (!req.file) throw ApiError.badRequest("Chưa upload file");
-    const logoUrl = `/uploads/shops/${id}/${req.file.filename}`;
-
-    validateObjectId(id, "shopID");
-    validateObjectId(accountId, "accID");
-
-    const updatedShop = await ShopService.updateShopImage(
-      id,
+    const updatedCart = await CartService.addToCart(
       accountId,
-      logoUrl,
-      "logo"
+      productVariantId,
+      quantity
     );
 
-    return successResponse(res, updatedShop, "Cập nhật logo shop thành công");
+    return successResponse(
+      res,
+      updatedCart,
+      "Thêm sản phẩm vào giỏ thành công"
+    );
   } catch (error) {
     next(error);
   }
 };
 
-export const updateCover = async (req, res, next) => {
+/**
+ * 🔢 Cập nhật số lượng sản phẩm
+ */
+export const updateQuantity = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const accountId = req.user?.id; // || req.body.accountId;
-    if (!req.file) throw ApiError.badRequest("Chưa upload file cover");
-    const coverUrl = `/uploads/shops/${id}/${req.file.filename}`;
+    const accountId = req.user?.id;
+    const { productVariantId, quantity } = req.body;
 
-    validateObjectId(id, "shopID");
-    validateObjectId(accountId, "accID");
-
-    const updatedShop = await ShopService.updateShopImage(
-      id,
+    const updatedCart = await CartService.updateItemQuantity(
       accountId,
-      coverUrl,
-      "cover"
+      productVariantId,
+      quantity
     );
-    return successResponse(
-      res,
-      updatedShop,
-      "Cập nhật cover image shop thành công"
-    );
+
+    return successResponse(res, updatedCart, "Cập nhật số lượng thành công");
   } catch (error) {
     next(error);
   }
 };
 
-export const updateDefaultLogo = async (req, res, next) => {
-  try {
-    if (!req.file)
-      return next(ApiError.badRequest("Up cái logo lên coi bro 😎"));
-
-    const targetPath = path.join(process.cwd(), DEFAULT_LOGO);
-
-    // 1. Xóa file cũ nếu tồn tại
-    if (fs.existsSync(targetPath)) {
-      fs.unlinkSync(targetPath);
-    }
-
-    // 2. Ghi đè file mới vào đúng tên
-    fs.renameSync(req.file.path, targetPath);
-
-    return successResponse(
-      res,
-      {
-        logoUrl: DEFAULT_LOGO,
-      },
-      "Logo mới fresh như bug-free code 💅"
-    );
-  } catch (err) {
-    next(err);
-  }
-};
-
-export const updateDefaultCover = async (req, res, next) => {
-  try {
-    if (!req.file) throw ApiError.badRequest("Up cover đi bạn eyyy");
-
-    const targetPath = path.join(process.cwd(), DEFAULT_COVER);
-
-    // Delete old one
-    if (fs.existsSync(targetPath)) {
-      fs.unlinkSync(targetPath);
-    }
-
-    // Replace new image with fixed filename
-    fs.renameSync(req.file.path, targetPath);
-
-    return successResponse(
-      res,
-      {
-        coverUrl: DEFAULT_COVER,
-      },
-      "Ảnh cover default mới đã được cập nhật 🎉"
-    );
-  } catch (err) {
-    next(err);
-  }
-};
-
 /**
- * Xóa shop (chỉ chủ shop)
+ * ❌ Xóa 1 sản phẩm khỏi giỏ
  */
-export const removeShop = async (req, res, next) => {
+export const removeItem = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const accountId = req.user?.id; // || req.body.accountId;
+    const accountId = req.user?.id;
+    const { productVariantId } = req.params;
 
-    validateObjectId(id, "ID shop");
-    validateObjectId(accountId, "accID");
-
-    const result = await ShopService.deleteShop(id, accountId);
-    return successResponse(res, result, "Xóa shop thành công");
-  } catch (error) {
-    // ApiError sẽ được xử lý bởi errorHandler middleware
-    next(error);
-  }
-};
-
-/**
- * Cập nhật trạng thái shop (admin hoặc chủ shop)
- */
-export const changeStatus = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const accountId = req.user?.id; // || req.body.accountId;
-    const { status } = req.body;
-    validateObjectId(id, "shopID");
-    validateObjectId(accountId, "accID");
-
-    // Gọi xuống service xử lý logic
-    const updatedShop = await ShopService.updateShopStatus(
-      id,
+    const updatedCart = await CartService.removeFromCart(
       accountId,
-      status
+      productVariantId
     );
 
-    return successResponse(
-      res,
-      updatedShop,
-      "Cập nhật trạng thái shop thành công"
-    );
+    return successResponse(res, updatedCart, "Xóa sản phẩm thành công");
   } catch (error) {
-    next(error); // để middleware errorHandler xử lý
-  }
-};
-
-/**
- * Xóa các shop có accountId null (chỉ Super Admin)
- */
-export const deleteNullShops = async (req, res, next) => {
-  try {
-    const adminAccountId = req.user?.id; // || req.body.accountId;
-    validateObjectId(adminAccountId, "adminID");
-
-    if (!adminAccountId) {
-      return errorResponse(res, "Chưa đăng nhập", 401);
-    }
-
-    const result = await ShopService.deleteShopsWithNullAccount(adminAccountId);
-    return successResponse(
-      res,
-      result,
-      `Super Admin đã xóa ${result.deletedShops} shop null hoặc có accountId không tồn tại khỏi hệ thống và ${result.deletedProducts} sản phẩm thành công`
-    );
-  } catch (error) {
-    // ApiError sẽ được xử lý bởi errorHandler middleware
     next(error);
   }
 };
 
-export const restoreShop = async (req, res, next) => {
+/**
+ * 🧹 Xóa toàn bộ giỏ hàng
+ */
+export const clearCart = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const adminAccountId = req.user?.id; // || req.body.accountId;
+    const accountId = req.user?.id;
+    const clearedCart = await CartService.clearCart(accountId);
+    return successResponse(res, clearedCart, "Đã xóa toàn bộ giỏ hàng");
+  } catch (error) {
+    next(error);
+  }
+};
 
-    validateObjectId(id, "shopID");
-    validateObjectId(adminAccountId, "adminID");
+/**
+ * 🧺 Thêm nhiều sản phẩm (bulk add)
+ */
+export const bulkAdd = async (req, res, next) => {
+  try {
+    const accountId = req.user?.id;
+    const { items } = req.body;
 
-    const result = await ShopService.restoreShop(id, adminAccountId);
-    return successResponse(res, result, "Khôi phục shop thành công");
+    const updatedCart = await CartService.bulkAdd(accountId, items);
+    return successResponse(res, updatedCart, "Đã thêm nhiều sản phẩm vào giỏ");
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * 🔄 Làm mới giỏ hàng (đồng bộ giá, tồn kho, trạng thái)
+ */
+export const refreshCart = async (req, res, next) => {
+  try {
+    const accountId = req.user?.id;
+    const refreshedCart = await CartService.refreshCart(accountId);
+    return successResponse(
+      res,
+      refreshedCart,
+      "Đã đồng bộ lại giỏ hàng thành công"
+    );
   } catch (error) {
     next(error);
   }
