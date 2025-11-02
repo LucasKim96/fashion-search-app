@@ -13,10 +13,10 @@ const orderItemSchema = new mongoose.Schema({
   },
   quantity: { type: Number, required: true, min: 1 },
 
-  // ✅ Giá cuối cùng lúc order (đã tính base + adjustment)
+  // Giá cuối cùng lúc order (đã tính base + adjustment)
   finalPriceAtOrder: { type: Number, required: true },
 
-  // ✅ Snapshot thông tin hiển thị
+  // Snapshot thông tin hiển thị
   pdNameAtOrder: { type: String, required: true },
   imageAtOrder: { type: String },
   attributesAtOrder: [
@@ -43,16 +43,16 @@ const orderSchema = new mongoose.Schema(
 
     orderItems: [orderItemSchema],
 
-    // 💰 Tổng giá trị & thanh toán
+    // Tổng giá trị & thanh toán
     totalAmount: { type: Number, required: true }, // sum(item.finalPriceAtOrder * qty)
 
-    // 🚚 Thông tin giao hàng
+    // Thông tin giao hàng
     addressLine: { type: String, required: true },
     receiverName: { type: String, required: true },
     phone: { type: String, required: true },
     note: String,
 
-    // 📦 Trạng thái đơn hàng
+    // Trạng thái đơn hàng
     status: {
       type: String,
       enum: [

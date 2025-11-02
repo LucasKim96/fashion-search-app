@@ -1,151 +1,282 @@
-// server/src/modules/order/order.controller.js
 import * as OrderService from "./order.service.js";
-import { apiResponse } from "../../utils/index.js";
-import ApiError from "../../utils/apiError.js";
+import { apiResponse, ApiError, validateObjectId } from "../../utils/index.js";
 
-const { successResponse, errorResponse } = apiResponse;
-
-/**
- * Tạo đơn hàng từ giỏ hàng
- */
-export const createOrder = async (req, res) => {
-  try {
-    const accountId = req.user?._id;
-
-    if (!accountId) {
-      return errorResponse(res, "Chưa đăng nhập", 401);
-    }
-
-    const { addressLine, receiverName, phone, note } = req.body;
-
-    const order = await OrderService.createOrderFromCart(accountId, {
-      addressLine,
-      receiverName,
-      phone,
-      note,
-    });
-
-    return successResponse(res, order, "Đặt hàng thành công", 201);
-  } catch (error) {
-    throw error;
-  }
-};
+const { successResponse } = apiResponse;
 
 /**
- * Lấy danh sách đơn hàng của user
+ * Buyer: Lấy danh sách đơn hàng của chính mình
  */
-export const getMyOrders = async (req, res) => {
+export const getMyOrders = async (req, res, next) => {
   try {
-    const accountId = req.user?._id;
+    const accountId = req.user?.id;
+    validateObjectId(accountId, "accountId");
 
-    if (!accountId) {
-      return errorResponse(res, "Chưa đăng nhập", 401);
-    }
-
-    const { page, limit, status } = req.query;
-
-    const options = {};
-    if (page) options.page = parseInt(page);
-    if (limit) options.limit = parseInt(limit);
-    if (status) options.status = status;
-
-    const result = await OrderService.getOrdersByAccount(
-      accountId,
-      {},
-      options
-    );
-
-    return successResponse(res, result, "Lấy danh sách đơn hàng thành công");
-  } catch (error) {
-    throw error;
-  }
-};
-
-/**
- * Lấy chi tiết đơn hàng
- */
-export const getOrderDetail = async (req, res) => {
-  try {
-    const accountId = req.user?._id;
-    const { id } = req.params;
-
-    if (!accountId) {
-      return errorResponse(res, "Chưa đăng nhập", 401);
-    }
-
-    const order = await OrderService.getOrderById(id, accountId);
-
-    return successResponse(res, order, "Lấy chi tiết đơn hàng thành công");
-  } catch (error) {
-    throw error;
-  }
-};
-
-/**
- * Cập nhật trạng thái đơn hàng (shop owner hoặc admin)
- */
-export const updateOrderStatus = async (req, res) => {
-  try {
-    const updaterAccountId = req.user?._id;
-    const { id } = req.params;
-    const { status } = req.body;
-
-    if (!updaterAccountId) {
-      return errorResponse(res, "Chưa đăng nhập", 401);
-    }
-
-    if (!status) {
-      return errorResponse(res, "Thiếu trạng thái mới", 400);
-    }
-
-    const order = await OrderService.updateOrderStatus(
-      id,
-      status,
-      updaterAccountId
-    );
-
+    const result = await OrderService.getOrdersByBuyer(accountId, req.query);
     return successResponse(
       res,
-      order,
-      "Cập nhật trạng thái đơn hàng thành công"
+      result,
+      "Lấy danh sách đơn hàng của bạn thành công"
     );
-  } catch (error) {
-    throw error;
+  } catch (err) {
+    next(err);
   }
 };
 
 /**
- * Hủy đơn hàng
+ * Buyer: Lấy chi tiết 1 đơn hàng
  */
-export const cancelOrder = async (req, res) => {
+export const getMyOrderDetail = async (req, res, next) => {
   try {
-    const accountId = req.user?._id;
     const { id } = req.params;
+    const accountId = req.user?.id;
 
-    if (!accountId) {
-      return errorResponse(res, "Chưa đăng nhập", 401);
-    }
+    validateObjectId(id, "orderId");
+    validateObjectId(accountId, "accountId");
 
-    const order = await OrderService.cancelOrder(id, accountId);
-
-    return successResponse(res, order, "Hủy đơn hàng thành công");
-  } catch (error) {
-    throw error;
+    const order = await OrderService.getOrderDetailForBuyer(id, accountId);
+    return successResponse(res, order, "Chi tiết đơn hàng của bạn nè 💌");
+  } catch (err) {
+    next(err);
   }
 };
 
 /**
- * Lấy thống kê đơn hàng cho shop (TODO)
+ * Buyer: Tạo đơn hàng từ giỏ hàng
  */
-export const getShopOrderStats = async (req, res) => {
+export const createFromCart = async (req, res, next) => {
   try {
-    const { shopId } = req.params;
+    const accountId = req.user?.id;
+    validateObjectId(accountId, "accountId");
 
-    // TODO: Implement sau khi có đủ logic phân quyền
-    const stats = await OrderService.getShopOrderStats(shopId);
+    const orderData = req.body; // chứa addressLine, receiverName, phone, note...
+    const result = await OrderService.createOrderFromCart(accountId, orderData);
+    return successResponse(res, result, "Đặt hàng thành công 🎉", 201);
+  } catch (err) {
+    next(err);
+  }
+};
 
-    return successResponse(res, stats, "Lấy thống kê đơn hàng thành công");
+/**
+ * Buyer: Xác nhận đã nhận hàng
+ */
+export const confirmReceived = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const accountId = req.user?.id;
+
+    validateObjectId(id, "orderId");
+    validateObjectId(accountId, "accountId");
+
+    const result = await OrderService.confirmOrderReceived(id, accountId);
+    return successResponse(res, result, "Đã xác nhận nhận hàng thành công ✅");
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * Buyer: Báo cáo sự cố đơn hàng
+ */
+export const reportIssue = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const accountId = req.user?.id;
+    const { note } = req.body;
+
+    validateObjectId(id, "orderId");
+    validateObjectId(accountId, "accountId");
+
+    const result = await OrderService.reportOrderIssue(id, accountId, note);
+    return successResponse(res, result, "Đã gửi báo cáo cho admin xử lý 🚨");
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * Buyer: Hủy đơn khi còn pending
+ */
+export const cancelMyOrder = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const accountId = req.user?.id;
+
+    validateObjectId(id, "orderId");
+    validateObjectId(accountId, "accountId");
+
+    const result = await OrderService.cancelOrderByBuyer(id, accountId);
+    return successResponse(res, result, "Đã hủy đơn hàng của bạn 💔");
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * Seller huỷ đơn hàng
+ */
+export const cancelBySeller = async (req, res, next) => {
+  try {
+    const { orderId } = req.params;
+    const sellerId = req.user?.id;
+    const { reason } = req.body;
+
+    validateObjectId(orderId, "ID đơn hàng");
+    validateObjectId(sellerId, "ID người bán");
+
+    const result = await OrderService.cancelBySeller(orderId, sellerId, reason);
+    return successResponse(res, result, "Huỷ đơn hàng thành công");
   } catch (error) {
-    throw error;
+    next(error);
+  }
+};
+
+/**
+ * Seller: Lấy danh sách đơn của shop
+ */
+export const getShopOrders = async (req, res, next) => {
+  try {
+    const shopId = req.user?.shopId;
+    validateObjectId(shopId, "shopId");
+
+    const result = await OrderService.getOrdersByShop(shopId, req.query);
+    return successResponse(
+      res,
+      result,
+      "Lấy danh sách đơn hàng của shop thành công"
+    );
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * Seller: Đánh dấu đang đóng gói
+ */
+export const markPacking = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const shopId = req.user?.shopId;
+    validateObjectId(id, "orderId");
+    validateObjectId(shopId, "shopId");
+
+    const result = await OrderService.updateStatusPacking(id, shopId);
+    return successResponse(
+      res,
+      result,
+      "Đơn hàng đã chuyển sang trạng thái 'packing' 📦"
+    );
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * Seller: Đánh dấu đang giao
+ */
+export const markShipping = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const shopId = req.user?.shopId;
+    validateObjectId(id, "orderId");
+    validateObjectId(shopId, "shopId");
+
+    const result = await OrderService.updateStatusShipping(id, shopId);
+    return successResponse(
+      res,
+      result,
+      "Đơn hàng đã chuyển sang 'shipping' 🚚"
+    );
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * Seller: Đánh dấu đã giao hàng
+ */
+export const markDelivered = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const shopId = req.user?.shopId;
+    validateObjectId(id, "orderId");
+    validateObjectId(shopId, "shopId");
+
+    const result = await OrderService.updateStatusDelivered(id, shopId);
+    return successResponse(
+      res,
+      result,
+      "Đã đánh dấu đơn hàng là 'delivered' 📬"
+    );
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * Admin: Hoàn tất đơn thủ công
+ */
+export const adminCompleteOrder = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const adminId = req.user?.id;
+    validateObjectId(id, "orderId");
+    validateObjectId(adminId, "adminId");
+
+    const result = await OrderService.forceCompleteOrder(id, adminId);
+    return successResponse(res, result, "Admin đã hoàn tất đơn hàng 🧾");
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Admin huỷ đơn
+export const adminCancelOrder = async (req, res, next) => {
+  try {
+    const { id: orderId } = req.params;
+    const adminId = req.user?.id;
+    const { reason } = req.body;
+
+    validateObjectId(orderId, "ID đơn hàng");
+    const result = await OrderService.adminCancelOrder(
+      orderId,
+      adminId,
+      reason
+    );
+
+    return successResponse(res, result, "Admin đã huỷ đơn hàng thành công");
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Admin xử lý đơn có report
+export const reviewReportedOrder = async (req, res, next) => {
+  try {
+    const { id: orderId } = req.params;
+    const adminId = req.user?.id;
+    const { action, note } = req.body;
+    // action: "approve_buyer" | "approve_seller" | "cancel_both"
+
+    validateObjectId(orderId, "ID đơn hàng");
+    const result = await OrderService.reviewReportedOrder(
+      orderId,
+      adminId,
+      action,
+      note
+    );
+
+    return successResponse(res, result, "Đã xử lý báo cáo đơn hàng");
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Cron job / auto transition orders
+export const autoTransitionOrders = async (req, res, next) => {
+  try {
+    const result = await OrderService.autoTransitionOrders();
+    return successResponse(res, result, "Đã auto cập nhật trạng thái đơn hàng");
+  } catch (error) {
+    next(error);
   }
 };
