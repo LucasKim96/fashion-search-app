@@ -8,7 +8,6 @@ import "./product/product.model.js";
 import "./product/productVariant.model.js";
 import "./product/attribute.model.js";
 import "./product/attributeValue.model.js";
-import "./product/shopAttributeValue.model.js";
 
 export * from "./account/index.js";
 export * from "./auth/index.js";
