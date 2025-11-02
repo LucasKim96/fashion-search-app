@@ -18,6 +18,7 @@ import { generateVariantsCombinations } from "./generateVariantsCombinations.js"
 import { createUploader } from "./createUploader.js";
 import { backupFile, restoreFile, removeBackup } from "./backupFile.js";
 import { toObjectId, validateAttributeValue, fetchAttributeWithValues } from "./attribute.helper.js";
+import { getShopIdFromAccount } from "./getShopIdFromAccount.js";
 
 export {
   ApiError,
@@ -42,4 +43,5 @@ export {
   toObjectId, 
   validateAttributeValue, 
   fetchAttributeWithValues,
+  getShopIdFromAccount,
 };
