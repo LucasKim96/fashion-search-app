@@ -2,7 +2,7 @@ import express from "express";
 import * as OrderController from "./order.controller.js";
 import { authMiddleware } from "../../middlewares/index.js";
 import {
-  isSellerOrAdmin,
+  isShopOrAdmin,
   isAdminOrSuperAdmin,
 } from "../../middlewares/role.middleware.js";
 
@@ -22,7 +22,7 @@ router.use("/buyer", buyerRouter);
 
 const sellerRouter = express.Router();
 
-sellerRouter.use(authMiddleware, isSellerOrAdmin);
+sellerRouter.use(authMiddleware, isShopOrAdmin);
 sellerRouter.get("/", OrderController.getShopOrders);
 sellerRouter.post("/:id/pack", OrderController.markPacking);
 sellerRouter.post("/:id/ship", OrderController.markShipping);
