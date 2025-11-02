@@ -1,5 +1,10 @@
 import * as OrderService from "./order.service.js";
-import { apiResponse, ApiError, validateObjectId } from "../../utils/index.js";
+import {
+  apiResponse,
+  ApiError,
+  validateObjectId,
+  getShopIdFromAccount,
+} from "../../utils/index.js";
 
 const { successResponse } = apiResponse;
 
@@ -116,17 +121,17 @@ export const cancelMyOrder = async (req, res, next) => {
  */
 export const cancelBySeller = async (req, res, next) => {
   try {
-    const { orderId } = req.params;
+    const { id } = req.params;
     const sellerId = req.user?.id;
     const { reason } = req.body;
 
-    validateObjectId(orderId, "ID đơn hàng");
+    validateObjectId(id, "ID đơn hàng");
     validateObjectId(sellerId, "ID người bán");
 
-    const result = await OrderService.cancelBySeller(orderId, sellerId, reason);
+    const result = await OrderService.cancelBySeller(id, sellerId, reason);
     return successResponse(res, result, "Huỷ đơn hàng thành công");
-  } catch (error) {
-    next(error);
+  } catch (err) {
+    next(err);
   }
 };
 
@@ -135,8 +140,8 @@ export const cancelBySeller = async (req, res, next) => {
  */
 export const getShopOrders = async (req, res, next) => {
   try {
-    const shopId = req.user?.shopId;
-    validateObjectId(shopId, "shopId");
+    const accountId = req.user?.id;
+    const shopId = await getShopIdFromAccount(accountId);
 
     const result = await OrderService.getOrdersByShop(shopId, req.query);
     return successResponse(
@@ -155,9 +160,11 @@ export const getShopOrders = async (req, res, next) => {
 export const markPacking = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const shopId = req.user?.shopId;
-    validateObjectId(id, "orderId");
-    validateObjectId(shopId, "shopId");
+    const accountId = req.user?.id;
+    
+    validateObjectId(id, "ID đơn hàng");
+    validateObjectId(accountId, "accountId");
+    const shopId = await getShopIdFromAccount(accountId);
 
     const result = await OrderService.updateStatusPacking(id, shopId);
     return successResponse(
@@ -176,9 +183,11 @@ export const markPacking = async (req, res, next) => {
 export const markShipping = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const shopId = req.user?.shopId;
-    validateObjectId(id, "orderId");
-    validateObjectId(shopId, "shopId");
+    const accountId = req.user?.id;
+    
+    validateObjectId(id, "ID đơn hàng");
+    validateObjectId(accountId, "accountId");
+    const shopId = await getShopIdFromAccount(accountId);
 
     const result = await OrderService.updateStatusShipping(id, shopId);
     return successResponse(
@@ -197,9 +206,11 @@ export const markShipping = async (req, res, next) => {
 export const markDelivered = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const shopId = req.user?.shopId;
-    validateObjectId(id, "orderId");
-    validateObjectId(shopId, "shopId");
+    const accountId = req.user?.id;
+    
+    validateObjectId(id, "ID đơn hàng");
+    validateObjectId(accountId, "accountId");
+    const shopId = await getShopIdFromAccount(accountId);
 
     const result = await OrderService.updateStatusDelivered(id, shopId);
     return successResponse(
@@ -219,8 +230,9 @@ export const adminCompleteOrder = async (req, res, next) => {
   try {
     const { id } = req.params;
     const adminId = req.user?.id;
-    validateObjectId(id, "orderId");
-    validateObjectId(adminId, "adminId");
+
+    validateObjectId(id, "ID đơn hàng");
+    validateObjectId(adminId, "ID admin");
 
     const result = await OrderService.forceCompleteOrder(id, adminId);
     return successResponse(res, result, "Admin đã hoàn tất đơn hàng 🧾");
@@ -232,42 +244,44 @@ export const adminCompleteOrder = async (req, res, next) => {
 // Admin huỷ đơn
 export const adminCancelOrder = async (req, res, next) => {
   try {
-    const { id: orderId } = req.params;
+    const { id } = req.params;
     const adminId = req.user?.id;
     const { reason } = req.body;
 
-    validateObjectId(orderId, "ID đơn hàng");
+    validateObjectId(id, "ID đơn hàng");
+    validateObjectId(adminId, "ID admin");
     const result = await OrderService.adminCancelOrder(
-      orderId,
+      id,
       adminId,
       reason
     );
 
     return successResponse(res, result, "Admin đã huỷ đơn hàng thành công");
-  } catch (error) {
-    next(error);
+  } catch (err) {
+    next(err);
   }
 };
 
 // Admin xử lý đơn có report
 export const reviewReportedOrder = async (req, res, next) => {
   try {
-    const { id: orderId } = req.params;
+    const { id } = req.params;
     const adminId = req.user?.id;
     const { action, note } = req.body;
     // action: "approve_buyer" | "approve_seller" | "cancel_both"
 
-    validateObjectId(orderId, "ID đơn hàng");
+    validateObjectId(id, "ID đơn hàng");
+    validateObjectId(adminId, "ID admin");
     const result = await OrderService.reviewReportedOrder(
-      orderId,
+      id,
       adminId,
       action,
       note
     );
 
     return successResponse(res, result, "Đã xử lý báo cáo đơn hàng");
-  } catch (error) {
-    next(error);
+  } catch (err) {
+    next(err);
   }
 };
 
@@ -276,7 +290,7 @@ export const autoTransitionOrders = async (req, res, next) => {
   try {
     const result = await OrderService.autoTransitionOrders();
     return successResponse(res, result, "Đã auto cập nhật trạng thái đơn hàng");
-  } catch (error) {
-    next(error);
+  } catch (err) {
+    next(err);
   }
 };
