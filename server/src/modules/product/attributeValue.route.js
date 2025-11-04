@@ -1,7 +1,7 @@
 import express from "express";
 import * as AttributeValueController from "./attributeValue.controller.js";
 import { authMiddleware } from "../../middlewares/auth.middleware.js";
-import { isAdminOrSuperAdmin, isSelfAndShopOwner } from "../../middlewares/role.middleware.js";
+import { isAdminOrSuperAdmin, isShopOwner } from "../../middlewares/role.middleware.js";
 import { uploadAttribute, uploadAttributeValueImages } from "../../middlewares/index.js";
 import { validateCreateAttributeValue } from "./attribute.validate.js";
 const router = express.Router();
@@ -21,7 +21,7 @@ adminRouter.delete("/:valueId", AttributeValueController.deleteAttributeValueAdm
 
 // ============================= SHOP ROUTES =============================
 const shopRouter = express.Router();
-router.use("/shop", authMiddleware, isSelfAndShopOwner, shopRouter);
+router.use("/shop", authMiddleware, isShopOwner, shopRouter);
 // Tạo giá trị thuộc tính (shop)
 shopRouter.post("/:attributeId", uploadAttributeValueImages, validateCreateAttributeValue, AttributeValueController.createAttributeValueShop);
 // Cập nhật giá trị thuộc tính (shop)
