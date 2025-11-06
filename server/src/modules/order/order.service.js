@@ -217,7 +217,10 @@ export const cancelBySeller = async (orderId, sellerId, reason = "") => {
     throw ApiError.badRequest("Đơn này đã bị huỷ rồi");
   if (["delivered", "completed"].includes(order.status))
     throw ApiError.badRequest("Không thể huỷ đơn đã giao hoặc hoàn tất");
-
+  if (order.status !== "pending") {
+    throw ApiError.badRequest("Chỉ được hủy đơn khi đang ở trạng thái 'pending'");
+  }
+  
   // Check quyền: phải là chủ shop của đơn hoặc admin
   const sellerAccount = await Account.findById(sellerId).populate(
     "roles",
