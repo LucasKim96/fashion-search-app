@@ -4,13 +4,13 @@ import { Account } from "../account/index.js";
 import { calculateCartTotal } from "../cart/cart.service.js"; // hoặc đúng path sếp dùng
 
 /**
- * 👤 Buyer: Tạo đơn hàng từ giỏ
+ * Buyer: Tạo đơn hàng từ giỏ
  */
 
 export const createOrderFromCart = async (accountId, data) => {
   const { addressLine, receiverName, phone, note } = data;
 
-  // 📦 Lấy giỏ hàng + populate đầy đủ
+  // Lấy giỏ hàng + populate đầy đủ
   const cart = await Cart.findOne({ accountId }).populate({
     path: "cartItems.productVariantId",
     populate: { path: "productId", select: "shopId productName imageUrl" },  options: { strictPopulate: false } 
@@ -19,14 +19,14 @@ export const createOrderFromCart = async (accountId, data) => {
   if (!cart || cart.cartItems.length === 0)
     throw ApiError.badRequest("Giỏ hàng trống bro 🛒");
 
-  // 💰 Tính lại giá chính xác từng variant bằng service
+  // Tính lại giá chính xác từng variant bằng service
   const { itemsWithFinalPrice, totalAmount: cartTotal } =
     await calculateCartTotal(accountId);
 
   return await withTransaction(async (session) => {
     const shopOrders = {};
 
-    // 🔧 Gộp theo shop
+    // Gộp theo shop
     for (const item of itemsWithFinalPrice) {
       const { productVariant, quantity, finalPrice } = item;
       const product = productVariant.productId;
@@ -78,7 +78,7 @@ export const createOrderFromCart = async (accountId, data) => {
       createdOrders.push(order[0]);
     }
 
-    // 🧹 Xoá giỏ hàng sau khi đặt
+    // Xoá giỏ hàng sau khi đặt
     await Cart.deleteOne({ _id: cart._id }, { session });
 
     return createdOrders;
@@ -87,14 +87,17 @@ export const createOrderFromCart = async (accountId, data) => {
 
 
 /**
- * 👤 Buyer: Lấy đơn của chính mình
+ * Buyer: Lấy đơn của chính mình
  */
-export const getOrdersByBuyer = async (accountId, { page = 1, limit = 10 }) => {
+export const getOrdersByBuyer = async (accountId, { page = 1, limit = 10, status = "all" }) => {
   page = Math.max(Number(page) || 1, 1);
   limit = Math.min(Math.max(Number(limit) || 10, 1), 50);
 
-  const total = await Order.countDocuments({ accountId });
-  const orders = await Order.find({ accountId })
+  const filter = { accountId };
+  if (status && status !== "all") filter.status = status;
+
+  const total = await Order.countDocuments(filter);
+  const orders = await Order.find(filter)
     .populate("shopId", "shopName logoUrl")
     .sort({ createdAt: -1 })
     .skip((page - 1) * limit)
@@ -111,7 +114,7 @@ export const getOrdersByBuyer = async (accountId, { page = 1, limit = 10 }) => {
 };
 
 /**
- * 👤 Buyer: Chi tiết đơn
+ * Buyer: Chi tiết đơn
  */
 export const getOrderDetailForBuyer = async (orderId, accountId) => {
   const order = await Order.findOne({ _id: orderId, accountId }).populate(
@@ -123,7 +126,7 @@ export const getOrderDetailForBuyer = async (orderId, accountId) => {
 };
 
 /**
- * 🧩 Buyer confirm nhận hàng
+ * Buyer confirm nhận hàng
  */
 export const confirmOrderReceived = async (orderId, accountId) => {
   const order = await Order.findOne({ _id: orderId, accountId });
@@ -141,7 +144,7 @@ export const confirmOrderReceived = async (orderId, accountId) => {
 };
 
 /**
- * 🚨 Buyer báo cáo sự cố
+ * Buyer báo cáo sự cố
  */
 export const reportOrderIssue = async (orderId, accountId, note) => {
   const order = await Order.findOne({ _id: orderId, accountId });
@@ -156,7 +159,7 @@ export const reportOrderIssue = async (orderId, accountId, note) => {
 };
 
 /**
- * ❌ Buyer hủy đơn khi pending
+ * Buyer hủy đơn khi pending
  */
 export const cancelOrderByBuyer = async (orderId, accountId) => {
   const order = await Order.findOne({ _id: orderId, accountId });
@@ -172,6 +175,33 @@ export const cancelOrderByBuyer = async (orderId, accountId) => {
   await order.save();
   return order;
 };
+
+/**
+ * Seller: Lấy danh sách đơn của shop
+ */
+  export const getOrdersByShop = async (shopId, { page = 1, limit = 10, status = "all"}) => {
+    page = Math.max(Number(page) || 1, 1);
+    limit = Math.min(Math.max(Number(limit) || 10, 1), 50);
+  
+    const filter = { shopId };
+    if (status && status !== "all") filter.status = status;
+
+    const total = await Order.countDocuments(filter);
+    const orders = await Order.find(filter)
+      .populate("shopId", "shopName logoUrl")
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit);
+  
+    return {
+      data: orders,
+      pagination: {
+        currentPage: page,
+        totalItems: total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  };
 
 /**
  * Seller huỷ đơn hàng
@@ -232,7 +262,7 @@ export const cancelBySeller = async (orderId, sellerId, reason = "") => {
 };
 
 /**
- * 🏪 Seller cập nhật trạng thái
+ * Seller cập nhật trạng thái
  */
 export const updateStatusPacking = async (orderId, shopId) => {
   const order = await Order.findOne({ _id: orderId, shopId });
@@ -281,7 +311,7 @@ export const updateStatusDelivered = async (orderId, shopId) => {
 };
 
 /**
- * 🧑‍💼 Admin force complete
+ * Admin force complete
  */
 export const forceCompleteOrder = async (orderId, adminId) => {
   const admin = await Account.findById(adminId);
@@ -299,7 +329,7 @@ export const forceCompleteOrder = async (orderId, adminId) => {
   return order;
 };
 
-/** 🧨 ADMIN CANCEL ORDER */
+/** ADMIN CANCEL ORDER */
 export const adminCancelOrder = async (
   orderId,
   adminId,
@@ -338,7 +368,7 @@ export const adminCancelOrder = async (
   });
 };
 
-/** 🕵️ REVIEW REPORTED ORDER */
+/** REVIEW REPORTED ORDER */
 export const reviewReportedOrder = async (
   orderId,
   adminId,
@@ -385,7 +415,7 @@ export const reviewReportedOrder = async (
   };
 };
 
-/** 🤖 AUTO TRANSITION ORDERS */
+/** AUTO TRANSITION ORDERS */
 export const autoTransitionOrders = async () => {
   const now = new Date();
   const oneDay = 24 * 60 * 60 * 1000;
