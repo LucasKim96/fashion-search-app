@@ -37,7 +37,7 @@ adminRouter.use(authMiddleware, isAdminOrSuperAdmin);
 adminRouter.patch("/:id/complete", OrderController.adminCompleteOrder);
 adminRouter.patch("/:id/cancel", OrderController.adminCancelOrder);
 adminRouter.post("/:id/review-report", OrderController.reviewReportedOrder);
-adminRouter.post("/auto/transition", OrderController.autoTransitionOrders);
+adminRouter.post("/manual/auto-transition", OrderController.autoTransitionOrders);
 
 router.use("/admin", adminRouter);
 

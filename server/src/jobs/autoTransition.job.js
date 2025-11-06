@@ -1,5 +1,5 @@
 import cron from "node-cron";
-import { autoTransitionOrders } from "../modules/order/order.controller.js";
+import { autoTransitionOrders } from "../modules/order/order.service.js";
 
 export default function startAutoTransitionJob() {
   // Chạy mỗi 15 phút
@@ -12,4 +12,5 @@ export default function startAutoTransitionJob() {
       console.error("[CRON] ❌ Error in auto transition:", err);
     }
   });
+  
 }
