@@ -136,23 +136,38 @@ export const getCartWithDetails = async (accountId) => {
 export const calculateCartTotal = async (accountId) => {
   const cart = await getCartWithDetails(accountId);
 
-  const summary = cart.cartItems.reduce(
-    (acc, item) => {
-      const variant = item.productVariantId;
-      const product = variant?.productId;
-      const price =
-        variant?.price ??
-        (product?.basePrice || 0) + (variant?.priceAdjustment || 0);
+  const itemsWithFinalPrice = cart.cartItems.map((item) => {
+    const variant = item.productVariantId;
+    const product = variant?.productId;
 
-      acc.total += (price || 0) * item.quantity;
-      acc.itemCount += item.quantity;
+    const finalPrice =
+      variant?.price ??
+      (product?.basePrice || 0) + (variant?.priceAdjustment || 0);
+
+    return {
+      productVariant: variant,
+      product: product,
+      quantity: item.quantity,
+      finalPrice,
+    };
+  });
+
+  const summary = itemsWithFinalPrice.reduce(
+    (acc, i) => {
+      acc.total += i.finalPrice * i.quantity;
+      acc.itemCount += i.quantity;
       return acc;
     },
     { total: 0, itemCount: 0 }
   );
 
-  return { ...summary, items: cart.cartItems.length };
+  return {
+    totalAmount: summary.total,
+    itemCount: summary.itemCount,
+    itemsWithFinalPrice,
+  };
 };
+
 
 /**
  * Thêm nhiều sản phẩm vào giỏ (bulk)
