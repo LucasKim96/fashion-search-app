@@ -39,7 +39,7 @@ export const getMyOrderDetail = async (req, res, next) => {
     validateObjectId(accountId, "accountId");
 
     const order = await OrderService.getOrderDetailForBuyer(id, accountId);
-    return successResponse(res, order, "Chi tiết đơn hàng của bạn nè");
+    return successResponse(res, order, "Chi tiết đơn hàng của bạn");
   } catch (err) {
     next(err);
   }

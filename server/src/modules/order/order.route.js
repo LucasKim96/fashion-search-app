@@ -14,9 +14,9 @@ buyerRouter.use(authMiddleware);
 buyerRouter.get("/", OrderController.getMyOrders);
 buyerRouter.post("/create-from-cart", OrderController.createFromCart);
 buyerRouter.get("/:id", OrderController.getMyOrderDetail);
-buyerRouter.post("/:id/confirm", OrderController.confirmReceived);
+buyerRouter.patch("/:id/confirm", OrderController.confirmReceived);
 buyerRouter.post("/:id/report", OrderController.reportIssue);
-buyerRouter.post("/:id/cancel", OrderController.cancelMyOrder);
+buyerRouter.patch("/:id/cancel", OrderController.cancelMyOrder);
 
 router.use("/buyer", buyerRouter);
 
@@ -24,18 +24,18 @@ const sellerRouter = express.Router();
 
 sellerRouter.use(authMiddleware, isShopOrAdmin);
 sellerRouter.get("/", OrderController.getShopOrders);
-sellerRouter.post("/:id/pack", OrderController.markPacking);
-sellerRouter.post("/:id/ship", OrderController.markShipping);
-sellerRouter.post("/:id/deliver", OrderController.markDelivered);
-sellerRouter.post("/:id/cancel", OrderController.cancelBySeller);
+sellerRouter.patch("/:id/pack", OrderController.markPacking);
+sellerRouter.patch("/:id/ship", OrderController.markShipping);
+sellerRouter.patch("/:id/deliver", OrderController.markDelivered);
+sellerRouter.patch("/:id/cancel", OrderController.cancelBySeller);
 
 router.use("/seller", sellerRouter);
 
 const adminRouter = express.Router();
 adminRouter.use(authMiddleware, isAdminOrSuperAdmin);
 
-adminRouter.post("/:id/complete", OrderController.adminCompleteOrder);
-adminRouter.post("/:id/cancel", OrderController.adminCancelOrder);
+adminRouter.patch("/:id/complete", OrderController.adminCompleteOrder);
+adminRouter.patch("/:id/cancel", OrderController.adminCancelOrder);
 adminRouter.post("/:id/review-report", OrderController.reviewReportedOrder);
 adminRouter.post("/auto/transition", OrderController.autoTransitionOrders);
 
