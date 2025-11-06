@@ -1,0 +1,11 @@
+{
+  "name": "shared",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.ts",
+  "types": "index.d.ts",
+  "dependencies": {
+    "@types/axios": "^0.9.36",
+    "axios": "^1.13.1"
+  }
+}
