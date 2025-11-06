@@ -39,7 +39,7 @@ export const getMyOrderDetail = async (req, res, next) => {
     validateObjectId(accountId, "accountId");
 
     const order = await OrderService.getOrderDetailForBuyer(id, accountId);
-    return successResponse(res, order, "Chi tiết đơn hàng của bạn nè 💌");
+    return successResponse(res, order, "Chi tiết đơn hàng của bạn nè");
   } catch (err) {
     next(err);
   }
@@ -55,7 +55,7 @@ export const createFromCart = async (req, res, next) => {
 
     const orderData = req.body; // chứa addressLine, receiverName, phone, note...
     const result = await OrderService.createOrderFromCart(accountId, orderData);
-    return successResponse(res, result, "Đặt hàng thành công 🎉", 201);
+    return successResponse(res, result, "Đặt hàng thành công", 201);
   } catch (err) {
     next(err);
   }
@@ -73,7 +73,7 @@ export const confirmReceived = async (req, res, next) => {
     validateObjectId(accountId, "accountId");
 
     const result = await OrderService.confirmOrderReceived(id, accountId);
-    return successResponse(res, result, "Đã xác nhận nhận hàng thành công ✅");
+    return successResponse(res, result, "Đã xác nhận nhận hàng thành công");
   } catch (err) {
     next(err);
   }
@@ -92,7 +92,7 @@ export const reportIssue = async (req, res, next) => {
     validateObjectId(accountId, "accountId");
 
     const result = await OrderService.reportOrderIssue(id, accountId, note);
-    return successResponse(res, result, "Đã gửi báo cáo cho admin xử lý 🚨");
+    return successResponse(res, result, "Đã gửi báo cáo cho admin xử lý");
   } catch (err) {
     next(err);
   }
@@ -110,7 +110,7 @@ export const cancelMyOrder = async (req, res, next) => {
     validateObjectId(accountId, "accountId");
 
     const result = await OrderService.cancelOrderByBuyer(id, accountId);
-    return successResponse(res, result, "Đã hủy đơn hàng của bạn 💔");
+    return successResponse(res, result, "Đã hủy đơn hàng của bạn");
   } catch (err) {
     next(err);
   }
@@ -170,7 +170,7 @@ export const markPacking = async (req, res, next) => {
     return successResponse(
       res,
       result,
-      "Đơn hàng đã chuyển sang trạng thái 'packing' 📦"
+      "Đơn hàng đã chuyển sang trạng thái 'packing'"
     );
   } catch (err) {
     next(err);
@@ -193,7 +193,7 @@ export const markShipping = async (req, res, next) => {
     return successResponse(
       res,
       result,
-      "Đơn hàng đã chuyển sang 'shipping' 🚚"
+      "Đơn hàng đã chuyển sang 'shipping'"
     );
   } catch (err) {
     next(err);
@@ -216,7 +216,7 @@ export const markDelivered = async (req, res, next) => {
     return successResponse(
       res,
       result,
-      "Đã đánh dấu đơn hàng là 'delivered' 📬"
+      "Đã đánh dấu đơn hàng là 'delivered'"
     );
   } catch (err) {
     next(err);
@@ -235,7 +235,7 @@ export const adminCompleteOrder = async (req, res, next) => {
     validateObjectId(adminId, "ID admin");
 
     const result = await OrderService.forceCompleteOrder(id, adminId);
-    return successResponse(res, result, "Admin đã hoàn tất đơn hàng 🧾");
+    return successResponse(res, result, "Admin đã hoàn tất đơn hàng");
   } catch (err) {
     next(err);
   }
