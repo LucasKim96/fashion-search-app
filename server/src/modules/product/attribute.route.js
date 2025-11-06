@@ -1,7 +1,7 @@
 import express from "express";
 import * as AttributeController from "./attribute.controller.js";
 import { authMiddleware } from "../../middlewares/auth.middleware.js";
-import { isAdminOrSuperAdmin, isSelfAndShopOwner } from "../../middlewares/role.middleware.js";
+import { isAdminOrSuperAdmin, isShopOwner } from "../../middlewares/role.middleware.js";
 import {
   validateCreateAttribute,
   validateUpdateAttribute,
@@ -28,7 +28,7 @@ shopRouter.get("/search", AttributeController.searchShopAttributes);
 shopRouter.post("/", uploadAttributeValueImages, validateCreateAttribute, AttributeController.createShopAttribute);
 // shopRouter.put("/:id", uploadAttributeValueImages, validateUpdateAttribute, AttributeController.updateShopAttribute);
 shopRouter.put("/label/:id", validateParamId, validateUpdateAttributeLabel, AttributeController.updateShopAttributeLabel );
-router.use("/shop", authMiddleware, isSelfAndShopOwner, shopRouter);
+router.use("/shop", authMiddleware, isShopOwner, shopRouter);
 
 // ========================= PUBLIC ROUTES =========================
 const publicRouter = express.Router();
