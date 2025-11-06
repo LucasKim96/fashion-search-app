@@ -11,17 +11,28 @@ export const getCart = async (req, res, next) => {
     if (!accountId) throw ApiError.unauthorized("Chưa đăng nhập");
 
     const cart = await CartService.getCartWithDetails(accountId);
-    const total = await CartService.calculateCartTotal(accountId);
+    const { totalAmount, itemCount, itemsWithFinalPrice } =
+      await CartService.calculateCartTotal(accountId);
 
-    return successResponse(
-      res,
-      { cart, summary: total },
-      "Lấy giỏ hàng thành công"
-    );
+    // Thay thế cart.cartItems bằng bản có finalPrice
+    const enhancedCart = {
+      ...cart.toObject(),
+      cartItems: itemsWithFinalPrice.map((i) => ({
+        productVariant: i.productVariant,
+        product: i.product,
+        quantity: i.quantity,
+        finalPrice: i.finalPrice,
+      })),
+      totalAmount,
+      itemCount,
+    };
+
+    return successResponse(res, enhancedCart, "Lấy giỏ hàng thành công");
   } catch (error) {
     next(error);
   }
 };
+
 
 // Thêm sản phẩm vào giỏ
 export const addItem = async (req, res, next) => {

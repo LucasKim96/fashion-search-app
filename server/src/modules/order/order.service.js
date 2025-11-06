@@ -1,38 +1,53 @@
 import { Order, Cart, Product, ProductVariant } from "../index.js";
 import { ApiError, withTransaction } from "../../utils/index.js";
 import { Account } from "../account/index.js";
+import { calculateCartTotal } from "../cart/cart.service.js"; // hoặc đúng path sếp dùng
 
 /**
  * 👤 Buyer: Tạo đơn hàng từ giỏ
  */
+
 export const createOrderFromCart = async (accountId, data) => {
   const { addressLine, receiverName, phone, note } = data;
+
+  // 📦 Lấy giỏ hàng + populate đầy đủ
   const cart = await Cart.findOne({ accountId }).populate({
-    path: "items.productVariantId",
-    populate: { path: "productId", select: "shopId productName imageUrl" },
+    path: "cartItems.productVariantId",
+    populate: { path: "productId", select: "shopId productName imageUrl" },  options: { strictPopulate: false } 
   });
 
-  if (!cart || cart.items.length === 0)
+  if (!cart || cart.cartItems.length === 0)
     throw ApiError.badRequest("Giỏ hàng trống bro 🛒");
+
+  // 💰 Tính lại giá chính xác từng variant bằng service
+  const { itemsWithFinalPrice, totalAmount: cartTotal } =
+    await calculateCartTotal(accountId);
 
   return await withTransaction(async (session) => {
     const shopOrders = {};
 
-    // gom theo shop
-    for (const item of cart.items) {
-      const shopId = item.productVariantId.productId.shopId.toString();
+    // 🔧 Gộp theo shop
+    for (const item of itemsWithFinalPrice) {
+      const { productVariant, quantity, finalPrice } = item;
+      const product = productVariant.productId;
+      const shopId =
+        typeof product.shopId === "object"
+          ? product.shopId._id.toString()
+          : product.shopId.toString();
+    
       if (!shopOrders[shopId]) shopOrders[shopId] = [];
-      const finalPrice = item.productVariantId.finalPrice;
+    
       shopOrders[shopId].push({
-        productId: item.productVariantId.productId._id,
-        productVariantId: item.productVariantId._id,
-        quantity: item.quantity,
+        productId: product._id,
+        productVariantId: productVariant._id,
+        quantity,
         finalPriceAtOrder: finalPrice,
-        pdNameAtOrder: item.productVariantId.productId.productName,
-        imageAtOrder: item.productVariantId.productId.imageUrl,
-        attributesAtOrder: item.productVariantId.attributes,
+        pdNameAtOrder: product.pdName, // đổi cho đúng schema
+        imageAtOrder: product.imageUrl,
+        attributesAtOrder: productVariant.attributes,
       });
     }
+    
 
     const createdOrders = [];
     for (const [shopId, orderItems] of Object.entries(shopOrders)) {
@@ -63,11 +78,13 @@ export const createOrderFromCart = async (accountId, data) => {
       createdOrders.push(order[0]);
     }
 
-    // xoá cart sau khi đặt
+    // 🧹 Xoá giỏ hàng sau khi đặt
     await Cart.deleteOne({ _id: cart._id }, { session });
+
     return createdOrders;
   });
 };
+
 
 /**
  * 👤 Buyer: Lấy đơn của chính mình
