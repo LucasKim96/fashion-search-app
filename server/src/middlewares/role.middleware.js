@@ -59,6 +59,24 @@ export const checkSelfOrRoles = (...allowedRoles) => {
   };
 };
 
+
+
+// Các middleware chính chủ or nhóm người dùng
+export const isSelf = checkSelfOrRoles();
+export const isSelfOrAdmin = checkSelfOrRoles("Quản trị viên", "Super Admin");
+export const isSelfOrShop = checkSelfOrRoles("Chủ shop", "Super Admin");
+
+// Các middleware nhanh gọn
+export const isCustomer = allowRoles("Khách hàng");
+export const isShopOwner = allowRoles("Chủ shop");
+export const isAdmin = allowRoles("Quản trị viên");
+export const isSuperAdmin = allowRoles("Super Admin");
+
+// Kết hợp quyền
+export const isAdminOrSuperAdmin = allowRoles("Quản trị viên", "Super Admin");
+export const isShopOrAdmin = allowRoles("Chủ shop", "Quản trị viên", "Super Admin");
+export const isCustomerOrShop = allowRoles("Khách hàng", "Chủ shop");
+
 // // Middleware: chỉ cho phép chủ shop (hoặc super admin) thao tác trong phạm vi của mình
 // export const isSelfAndShopOwner = (req, res, next) => {
 //   try {
@@ -113,21 +131,3 @@ export const checkSelfOrRoles = (...allowedRoles) => {
 //     });
 //   }
 // };
-
-
-
-// Các middleware chính chủ or nhóm người dùng
-export const isSelf = checkSelfOrRoles();
-export const isSelfOrAdmin = checkSelfOrRoles("Quản trị viên", "Super Admin");
-export const isSelfOrShop = checkSelfOrRoles("Chủ shop", "Super Admin");
-
-// Các middleware nhanh gọn
-export const isCustomer = allowRoles("Khách hàng");
-export const isShopOwner = allowRoles("Chủ shop");
-export const isAdmin = allowRoles("Quản trị viên");
-export const isSuperAdmin = allowRoles("Super Admin");
-
-// Kết hợp quyền
-export const isAdminOrSuperAdmin = allowRoles("Quản trị viên", "Super Admin");
-export const isShopOrAdmin = allowRoles("Chủ shop", "Quản trị viên", "Super Admin");
-export const isCustomerOrShop = allowRoles("Khách hàng", "Chủ shop");
