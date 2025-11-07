@@ -25,7 +25,7 @@ export const LoginForm = ({ redirectPath = "/dashboard", title }: LoginFormProps
       <h2 className="text-2xl font-bold text-center mb-6">{title || "Đăng nhập"}</h2>
 
       <div className="flex items-center border border-gray-300 rounded-md p-2 mb-4">
-        <User className="w-5 h-5 text-gray-400 mr-2" />
+        <User className="w-5 h-5 text-red-500 mr-2" />
         <Input
           type="text"
           placeholder="Tên đăng nhập hoặc số điện thoại"
@@ -35,7 +35,7 @@ export const LoginForm = ({ redirectPath = "/dashboard", title }: LoginFormProps
       </div>
 
       <div className="flex items-center border border-gray-300 rounded-md p-2 mb-4">
-        <Lock className="w-5 h-5 text-gray-400 mr-2" />
+        <Lock className="w-5 h-5 text-red-500 mr-2" />
         <Input
           type="password"
           placeholder="Mật khẩu"
