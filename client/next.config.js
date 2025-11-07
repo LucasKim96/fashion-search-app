@@ -1,13 +1,16 @@
 /** @type {import('next').NextConfig} */
-const path = require("path");
+import path from "path";
+import { fileURLToPath } from "url"; // 👈 Thêm import này
+import { dirname } from "path"; // 👈 Thêm import này
+
+// Thay thế __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename); // 👈 Khai báo lại __dirname
 
 const IMAGE_DOMAIN = process.env.NEXT_PUBLIC_IMAGE_DOMAIN || "localhost";
 
 const nextConfig = {
   reactStrictMode: true,
-  experimental: {
-    externalDir: true,
-  },
   webpack: (config) => {
     // Alias nội bộ
     config.resolve.alias["@"] = path.resolve(__dirname, "src");
@@ -16,10 +19,11 @@ const nextConfig = {
     return config;
   },
   experimental: {
-    externalDir: true, // Cho phép import file CSS từ ngoài project
+    externalDir: true, // Cho phép import file CSS từ ngoài project (Monorepo)
   },
   images: {
-    // Cho phép ảnh từ BE (uploads/assets)
+    // ⚠️ Cảnh báo Next.js: `domains` bị lỗi thời, nhưng tôi sẽ giữ nó
+    // cho đến khi bạn hoàn toàn chuyển sang remotePatterns
     domains: [IMAGE_DOMAIN],
     remotePatterns: [
       {
@@ -38,4 +42,4 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
+export default nextConfig;
