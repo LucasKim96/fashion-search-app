@@ -22,7 +22,7 @@ ownerRouter.use(authMiddleware);
 ownerRouter.post("/", validateShop, ShopController.addShop);
 ownerRouter.put("/:id", validateShop, ShopController.editShop);
 ownerRouter.delete("/:id", ShopController.removeShop);
-ownerRouter.put("/:id/status", ShopController.changeStatus);
+ownerRouter.patch("/:id/status", ShopController.changeStatus);
 ownerRouter.put(
   "/:id/logo",
   uploadShopImage.single("logo"),
@@ -41,8 +41,7 @@ router.use("/owner", ownerRouter);
 const adminRouter = express.Router();
 adminRouter.use(authMiddleware, isAdminOrSuperAdmin); // xác thực + check quyền
 
-adminRouter.put("/:id/restore", ShopController.restoreShop);
-
+adminRouter.patch("/:id/restore", ShopController.restoreShop);
 adminRouter.put(
   "/default-logo",
   uploadShopDefaultImage.single("defaultLogo"),

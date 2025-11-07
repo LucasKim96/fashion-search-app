@@ -213,13 +213,13 @@ export const updateShopImage = async (
 
   const oldPath = shop[type + "Url"];
 
-  // ✅ Chuẩn hóa path an toàn
+  // Chuẩn hóa path an toàn
   const resolvePath = (urlPath) => {
     const safePath = urlPath.startsWith("/") ? urlPath.slice(1) : urlPath;
     return path.join(process.cwd(), safePath);
   };
 
-  // ✅ Kiểm tra và xóa ảnh cũ (nếu đủ điều kiện)
+  // Kiểm tra và xóa ảnh cũ (nếu đủ điều kiện)
   if (oldPath && oldPath !== newUrl) {
     const filePath = resolvePath(oldPath);
 
@@ -249,7 +249,7 @@ export const updateShopImage = async (
     }
   }
 
-  // ✅ Cập nhật ảnh mới
+  // Cập nhật ảnh mới
   shop[type + "Url"] = newUrl;
   await shop.save();
 
@@ -339,14 +339,13 @@ export const deleteShop = async (shopId, accountId) => {
  * Cập nhật trạng thái (admin hoặc chủ shop)
  */
 export const updateShopStatus = async (shopId, accountId, status) => {
-  // console.log("accountId:", accountId);
-  // 2️⃣ Validate status
+  // Validate status
   const validStatuses = ["active", "closed", "suspended"];
   if (!validStatuses.includes(status)) {
     throw ApiError.badRequest("Trạng thái không hợp lệ");
   }
 
-  // 4️⃣ Lấy shop để kiểm tra quyền
+  // Lấy shop để kiểm tra quyền
   const shop = await Shop.findById(shopId).populate(
     "accountId",
     "username phoneNumber"
@@ -355,7 +354,7 @@ export const updateShopStatus = async (shopId, accountId, status) => {
     throw ApiError.notFound("Không tìm thấy shop");
   }
 
-  // 3️⃣ Lấy thông tin người thay đổi (từ Account)
+  // Lấy thông tin người thay đổi (từ Account)
   const account = await Account.findById(accountId).populate("roles");
   if (!account) {
     throw ApiError.notFound("Không tìm thấy tài khoản");
@@ -369,12 +368,12 @@ export const updateShopStatus = async (shopId, accountId, status) => {
     throw ApiError.forbidden("Không có quyền cập nhật trạng thái shop này");
   }
 
-  // ⚠️ Kiểm tra nếu status không thay đổi
+  // Kiểm tra nếu status không thay đổi
   if (shop.status === status) {
     throw ApiError.badRequest(`Shop đã đang ở trạng thái '${status}'`);
   }
 
-  // 5️⃣ Cập nhật trong transaction
+  // Cập nhật trong transaction
   return await withTransaction(async (session) => {
     const updatedShop = await Shop.findOneAndUpdate(
       { _id: shopId, isDeleted: { $ne: true } },
@@ -454,7 +453,7 @@ export const deleteShopsWithNullAccount = async (adminAccountId) => {
 };
 
 export const restoreShop = async (shopId, adminAccountId) => {
-  // 1️⃣ Kiểm tra quyền Super Admin
+  // Kiểm tra quyền Super Admin
   const admin = await Account.findById(adminAccountId).populate(
     "roles",
     "roleName level"
@@ -468,29 +467,29 @@ export const restoreShop = async (shopId, adminAccountId) => {
     throw ApiError.forbidden("Chỉ Super Admin mới được phép khôi phục shop");
   }
 
-  // 2️⃣ Kiểm tra shop đã bị xóa mềm chưa
+  // Kiểm tra shop đã bị xóa mềm chưa
   const shop = await Shop.findOne({ _id: shopId, isDeleted: true });
   if (!shop) {
     throw ApiError.notFound("Shop không tồn tại hoặc chưa bị xóa");
   }
 
-  // 3️⃣ Chạy transaction khôi phục
+  // Chạy transaction khôi phục
   return await withTransaction(async (session) => {
-    // 3.1️⃣ Khôi phục shop
+    // Khôi phục shop
     await Shop.updateOne(
       { _id: shopId },
       { $set: { isDeleted: false }, $unset: { deletedAt: "" } },
       { session }
     );
 
-    // 3.2️⃣ Khôi phục toàn bộ sản phẩm
+    // Khôi phục toàn bộ sản phẩm
     const restoredProducts = await Product.updateMany(
       { shopId, isDeleted: true },
       { $set: { isDeleted: false }, $unset: { deletedAt: "" } },
       { session }
     );
 
-    // 3.3️⃣ Khôi phục variants của những sản phẩm này
+    // Khôi phục variants của những sản phẩm này
     if (restoredProducts.modifiedCount > 0) {
       const productIds = (
         await Product.find({ shopId }, "_id", { session })
@@ -503,7 +502,7 @@ export const restoreShop = async (shopId, adminAccountId) => {
       );
     }
 
-    // 3.4️⃣ Khôi phục quyền "Chủ shop" nếu bị gỡ
+    // Khôi phục quyền "Chủ shop" nếu bị gỡ
     const shopOwnerRole = await Role.findOne({ roleName: "Chủ shop" }).session(
       session
     );
@@ -515,7 +514,7 @@ export const restoreShop = async (shopId, adminAccountId) => {
       );
     }
 
-    // 3.5️⃣ Trả kết quả
+    // Trả kết quả
     return {
       message: `Shop '${shop.shopName}' và toàn bộ sản phẩm đã được khôi phục thành công`,
       restoredProducts: restoredProducts.modifiedCount,

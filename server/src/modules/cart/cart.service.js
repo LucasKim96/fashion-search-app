@@ -23,11 +23,15 @@ export const addToCart = async (accountId, productVariantId, quantity = 1) => {
     const shop = await Shop.findById(product.shopId).session(session);
     if (!shop) throw ApiError.notFound("Không tìm thấy shop của sản phẩm");
 
+    // 🚫 Chặn chủ shop mua hàng của chính mình
+    if (String(shop.accountId) === String(accountId)) {
+      throw ApiError.badRequest("Bạn không thể thêm sản phẩm của chính shop mình vào giỏ hàng");
+    }
+
     let cart = await Cart.findOne({ accountId }).session(session);
     if (!cart)
-      cart = await Cart.create([{ accountId, cartItems: [] }], {
-        session,
-      }).then(([c]) => c);
+      cart = await Cart.create([{ accountId, cartItems: [] }], { session })
+        .then(([c]) => c);
 
     const existingItem = cart.cartItems.find(
       (item) => item.productVariantId.toString() === String(productVariantId)
@@ -48,6 +52,7 @@ export const addToCart = async (accountId, productVariantId, quantity = 1) => {
     return await cart.populate("cartItems.productVariantId");
   });
 };
+
 
 /**
  * Cập nhật số lượng sản phẩm trong giỏ
@@ -136,23 +141,38 @@ export const getCartWithDetails = async (accountId) => {
 export const calculateCartTotal = async (accountId) => {
   const cart = await getCartWithDetails(accountId);
 
-  const summary = cart.cartItems.reduce(
-    (acc, item) => {
-      const variant = item.productVariantId;
-      const product = variant?.productId;
-      const price =
-        variant?.price ??
-        (product?.basePrice || 0) + (variant?.priceAdjustment || 0);
+  const itemsWithFinalPrice = cart.cartItems.map((item) => {
+    const variant = item.productVariantId;
+    const product = variant?.productId;
 
-      acc.total += (price || 0) * item.quantity;
-      acc.itemCount += item.quantity;
+    const finalPrice =
+      variant?.price ??
+      (product?.basePrice || 0) + (variant?.priceAdjustment || 0);
+
+    return {
+      productVariant: variant,
+      product: product,
+      quantity: item.quantity,
+      finalPrice,
+    };
+  });
+
+  const summary = itemsWithFinalPrice.reduce(
+    (acc, i) => {
+      acc.total += i.finalPrice * i.quantity;
+      acc.itemCount += i.quantity;
       return acc;
     },
     { total: 0, itemCount: 0 }
   );
 
-  return { ...summary, items: cart.cartItems.length };
+  return {
+    totalAmount: summary.total,
+    itemCount: summary.itemCount,
+    itemsWithFinalPrice,
+  };
 };
+
 
 /**
  * Thêm nhiều sản phẩm vào giỏ (bulk)

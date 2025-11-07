@@ -19,7 +19,6 @@ export const uploadDefautlAvatar = createUploader({
   useAssets: true, // Mặc định là false (lưu vào uploads)
 });
 
-
 export const uploadAttribute = createUploader({
   destinationGenerator: (req) => {
     return "attributes";
@@ -52,20 +51,15 @@ export const uploadVariant = createUploader({
   useAssets: false, // Mặc định là false (lưu vào uploads)
 });
 
-
-// 🧩 Upload image shop
+// Upload image shop
 export const uploadShopImage = createUploader({
   destinationGenerator: (req) => {
-    // 🚨 KHÔNG CẦN TẠO THƯ MỤC CON, CHỈ CẦN DÙNG SHOP ID
+    // KHÔNG CẦN TẠO THƯ MỤC CON, CHỈ CẦN DÙNG SHOP ID
     // Path: uploads/shops/:id/
     return path.join("shops", req.params.id);
   },
   useAssets: false,
 });
-
-// server/src/middlewares/upload.middleware.js
-
-// ... (các middleware khác)
 
 export const uploadShopDefaultImage = createUploader({
   destinationGenerator: (req) => {
