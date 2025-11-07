@@ -1,5 +1,4 @@
 // admin/next.config.mjs
-import path from "path";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
 
@@ -21,25 +20,20 @@ const nextConfig = {
     externalDir: true, // Cho phép import từ ../shared
   },
 
-  images: {
-    // Cảnh báo Next.js: `domains` bị lỗi thời, nhưng tôi sẽ giữ nó
-    // cho đến khi bạn hoàn toàn chuyển sang remotePatterns
-    domains: [IMAGE_DOMAIN],
-    remotePatterns: [
-      {
-        protocol: "http",
-        hostname: IMAGE_DOMAIN,
-        port: process.env.NODE_ENV === "development" ? "5000" : "",
-        pathname: "/uploads/**",
-      },
-      {
-        protocol: "http",
-        hostname: IMAGE_DOMAIN,
-        port: process.env.NODE_ENV === "development" ? "5000" : "",
-        pathname: "/assets/**",
-      },
-    ],
-  },
+  remotePatterns: [
+    {
+      protocol: "http",
+      hostname: IMAGE_DOMAIN,
+      port: process.env.NODE_ENV === "development" ? "5000" : "",
+      pathname: "/uploads/**",
+    },
+    {
+      protocol: "http",
+      hostname: IMAGE_DOMAIN,
+      port: process.env.NODE_ENV === "development" ? "5000" : "",
+      pathname: "/assets/**",
+    },
+  ],
 
   // ⚡ Bắt buộc để Turbopack hiểu có cấu hình hợp lệ
   turbopack: {},
