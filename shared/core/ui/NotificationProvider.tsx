@@ -15,7 +15,9 @@ interface NotificationContextProps {
   showToast: (message: string, type?: ToastType) => void;
 }
 
-const NotificationContext = createContext<NotificationContextProps | null>(null);
+const NotificationContext = createContext<NotificationContextProps | null>(
+  null
+);
 
 export const useNotification = (): NotificationContextProps => {
   const ctx = useContext(NotificationContext);
@@ -25,7 +27,9 @@ export const useNotification = (): NotificationContextProps => {
   return ctx;
 };
 
-export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const showToast = useCallback((message: string, type: ToastType = "info") => {
