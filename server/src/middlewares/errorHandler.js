@@ -91,13 +91,10 @@ export const notFoundHandler = (req, res, next) => {
     path: req.originalUrl,
     method: req.method,
     availableEndpoints: [
-      "GET /api/shops",
-      "POST /api/shops",
-      "GET /api/shops/:id",
-      "PUT /api/shops/:id",
-      "DELETE /api/shops/:id",
       "POST /api/auth/login",
       "POST /api/auth/register",
+      "GET /api/auth/me",
+      "POST /api/auth/change-password",
     ],
     timestamp: new Date().toISOString(),
   });

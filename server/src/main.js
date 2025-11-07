@@ -78,11 +78,17 @@ app.use(notFoundHandler);
 
 // Error handling middleware (phải đặt cuối cùng)
 app.use(errorHandler);
+
 // Connect MongoDB and start server
 connectDB(process.env.MONGO_URI)
   .then(() => {
-    app.listen(PORT, () => {
+    app.listen(PORT, async () => {
       console.log(`🚀 Server running on port ${PORT}`);
+
+      // ✅ Import và khởi động cron job tại đây
+      const { default: startAutoTransitionJob } = await import("./jobs/autoTransition.job.js");
+      startAutoTransitionJob();
+      console.log("🔄 Auto transition job started");
     });
   })
   .catch((err) => {
