@@ -1,5 +1,5 @@
-/** @type {import('next').NextConfig} */
-const path = require("path");
+// admin/next.config.mjs
+import path from "path";
 
 const IMAGE_DOMAIN = process.env.NEXT_PUBLIC_IMAGE_DOMAIN || "localhost";
 
@@ -9,18 +9,11 @@ const nextConfig = {
     externalDir: true,
   },
   webpack: (config) => {
-    // Alias nội bộ
-    config.resolve.alias["@"] = path.resolve(__dirname, "src");
-    // Alias dùng chung cho FE
-    config.resolve.alias["@shared"] = path.resolve(__dirname, "../shared");
+    config.resolve.alias["@"] = path.resolve(".", "src");
+    config.resolve.alias["@shared"] = path.resolve(".", "../shared");
     return config;
   },
-  experimental: {
-    externalDir: true, // Cho phép import file CSS từ ngoài project
-  },
   images: {
-    // Cho phép ảnh từ BE (uploads/assets)
-    domains: [IMAGE_DOMAIN],
     remotePatterns: [
       {
         protocol: "http",
@@ -38,4 +31,4 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
+export default nextConfig;

@@ -1,9 +1,12 @@
+// admin/tailwind.config.mjs
+import path from "path";
+
 /** @type {import('tailwindcss').Config} */
-module.exports = {
+export default {
   content: [
     "./src/**/*.{js,ts,jsx,tsx}",
-    "../../shared/**/*.{js,ts,jsx,tsx}",
-    "./src/styles/**/*.css"
+    path.join(process.cwd(), "../..", "shared/**/*.{js,ts,jsx,tsx}"),
+    "./src/styles/**/*.css",
   ],
   theme: {
     extend: {

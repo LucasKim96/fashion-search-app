@@ -2,15 +2,13 @@
   "name": "admin",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "main": "index.js",
   "scripts": {
-    "dev": "next dev --webpack",
+    "dev": "set PORT=3001 && next dev --webpack",
     "build": "next build",
     "start": "next start"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
     "eslint-config-next": "^16.0.1",
     "next": "^16.0.1",

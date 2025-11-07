@@ -19,9 +19,6 @@
       ],
       "@shared/*": [
         "../shared/*"
-      ],
-      "@shared/styles/*": [
-        "../shared/styles/*"
       ]
     },
     "lib": [
