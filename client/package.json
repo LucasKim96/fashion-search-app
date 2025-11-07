@@ -1,11 +1,10 @@
 {
   "name": "client",
   "version": "1.0.0",
-  "type": "module",
   "main": "index.js",
   "private": true,
   "scripts": {
-    "dev": "next dev --webpack",
+    "dev": "next dev",
     "build": "next build",
     "start": "next start"
   },
@@ -18,8 +17,8 @@
     "react-dom": "^19.1.1"
   },
   "devDependencies": {
-    "@types/node": "24.6.2",
-    "@types/react": "19.2.0",
-    "typescript": "5.9.3"
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.4.31",
+    "tailwindcss": "^3.4.14"
   }
 }
