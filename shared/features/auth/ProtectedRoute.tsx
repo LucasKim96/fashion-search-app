@@ -1,13 +1,13 @@
-// shared/features/auth/ProtectedRoute.tsx
+"use client";
 import { ReactNode, useEffect } from "react";
-import { useRouter } from "next/router";
+import { useRouter } from "next/navigation";
 import { useAuth } from "./useAuth";
 import { RoleKey } from "@shared/core";
 
 interface ProtectedRouteProps {
   children: ReactNode;
   requiredRole?: RoleKey | RoleKey[];
-  redirectTo?: string; // page redirect khi chưa auth hoặc không có quyền
+  redirectTo?: string;
 }
 
 export const ProtectedRoute = ({
@@ -15,7 +15,7 @@ export const ProtectedRoute = ({
   requiredRole,
   redirectTo = "/login",
 }: ProtectedRouteProps) => {
-  const { user, loading, isAuthenticated, isAuthorized } = useAuth({ requiredRole });
+  const { loading, isAuthenticated, isAuthorized } = useAuth({ requiredRole });
   const router = useRouter();
 
   useEffect(() => {
@@ -28,11 +28,11 @@ export const ProtectedRoute = ({
   }, [loading, isAuthenticated, isAuthorized, router, redirectTo]);
 
   if (loading) {
-    return <div>Loading...</div>; // Hoặc skeleton/loading spinner
+    return <div className="flex items-center justify-center h-screen">Đang tải...</div>;
   }
 
   if (!isAuthenticated || !isAuthorized) {
-    return null; // Chờ redirect
+    return null;
   }
 
   return <>{children}</>;

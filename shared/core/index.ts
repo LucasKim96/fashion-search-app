@@ -10,6 +10,7 @@ export * from "./utils/storage.utils";
 export * from "./utils/error.utils";
 export * from "./utils/logger.utils"
 export * from "./utils/role.utils"
+export { NotificationProvider, useNotification } from "./ui/NotificationProvider";
 // export * from "./utils/date.utils";
 
 // export * from "./hooks/useAxios";

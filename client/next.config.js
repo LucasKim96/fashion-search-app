@@ -15,6 +15,9 @@ const nextConfig = {
     config.resolve.alias["@shared"] = path.resolve(__dirname, "../shared");
     return config;
   },
+  experimental: {
+    externalDir: true, // Cho phép import file CSS từ ngoài project
+  },
   images: {
     // Cho phép ảnh từ BE (uploads/assets)
     domains: [IMAGE_DOMAIN],
