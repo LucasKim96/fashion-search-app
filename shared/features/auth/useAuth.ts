@@ -1,13 +1,13 @@
 // shared/features/auth/useAuth.ts
 import { useEffect, useState, useCallback } from "react";
 import { tokenUtils } from "@shared/core";
-import { getMeApi, refreshTokenApi } from "./auth.api";
+import { getMeApi, refreshTokenApi, logoutApi } from "./auth.api";
 import { MeResponse } from "./auth.types";
 import { RoleKey } from "@shared/core/constants/role.constants";
 import { mapBackendRoles } from "@shared/core/utils/role.utils";
 
 interface UseAuthOptions {
-  requiredRole?: RoleKey | RoleKey[]; // nếu muốn check quyền
+  requiredRole?: RoleKey | RoleKey[];
 }
 
 export const useAuth = ({ requiredRole }: UseAuthOptions = {}) => {
@@ -15,16 +15,18 @@ export const useAuth = ({ requiredRole }: UseAuthOptions = {}) => {
   const [loading, setLoading] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(true);
 
+  // Lấy thông tin người dùng hiện tại
   const fetchUser = useCallback(async () => {
     try {
       const res = await getMeApi();
       if (res.success && res.data) {
         setUser(res.data);
 
+        // Kiểm tra quyền (nếu có yêu cầu)
         if (requiredRole) {
           const rolesArray = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
           const userRoles = mapBackendRoles(res.data.roles || []);
-          const hasRole = userRoles.some(r => rolesArray.includes(r));
+          const hasRole = userRoles.some((r) => rolesArray.includes(r));
           setIsAuthorized(hasRole);
         } else {
           setIsAuthorized(true);
@@ -34,7 +36,7 @@ export const useAuth = ({ requiredRole }: UseAuthOptions = {}) => {
         setUser(null);
         setIsAuthorized(false);
       }
-    } catch (error) {
+    } catch {
       tokenUtils.clearTokens();
       setUser(null);
       setIsAuthorized(false);
@@ -43,6 +45,7 @@ export const useAuth = ({ requiredRole }: UseAuthOptions = {}) => {
     }
   }, [requiredRole]);
 
+  // Làm mới token khi cần
   const handleRefreshToken = useCallback(async () => {
     const refreshToken = tokenUtils.getRefreshToken();
     if (!refreshToken) {
@@ -71,6 +74,25 @@ export const useAuth = ({ requiredRole }: UseAuthOptions = {}) => {
     }
   }, [fetchUser]);
 
+  // Đăng xuất
+  const logout = useCallback(async () => {
+    try {
+      const res = await logoutApi();
+      return res; // Trả về ApiResponse để nơi khác có thể đọc message / success
+    } catch (error) {
+      return {
+        success: false,
+        message: "Lỗi khi đăng xuất",
+        data: null,
+      };
+    } finally {
+      tokenUtils.clearTokens();
+      setUser(null);
+      setIsAuthorized(false);
+    }
+  }, []);
+
+  // Khi load app — kiểm tra user
   useEffect(() => {
     const token = tokenUtils.getAccessToken();
     if (token) {
@@ -82,5 +104,13 @@ export const useAuth = ({ requiredRole }: UseAuthOptions = {}) => {
     }
   }, [fetchUser]);
 
-  return { user, loading, isAuthenticated: !!user, isAuthorized, refreshUser: fetchUser, handleRefreshToken };
+  return {
+    user,
+    loading,
+    isAuthenticated: !!user,
+    isAuthorized,
+    refreshUser: fetchUser,
+    handleRefreshToken,
+    logout,
+  };
 };
