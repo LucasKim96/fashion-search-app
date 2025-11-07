@@ -22,7 +22,7 @@ export const register = async (data) => {
     const existing = await Account.findOne({
       $or: [{ username }, { phoneNumber }],
     });
-    if (existing) throw new Error("Username hoặc số điện thoại đã tồn tại!" );
+    if (existing) throw new Error("Username hoặc số điện thoại đã tồn tại!");
 
     // Băm mật khẩu
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -45,6 +45,8 @@ export const register = async (data) => {
       password: hashedPassword,
       roles: [role._id],
       userInfoId: userInfoDoc._id,
+      status: "inactive",
+      isBanned: false,
     });
 
     return {
@@ -69,33 +71,36 @@ export const login = async ({ usernameOrPhone, password }) => {
     }).populate("roles");
 
     if (!account) throw new Error("Tài khoản không tồn tại!");
-    if (account.status === "banned")
-      throw new Error("Tài khoản của bạn đã bị khóa!");
-
+    if (account.isBanned) throw new Error("Tài khoản của bạn đã bị khóa!");
 
     // Kiểm tra mật khẩu
     const isMatch = await bcrypt.compare(password, account.password);
     if (!isMatch) throw new Error("Sai mật khẩu!");
 
     // Tạo accessToken và refreshToken
-    const roles = account.roles.map((r) => r.roleName);
-    const payload = { id: account._id, roles };
-    const accessToken = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
-    const refreshToken = jwt.sign(payload, JWT_SECRET, { expiresIn: REFRESH_TOKEN_EXPIRES_IN });
+    const payload = {
+      id: account._id,
+      userInfoId: account.userInfoId,
+      roleNames: account.roles.map((r) => r.roleName),
+      maxLevel: Math.max(...account.roles.map((r) => r.level)),
+    };
+    const accessToken = jwt.sign(payload, JWT_SECRET, {
+      expiresIn: JWT_EXPIRES_IN,
+    });
+    const refreshToken = jwt.sign(payload, JWT_SECRET, {
+      expiresIn: REFRESH_TOKEN_EXPIRES_IN,
+    });
 
-    // Cập nhật lần đăng nhập cuối
-    account.lastLogin = new Date();
+    // Cập nhật trạng thái và thời gian đăng nhập
+    account.status = "active";
+    account.lastActive = new Date();
     await account.save();
 
     return {
-      success: true, message: "Đăng nhập thành công!", 
-      data: { 
-        account:{ // chuyển đổi sang giờ việt nam
-          ...account.toObject(),
-          lastLoginVN: moment(account.lastLogin)
-            .tz("Asia/Ho_Chi_Minh")
-            .format("YYYY-MM-DD HH:mm:ss"),
-        },
+      success: true,
+      message: "Đăng nhập thành công!",
+      data: {
+        account,
         accessToken,
         refreshToken,
       },
@@ -108,12 +113,39 @@ export const login = async ({ usernameOrPhone, password }) => {
   }
 };
 
+
+// Đăng xuất — chuyển trạng thái về inactive
+export const logout = async (accountId) => {
+  try {
+    const account = await Account.findById(accountId);
+    if (!account) throw new Error("Không tìm thấy tài khoản!");
+
+    account.status = "inactive";
+    account.lastActive = new Date();
+    await account.save();
+
+    return {
+      success: true,
+      message: "Đăng xuất thành công!",
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: error.message || "Đăng xuất thất bại!",
+    };
+  }
+};
+
 // Làm mới token
 export const refresh = async (refreshToken) => {
   try {
     const decoded = jwt.verify(refreshToken, JWT_SECRET);
     const newAccessToken = jwt.sign(
-      { id: decoded.id, roles: decoded.roles },
+      {
+        id: decoded.id,
+        roles: decoded.roles,
+        maxRoleLevel: decoded.maxRoleLevel,
+      },
       JWT_SECRET,
       { expiresIn: JWT_EXPIRES_IN }
     );
@@ -137,7 +169,7 @@ export const verifyToken = (token) => {
     return {
       success: true,
       message: "Token hợp lệ!",
-      data: decoded, // chứa userId, role, exp,...
+      data: decoded, // chứa userId, role, maxRoleLevel, exp,...
     };
   } catch (error) {
     if (error.name === "TokenExpiredError") {
@@ -154,7 +186,7 @@ export const verifyToken = (token) => {
 export const changePassword = async (userId, oldPassword, newPassword) => {
   try {
     const account = await Account.findById(userId);
-    if (!account)  throw new Error("Không tìm thấy tài khoản!");
+    if (!account) throw new Error("Không tìm thấy tài khoản!");
 
     const isMatch = await bcrypt.compare(oldPassword, account.password);
     if (!isMatch) throw new Error("Mật khẩu cũ không đúng!");
@@ -164,7 +196,10 @@ export const changePassword = async (userId, oldPassword, newPassword) => {
 
     return { success: true, message: "Đổi mật khẩu thành công!" };
   } catch (error) {
-    return { success: false, message: error.message || "Đổi mật khẩu thất bại!" };
+    return {
+      success: false,
+      message: error.message || "Đổi mật khẩu thất bại!",
+    };
   }
 };
 
@@ -177,6 +212,9 @@ export const getProfile = async (userId) => {
     if (!account) throw new Error("Không tìm thấy tài khoản!");
     return { success: true, data: account };
   } catch (error) {
-    return { success: false, message: error.message || "Không lấy được thông tin tài khoản!" };
+    return {
+      success: false,
+      message: error.message || "Không lấy được thông tin tài khoản!",
+    };
   }
 };
