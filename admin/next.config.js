@@ -1,4 +1,4 @@
-// admin/next.config.js
+// admin/next.config.mjs
 import path from "path";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
@@ -6,25 +6,42 @@ import { dirname } from "path";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+const IMAGE_DOMAIN = process.env.NEXT_PUBLIC_IMAGE_DOMAIN || "localhost";
+
+/** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+
+  // Không dùng LightningCSS (vì gây lỗi .node)
+  compiler: {
+    lightningcss: false,
+  },
+
   experimental: {
-    externalDir: true,
+    externalDir: true, // Cho phép import từ ../shared
   },
-  webpack: (config) => {
-    config.resolve.alias["@shared"] = path.resolve(__dirname, "../shared");
-    return config;
-  },
+
   images: {
+    // Cảnh báo Next.js: `domains` bị lỗi thời, nhưng tôi sẽ giữ nó
+    // cho đến khi bạn hoàn toàn chuyển sang remotePatterns
+    domains: [IMAGE_DOMAIN],
     remotePatterns: [
       {
         protocol: "http",
-        hostname: "localhost",
-        port: "5000",
+        hostname: IMAGE_DOMAIN,
+        port: process.env.NODE_ENV === "development" ? "5000" : "",
         pathname: "/uploads/**",
+      },
+      {
+        protocol: "http",
+        hostname: IMAGE_DOMAIN,
+        port: process.env.NODE_ENV === "development" ? "5000" : "",
+        pathname: "/assets/**",
       },
     ],
   },
+
+  // ⚡ Bắt buộc để Turbopack hiểu có cấu hình hợp lệ
   turbopack: {},
 };
 
