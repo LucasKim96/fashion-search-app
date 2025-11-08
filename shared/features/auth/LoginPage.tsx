@@ -4,11 +4,13 @@ import  styles  from "./LoginCustom.module.css";
 interface LoginPageProps {
   title?: string;
   redirectPath?: string;
+  showRegisterLink?: boolean;
 }
 
 export const LoginPage = ({
   title,
   redirectPath = "/dashboard",
+  showRegisterLink = false,
 }: LoginPageProps) => {
   return (
     // Sử dụng .auth-wrapper để áp dụng full screen, background và center
@@ -22,7 +24,11 @@ export const LoginPage = ({
 
       {/* Auth Form: Sẽ sử dụng CSS của .auth-form */}
       <div className={styles["auth-form"]}>
-        <LoginForm title={title} redirectPath={redirectPath} />
+        <LoginForm 
+          title={title} 
+          redirectPath={redirectPath} 
+          showRegisterLink={showRegisterLink} // truyền prop xuống
+        />
       </div>
     </div>
   );

@@ -1,4 +1,5 @@
 "use client";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { User, Eye, EyeOff } from "lucide-react";
 import  styles  from "./LoginCustom.module.css";
@@ -7,12 +8,16 @@ import { useAuth } from "./useAuth.hook";
 interface LoginFormProps {
   redirectPath?: string; // "/admin/dashboard" hoặc "/dashboard"
   title?: string;
+  showRegisterLink?: boolean;
 }
 
 export const LoginForm = ({ 
   redirectPath = "/dashboard", 
-  title 
+  title,
+  showRegisterLink = false,
 }: LoginFormProps) => {
+  const router = useRouter();
+
   const [usernameOrPhone, setUsernameOrPhone] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -64,6 +69,18 @@ export const LoginForm = ({
       >
         {loading ? "Đang đăng nhập..." : "Đăng nhập"}
       </button>
+
+      {/* Link to register (chỉ hiển thị khi showRegisterLink = true) */}
+      {showRegisterLink && (
+        <div className={styles["switch-auth-mode"]}>
+          <p onClick={() => router.push("/register")}>
+            Chưa có tài khoản?{" "}
+            <span>
+              Đăng ký ngay
+            </span>
+          </p>
+        </div>
+      )}
     </form>
   );
 };
