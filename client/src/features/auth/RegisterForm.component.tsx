@@ -1,4 +1,5 @@
 "use client";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { User, Phone, Lock, Eye, EyeOff } from "lucide-react";
 import styles from "@shared/features/auth/LoginCustom.module.css";
@@ -13,6 +14,8 @@ export const RegisterForm = ({
   redirectPath = "/login",
   title = "Đăng ký tài khoản",
 }: RegisterFormProps) => {
+  const router = useRouter();
+
   const [username, setUsername] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
@@ -96,6 +99,16 @@ export const RegisterForm = ({
       >
         {loading ? "Đang đăng ký..." : "Đăng ký"}
       </button>
+
+      {/* Link to login */}
+      <div className={styles["switch-auth-mode"]}>
+        <p onClick={() => router.push("/login")}>
+          Đã có tài khoản?{" "}
+          <span>
+            Đăng nhập
+          </span>
+        </p>
+      </div>
     </form>
   );
 };
