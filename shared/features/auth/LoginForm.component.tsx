@@ -9,11 +9,15 @@ interface LoginFormProps {
   title?: string;
 }
 
-export const LoginForm = ({ redirectPath = "/dashboard", title }: LoginFormProps) => {
+export const LoginForm = ({ 
+  redirectPath = "/dashboard", 
+  title 
+}: LoginFormProps) => {
   const [usernameOrPhone, setUsernameOrPhone] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const { login, loading } = useAuth({ redirectAfterLogin: redirectPath }); // ✅ dùng login từ hook mới
+  
+  const { login, loading } = useAuth({ redirectAfterLogin: redirectPath });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
