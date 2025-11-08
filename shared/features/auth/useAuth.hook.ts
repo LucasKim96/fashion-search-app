@@ -2,24 +2,30 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { useNotification } from "@shared/core/ui/NotificationProvider";
-import { tokenUtils } from "@shared/core";
-import { errorUtils } from "@shared/core/utils/error.utils";
-import { getMeApi, refreshTokenApi, logoutApi, loginApi } from "./auth.api";
-import { MeResponse } from "./auth.types";
-import { RoleKey } from "@shared/core/constants/role.constants";
-import { mapBackendRoles } from "@shared/core/utils/role.utils";
+import { tokenUtils, mapBackendRoles, RoleKey, errorUtils, useNotification } from "@shared/core";
+import { MeResponse, RegisterRequest, ChangePasswordRequest} from "./auth.types";
+import {
+  getMeApi,
+  refreshTokenApi,
+  logoutApi,
+  loginApi,
+  registerApi,
+  changePasswordApi,
+  verifyTokenApi,
+} from "./auth.api";
 
 interface UseAuthManagerOptions {
   requiredRole?: RoleKey | RoleKey[];
   redirectAfterLogin?: string;
   redirectAfterLogout?: string;
+  redirectAfterRegister?: string;
 }
 
 export const useAuth = ({
   requiredRole,
   redirectAfterLogin = "/dashboard",
   redirectAfterLogout = "/login",
+  redirectAfterRegister = "/login",
 }: UseAuthManagerOptions = {}) => {
   const [user, setUser] = useState<MeResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -27,7 +33,7 @@ export const useAuth = ({
   const router = useRouter();
   const { showToast } = useNotification();
 
-  // Lấy thông tin user hiện tại
+  // ====== Lấy thông tin user ======
   const fetchUser = useCallback(async () => {
     try {
       const res = await getMeApi();
@@ -60,7 +66,7 @@ export const useAuth = ({
     }
   }, [requiredRole, showToast]);
 
-  // Đăng nhập
+  // ====== Đăng nhập ======
   const login = useCallback(
     async (usernameOrPhone: string, password: string) => {
       setLoading(true);
@@ -99,7 +105,50 @@ export const useAuth = ({
     [fetchUser, router, redirectAfterLogin, showToast]
   );
 
-  // Làm mới token
+  // ====== Đăng ký ======
+  const register = useCallback(
+    async (data: RegisterRequest) => {
+      setLoading(true);
+      try {
+        const res = await registerApi(data);
+        if (res.success) {
+          showToast(res.message || "Đăng ký thành công!", "success");
+          router.push(redirectAfterRegister);
+        } else {
+          showToast(res.message || "Đăng ký thất bại", "error");
+        }
+        return res;
+      } catch (error) {
+        const message = errorUtils.parseApiError(error);
+        showToast(message, "error");
+        return { success: false, message, data: null };
+      } finally {
+        setLoading(false);
+      }
+    },
+    [router, redirectAfterRegister, showToast]
+  );
+
+  // ====== Đổi mật khẩu ======
+  const changePassword = useCallback(
+    async (data: ChangePasswordRequest) => {
+      setLoading(true);
+      try {
+        const res = await changePasswordApi(data);
+        showToast(res.message || (res.success ? "Đổi mật khẩu thành công!" : "Đổi mật khẩu thất bại!"), res.success ? "success" : "error");
+        return res;
+      } catch (error) {
+        const message = errorUtils.parseApiError(error);
+        showToast(message, "error");
+        return { success: false, message, data: null };
+      } finally {
+        setLoading(false);
+      }
+    },
+    [showToast]
+  );
+
+  // ====== Làm mới token ======
   const handleRefreshToken = useCallback(async () => {
     const refreshToken = tokenUtils.getRefreshToken();
     if (!refreshToken) {
@@ -130,7 +179,7 @@ export const useAuth = ({
     }
   }, [fetchUser, showToast]);
 
-  // Đăng xuất
+  // ====== Đăng xuất ======
   const logout = useCallback(async () => {
     try {
       const res = await logoutApi();
@@ -156,7 +205,27 @@ export const useAuth = ({
     }
   }, [router, redirectAfterLogout, showToast]);
 
-  // Khi load app — kiểm tra user
+  // ====== Xác minh token ======
+  const verifyToken = useCallback(async () => {
+    try {
+      const res = await verifyTokenApi();
+      if (!res.success) {
+        tokenUtils.clearTokens();
+        setUser(null);
+        setIsAuthorized(false);
+      }
+      return res;
+    } catch (error) {
+      const message = errorUtils.parseApiError(error);
+      showToast(message, "error");
+      tokenUtils.clearTokens();
+      setUser(null);
+      setIsAuthorized(false);
+      return { success: false, message };
+    }
+  }, [showToast]);
+
+  // ====== Khởi động ======
   useEffect(() => {
     const token = tokenUtils.getAccessToken();
     if (token) {
@@ -174,7 +243,10 @@ export const useAuth = ({
     isAuthenticated: !!user,
     isAuthorized,
     login,
+    register,
     logout,
+    changePassword,
+    verifyToken,
     refreshUser: fetchUser,
     handleRefreshToken,
   };
