@@ -1,13 +1,7 @@
-// "use client";
-
-import React from "react";
 import { LoginPage } from "@shared/features/auth/LoginPage";
-import { NotificationProvider } from "@shared/core/ui/NotificationProvider";
 
-export default function LoginClientPage() {
+export default function AdminLogin() {
   return (
-    <NotificationProvider>
-      <LoginPage />
-    </NotificationProvider>
+    <LoginPage title="ĐĂNG NHẬP" redirectPath="/admin/dashboard" />
   );
 }

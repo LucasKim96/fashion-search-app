@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useAuth } from "@shared/features/auth/useAuth";
+import { useAuth } from "@shared/features/auth/useAuth.hook";
 import { Card, CardContent } from "@/components/ui/Card";
 
 export default function AdminDashboardPage() {

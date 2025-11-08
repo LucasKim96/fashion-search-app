@@ -7,7 +7,7 @@ export const LoginPage = ({
   title?: string;
   redirectPath?: string;
 }) => (
-  <div className="flex items-center justify-center min-h-screen bg-gray-900 text-white">
+  <div className="flex items-center justify-center min-h-screen bg-gray-900">
     <LoginForm title={title} redirectPath={redirectPath} />
   </div>
 );

@@ -1,7 +1,7 @@
 "use client";
 import { ReactNode, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "./useAuth";
+import { useAuth } from "./useAuth.hook";
 import { RoleKey } from "@shared/core";
 
 interface ProtectedRouteProps {
