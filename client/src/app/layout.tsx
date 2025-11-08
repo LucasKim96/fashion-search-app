@@ -16,7 +16,11 @@ export default function RootLayout({
   return (
     <html lang="vi">
       <body className="bg-gray-100 min-h-screen">
-        <NotificationProvider>{children}</NotificationProvider>
+        {/* Container toast luôn ở ngoài NotificationProvider */}
+        <div id="toast-root" />
+        <NotificationProvider>
+          {children}
+        </NotificationProvider>
       </body>
     </html>
   );
