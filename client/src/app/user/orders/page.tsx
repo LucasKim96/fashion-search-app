@@ -27,6 +27,9 @@ export default function OrdersPage() {
               <p className="font-medium">Mã đơn: {order.id}</p>
               <p className="text-sm text-text/70">Ngày: {order.date}</p>
             </div>
+            <div>
+              <div className="p-2 bg-primary-light rounded-full">hiiiii</div>
+            </div>
             <div className="text-sm text-text/80">
               <p>Tổng tiền: {order.total}</p>
               <p>Trạng thái: {order.status}</p>

@@ -4,7 +4,7 @@ import { Instagram, Facebook, Twitter } from "lucide-react";
 
 export default function ClientFooter() {
   return (
-    <footer className="bg-gray-900 text-gray-300 py-8 text-center relative">
+    <footer className="bg-gray-900 text-gray-300 py-8 relative">
       <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-4">
         {/* Copyright */}
         <p className="text-sm md:text-base">
