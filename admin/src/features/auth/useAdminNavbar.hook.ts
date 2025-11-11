@@ -10,7 +10,7 @@ export const useAdminNavbar = () => {
   const { user, logout } = useAuth();
   const { showToast } = useNotification();
 
-  const handleAccountClick = () => router.push("/account");
+  const handleAccountClick = () => router.push("/admin/account");
 
   const handleLogout = async () => {
     try {
