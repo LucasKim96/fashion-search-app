@@ -14,7 +14,7 @@ export default function UserLayout({
     <div className="min-h-screen flex flex-col bg-bg text-text">
       <ClientHeader />
 
-      <main className="flex flex-1 w-full mx-auto px-4 py-6 gap-6">
+      <main className="flex flex-1 px-4 py-6 gap-6">
         {/* Sidebar user */}
         <aside className="w-64 hidden lg:block">
           <ClientSidebar />
