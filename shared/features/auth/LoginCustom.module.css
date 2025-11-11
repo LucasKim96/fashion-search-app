@@ -1,0 +1,238 @@
+/* -------------------- KEYFRAMES -------------------- */
+@keyframes animateTextGradient {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+/* -------------------- AUTH WRAPPER (Toàn màn hình) -------------------- */
+.auth-wrapper {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    /* Các style vị trí: Dễ gây lỗi, nên dùng Tailwind trong Component cha */
+    /* margin-top: -20px; */
+    /* top: 20px; */
+    background-color: rgba(240, 253, 255, 0.281);
+    /* Nền nhẹ nhàng */
+}
+
+/* Background Image cho Wrapper (sử dụng ::before) */
+.auth-wrapper::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    /* Đường dẫn Public: Giả sử ảnh đã được chuyển vào thư mục public */
+    background-image: url("/auth_background.png");
+    background-size: cover;
+    background-repeat: no-repeat;
+    z-index: -1;
+}
+
+/* -------------------- HERO TITLE (Phần giới thiệu) -------------------- */
+.hero-title {
+    position: relative;
+    width: 400px;
+    height: 300px;
+    border-radius: 50px 0 50px 0;
+    text-align: center;
+    margin-right: 10px;
+    color: blanchedalmond;
+    /* Màu chữ fallback */
+    /* Nếu không dùng ::before cho Wrapper, có thể dùng background-image ở đây */
+    background-image: url("/auth_background.png");
+    background-size: cover;
+    background-repeat: no-repeat;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.2), -4px -4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.hero-title h1 {
+    margin: 0;
+    font-weight: bolder;
+    margin-bottom: 10px;
+    font-family: "Merriweather", serif;
+    font-size: 45px;
+    background: linear-gradient(90deg, #909090, #000000, #909090);
+    background-size: 300% 300%;
+    background-position: 0% 50%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: animateTextGradient 4s ease infinite;
+}
+
+.hero-title h3 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: bolder;
+    font-style: italic;
+    font-family: "Merriweather", serif;
+    background: linear-gradient(90deg, #909090, #000000, #909090);
+    background-size: 300% 300%;
+    background-position: 0% 50%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: animateTextGradient 4s ease infinite;
+}
+
+/* -------------------- AUTH FORM (Khung đăng nhập) -------------------- */
+.auth-form {
+    width: 500px;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.2), -4px -4px 10px rgba(0, 0, 0, 0.2);
+    text-align: center;
+    font-size: 18px;
+    background-color: rgba(255, 255, 255, 0.71);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+}
+
+/* Tiêu đề H2 trong Form (ĐÃ HỢP NHẤT TỪ LoginCustom.css) */
+.auth-form-title {
+    /* Đã đổi tên class cho dễ dùng trong React */
+    /* margin-bottom: 10px !important; */
+    font-family: "Poppins", sans-serif;
+    font-size: 36px;
+    font-weight: 600;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    background: linear-gradient(90deg, #6c6c6c, #000000, #6c6c6c);
+    background-size: 300% 300%;
+    background-position: 0% 50%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    padding: 10px 0;
+    text-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    animation: animateTextGradient 4s ease infinite;
+}
+
+
+/* -------------------- INPUT FIELDS (Tách ra từ LoginForm) -------------------- */
+
+.input-field {
+    position: relative;
+    /* Thêm margin-bottom để mô phỏng form cũ */
+    margin-bottom: 20px;
+}
+
+.password-field {
+    position: relative;
+}
+
+.input-field input,
+.password-field input {
+    width: calc(100% - 20px);
+    padding: 10px;
+    margin-bottom: 5px;
+    margin-top: 5px;
+    border: none;
+    border-bottom: 2px solid rgba(0, 0, 0, 0.803);
+    background-color: transparent;
+}
+
+.input-field input:focus,
+.password-field input:focus {
+    outline: none;
+}
+
+.input-field input::placeholder,
+.password-field input::placeholder {
+    color: rgba(0, 0, 0, 0.803);
+}
+
+.input-field input[type="date"],
+.password-field input[type="date"] {
+    color: rgba(0, 0, 0, 0.803);
+}
+
+/* Icon position for input fields */
+.input-field svg,
+.password-field svg {
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 18px;
+    color: rgba(0, 0, 0, 0.803);
+    cursor: pointer;
+    /* Cho icon con mắt */
+}
+
+.password-field svg:hover {
+    color: rgb(152, 152, 152);
+}
+
+.switch-auth-mode {
+    color: rgba(0, 0, 0, 0.803);
+    cursor: pointer;
+    transition: 0.5s;
+    display: inline-block;
+    margin-top: 10px;
+}
+
+.switch-auth-mode:hover {
+    color: #3f3f3f;
+    text-shadow: 1px 4px 8px rgba(0, 0, 0, 0.2);
+    transition: background-image 0.3s ease;
+}
+
+/* -------------------- BUTTON (Tách ra từ LoginForm) -------------------- */
+
+.auth-button {
+    width: 100%;
+    padding: 10px;
+    margin-top: 10px;
+    background-color: rgba(0, 0, 0, 0);
+    border: solid rgba(0, 0, 0, 0.803);
+    border-radius: 10px;
+    color: rgba(0, 0, 0, 0.803);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    z-index: 1;
+    transition: color 0.3s ease, border-color 0.3s ease;
+    font-size: 18px;
+    /* Thêm font size cho dễ nhìn */
+}
+
+.auth-button::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #818080 0%, rgb(0, 0, 0) 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: -1;
+}
+
+.auth-button:hover {
+    color: white;
+    border-color: transparent;
+}
+
+.auth-button:hover::before {
+    opacity: 1;
+}

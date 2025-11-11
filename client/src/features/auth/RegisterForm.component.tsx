@@ -1,77 +1,114 @@
 "use client";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { useRegister } from "./useRegister.hook";
-import { User, Lock, Phone } from "lucide-react";
-import { Button, Input } from "@/components/ui";
-import styles from "@/styles/auth.module.css";
+import { User, Phone, Lock, Eye, EyeOff } from "lucide-react";
+import styles from "@shared/features/auth/LoginCustom.module.css";
+import { useAuth } from "@shared/features/auth";
 
-export const RegisterForm = () => {
-  const [form, setForm] = useState({
-    username: "",
-    phoneNumber: "",
-    password: "",
-    confirmPassword: "",
+interface RegisterFormProps {
+  redirectPath?: string; // sau khi đăng ký xong chuyển hướng
+  title?: string;
+}
+
+export const RegisterForm = ({
+  redirectPath = "/login",
+  title = "Đăng ký tài khoản",
+}: RegisterFormProps) => {
+  const router = useRouter();
+
+  const [username, setUsername] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const { register, loading } = useAuth({
+    redirectAfterRegister: redirectPath,
   });
-  const { handleRegister, loading } = useRegister();
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    handleRegister(form);
+    register({ username, phoneNumber, password, confirmPassword });
   };
 
   return (
-    <form onSubmit={handleSubmit} className={styles.authForm}>
-      <h2 className="text-2xl font-bold text-center mb-6">Đăng ký tài khoản</h2>
+    <form onSubmit={handleSubmit}>
+      <h2 className={styles["auth-form-title"]}>{title}</h2>
 
-      <div className={styles.inputGroup}>
-        <User className="icon" />
-        <Input
-          name="username"
+      {/* Username */}
+      <div className={styles["input-field"]}>
+        <input
+          type="text"
           placeholder="Tên đăng nhập"
-          value={form.username}
-          onChange={handleChange}
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          required
         />
+        <User size={20} />
       </div>
 
-      <div className={styles.inputGroup}>
-        <Phone className="icon" />
-        <Input
-          name="phoneNumber"
+      {/* Phone */}
+      <div className={styles["input-field"]}>
+        <input
+          type="text"
           placeholder="Số điện thoại"
-          value={form.phoneNumber}
-          onChange={handleChange}
+          value={phoneNumber}
+          onChange={(e) => setPhoneNumber(e.target.value)}
+          required
         />
+        <Phone size={20} />
       </div>
 
-      <div className={styles.inputGroup}>
-        <Lock className="icon" />
-        <Input
-          name="password"
-          type="password"
+      {/* Password */}
+      <div className={styles["password-field"]}>
+        <input
+          type={showPassword ? "text" : "password"}
           placeholder="Mật khẩu"
-          value={form.password}
-          onChange={handleChange}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
         />
+        {showPassword ? (
+          <EyeOff size={20} onClick={() => setShowPassword(false)} />
+        ) : (
+          <Eye size={20} onClick={() => setShowPassword(true)} />
+        )}
       </div>
 
-      <div className={styles.inputGroup}>
-        <Lock className="icon" />
-        <Input
-          name="confirmPassword"
-          type="password"
-          placeholder="Nhập lại mật khẩu"
-          value={form.confirmPassword}
-          onChange={handleChange}
+      {/* Confirm Password */}
+      <div className={styles["password-field"]}>
+        <input
+          type={showConfirmPassword ? "text" : "password"}
+          placeholder="Xác nhận mật khẩu"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          required
         />
+        {showConfirmPassword ? (
+          <EyeOff size={20} onClick={() => setShowConfirmPassword(false)} />
+        ) : (
+          <Eye size={20} onClick={() => setShowConfirmPassword(true)} />
+        )}
       </div>
 
-      <Button type="submit" disabled={loading} className="w-full mt-4">
+      <button
+        type="submit"
+        className={styles["auth-button"]}
+        disabled={loading}
+      >
         {loading ? "Đang đăng ký..." : "Đăng ký"}
-      </Button>
+      </button>
+
+      {/* Link to login */}
+      <div className={styles["switch-auth-mode"]}>
+        <p onClick={() => router.push("/login")}>
+          Đã có tài khoản?{" "}
+          <span>
+            Đăng nhập
+          </span>
+        </p>
+      </div>
     </form>
   );
 };

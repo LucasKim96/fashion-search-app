@@ -1,6 +1,6 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@shared/features/auth/useAuth";
+import { useAuth } from "@shared/features/auth/useAuth.hook";
 import { useNotification } from "@shared/core/ui/NotificationProvider";
 import { getRoleLabel, mapBackendRole } from "@shared/core/utils/role.utils";
 import { errorUtils } from "@shared/core/utils/error.utils";
@@ -10,7 +10,7 @@ export const useAdminNavbar = () => {
   const { user, logout } = useAuth();
   const { showToast } = useNotification();
 
-  const handleAccountClick = () => router.push("/account");
+  const handleAccountClick = () => router.push("/admin/account");
 
   const handleLogout = async () => {
     try {

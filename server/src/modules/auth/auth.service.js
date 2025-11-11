@@ -22,7 +22,7 @@ export const register = async (data) => {
     const existing = await Account.findOne({
       $or: [{ username }, { phoneNumber }],
     });
-    if (existing) throw new Error("Username hoặc số điện thoại đã tồn tại!");
+    if (existing) throw new Error("Tên đăng nhập hoặc số điện thoại đã tồn tại!");
 
     // Băm mật khẩu
     const hashedPassword = await bcrypt.hash(password, 10);
