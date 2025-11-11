@@ -38,7 +38,7 @@ const nextConfig = {
     },
   },
 
-  // ⚡ Bắt buộc để Turbopack hiểu có cấu hình hợp lệ
+  // Bắt buộc để Turbopack hiểu có cấu hình hợp lệ
   turbopack: {},
 };
 
