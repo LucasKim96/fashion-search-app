@@ -305,7 +305,7 @@ export default function UserListPage() {
             className={`px-2 py-1 text-xs rounded-full ${
                 user.role === "Admin"
                 ? "bg-blue-100 text-blue-700"
-                : "bg-gray-100 text-gray-600"
+                : "bg-gray-900 text-gray-100"
             }`}
             >
             {user.role}

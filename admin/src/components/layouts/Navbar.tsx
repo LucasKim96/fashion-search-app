@@ -4,7 +4,7 @@ import { User, LogOut } from "lucide-react";
 import { useAdminNavbar } from "@/features/auth/useAdminNavbar.hook";
 
 export const AdminNavbar: React.FC = () => {
-  const { user, roleLabel, handleAccountClick, handleLogout } = useAdminNavbar();
+  const { user, roleLabel, handleAccountClick} = useAdminNavbar();
 
   return (
     <nav className="bg-white shadow px-6 py-3 flex items-center justify-end gap-4">
@@ -17,10 +17,6 @@ export const AdminNavbar: React.FC = () => {
           {user?.username || "Chưa đăng nhập"} ({roleLabel})
         </span>
       </div>
-      <LogOut
-        className="cursor-pointer hover:text-red-500 transition-colors"
-        onClick={handleLogout}
-      />
     </nav>
   );
 };
