@@ -23,3 +23,20 @@ export const USER_ENDPOINTS = {
   STATS_GENDER: "/users/stats/gender",
   STATS_AGE: "/users/stats/age",
 };
+
+export const ACCOUNT_ENDPOINTS = {
+  GET_ALL: "/accounts",
+  BY_STATUS: (status: string) => `/accounts/status/${status}`,      // active / inactive
+  BY_ROLE: (roleId: string) => `/accounts/role/${roleId}`,
+  BANNED: "/accounts/banned",
+  UNBANNED: "/accounts/unbanned",
+  TOGGLE_BAN: (id: string) => `/accounts/ban-toggle/${id}`,
+  UPDATE_ROLES: (id: string) => `/accounts/update-roles/${id}`,
+  MODIFY_ROLES: (id: string) => `/accounts/modify-roles/${id}`,
+  STATS_STATUS: "/accounts/stats/status",
+  STATS_BANNED: "/accounts/stats/banned",
+  STATS_ROLE: "/accounts/stats/role",
+  SEARCH: "/accounts/search",
+  UPDATE_BASIC_INFO: (id: string) => `/accounts/update-basic/${id}`,
+  BY_ID: (id: string) => `/accounts/${id}`,
+};
