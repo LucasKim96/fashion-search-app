@@ -1,6 +1,5 @@
 // client/src/app/layout.tsx
 import "./globals.css";
-import "@/styles/theme.css";
 import React from "react";
 import { NotificationProvider } from "@shared/core/ui/NotificationProvider";
 
