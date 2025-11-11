@@ -1,122 +1,75 @@
-import { axiosInstance } from "../../core/api/axiosInstance";
+// shared/features/account/account.api.ts
+import { axiosInstance, ACCOUNT_ENDPOINTS } from "../../core";
 import { ApiResponse } from "../../types/common.types";
 import {
   Account,
-  UpdateBasicInfoPayload,
-  UpdateRolesPayload,
-  ModifyRolesPayload,
+  UpdateAccountBasicInfoRequest,
+  UpdateRolesRequest,
+  ModifyRolesRequest,
   AccountStatsByStatus,
-  AccountStatsByBanned,
+  AccountStatsBanned,
   AccountStatsByRole,
 } from "./account.types";
 
-
-const BASE_URL = "/api/accounts";
-
-// Lấy danh sách tài khoản
-export const getAllAccounts = async () => {
-  const res = await axiosInstance.get<ApiResponse<Account[]>>(BASE_URL);
-  return res.data;
+// --- GET ---
+export const getAllAccounts = (): Promise<ApiResponse<Account[]>> => {
+  return axiosInstance.get(ACCOUNT_ENDPOINTS.GET_ALL).then(res => res.data);
 };
 
-// Lấy tài khoản theo ID
-export const getAccountById = async (id: string) => {
-  const res = await axiosInstance.get<ApiResponse<Account>>(`${BASE_URL}/${id}`);
-  return res.data;
+export const getAccountById = (id: string): Promise<ApiResponse<Account>> => {
+  return axiosInstance.get(ACCOUNT_ENDPOINTS.BY_ID(id)).then(res => res.data);
 };
 
-// Lấy tài khoản theo trạng thái
-export const getAccountsByStatus = async (status: string) => {
-  const res = await axiosInstance.get<ApiResponse<Account[]>>(
-    `${BASE_URL}/status/${status}`
-  );
-  return res.data;
+export const getAccountsByStatus = (status: "active" | "inactive"): Promise<ApiResponse<Account[]>> => {
+  return axiosInstance.get(ACCOUNT_ENDPOINTS.BY_STATUS(status)).then(res => res.data);
 };
 
-// Lấy tài khoản theo vai trò
-export const getAccountsByRole = async (roleId: string) => {
-  const res = await axiosInstance.get<ApiResponse<Account[]>>(
-    `${BASE_URL}/role/${roleId}`
-  );
-  return res.data;
+export const getAccountsByRole = (roleId: string): Promise<ApiResponse<Account[]>> => {
+  return axiosInstance.get(ACCOUNT_ENDPOINTS.BY_ROLE(roleId)).then(res => res.data);
 };
 
-// Lấy danh sách bị chặn
-export const getBannedAccounts = async () => {
-  const res = await axiosInstance.get<ApiResponse<Account[]>>(`${BASE_URL}/banned`);
-  return res.data;
+export const getBannedAccounts = (): Promise<ApiResponse<Account[]>> => {
+  return axiosInstance.get(ACCOUNT_ENDPOINTS.BANNED).then(res => res.data);
 };
 
-// Lấy danh sách không bị chặn
-export const getUnbannedAccounts = async () => {
-  const res = await axiosInstance.get<ApiResponse<Account[]>>(`${BASE_URL}/unbanned`);
-  return res.data;
+export const getUnbannedAccounts = (): Promise<ApiResponse<Account[]>> => {
+  return axiosInstance.get(ACCOUNT_ENDPOINTS.UNBANNED).then(res => res.data);
 };
 
-// Toggle khóa / mở khóa
-export const toggleBanAccount = async (id: string) => {
-  const res = await axiosInstance.put<ApiResponse<Account>>(
-    `${BASE_URL}/ban-toggle/${id}`
-  );
-  return res.data;
+// --- PATCH / PUT ---
+export const toggleBanAccount = (id: string): Promise<ApiResponse<Account>> => {
+  return axiosInstance.patch(ACCOUNT_ENDPOINTS.TOGGLE_BAN(id)).then(res => res.data);
 };
 
-// Cập nhật thông tin cơ bản
-export const updateBasicInfo = async (id: string, payload: UpdateBasicInfoPayload) => {
-  const res = await axiosInstance.put<ApiResponse<Account>>(
-    `${BASE_URL}/update-basic/${id}`,
-    payload
-  );
-  return res.data;
+export const updateBasicInfo = (
+  id: string,
+  data: UpdateAccountBasicInfoRequest
+): Promise<ApiResponse<Account>> => {
+  return axiosInstance.put(ACCOUNT_ENDPOINTS.UPDATE_BASIC_INFO(id), data).then(res => res.data);
 };
 
-// Ghi đè toàn bộ role
-export const updateRoles = async (id: string, payload: UpdateRolesPayload) => {
-  const res = await axiosInstance.put<ApiResponse<Account>>(
-    `${BASE_URL}/update-roles/${id}`,
-    payload
-  );
-  return res.data;
+export const updateRoles = (id: string, data: UpdateRolesRequest): Promise<ApiResponse<Account>> => {
+  return axiosInstance.put(ACCOUNT_ENDPOINTS.UPDATE_ROLES(id), data).then(res => res.data);
 };
 
-// Thêm hoặc xóa role linh hoạt
-export const modifyRoles = async (id: string, payload: ModifyRolesPayload) => {
-  const res = await axiosInstance.put<ApiResponse<Account>>(
-    `${BASE_URL}/modify-roles/${id}`,
-    payload
-  );
-  return res.data;
+export const modifyRoles = (id: string, data: ModifyRolesRequest): Promise<ApiResponse<Account>> => {
+  return axiosInstance.put(ACCOUNT_ENDPOINTS.MODIFY_ROLES(id), data).then(res => res.data);
 };
 
-// Thống kê theo trạng thái
-export const countByStatus = async () => {
-  const res = await axiosInstance.get<ApiResponse<AccountStatsByStatus>>(
-    `${BASE_URL}/stats/status`
-  );
-  return res.data;
+// --- STATS ---
+export const countAccountsByStatus = (): Promise<ApiResponse<AccountStatsByStatus>> => {
+  return axiosInstance.get(ACCOUNT_ENDPOINTS.STATS_STATUS).then(res => res.data);
 };
 
-// Thống kê tài khoản bị khóa / không bị khóa
-export const countBannedAccounts = async () => {
-  const res = await axiosInstance.get<ApiResponse<AccountStatsByBanned>>(
-    `${BASE_URL}/stats/banned`
-  );
-  return res.data;
+export const countBannedAccountsStats = (): Promise<ApiResponse<AccountStatsBanned>> => {
+  return axiosInstance.get(ACCOUNT_ENDPOINTS.STATS_BANNED).then(res => res.data);
 };
 
-// Thống kê theo vai trò
-export const countByRole = async () => {
-  const res = await axiosInstance.get<ApiResponse<AccountStatsByRole[]>>(
-    `${BASE_URL}/stats/role`
-  );
-  return res.data;
+export const countAccountsByRole = (): Promise<ApiResponse<AccountStatsByRole[]>> => {
+  return axiosInstance.get(ACCOUNT_ENDPOINTS.STATS_ROLE).then(res => res.data);
 };
 
-// Tìm kiếm tài khoản
-export const searchAccounts = async (keyword: string) => {
-  const res = await axiosInstance.get<ApiResponse<Account[]>>(
-    `${BASE_URL}/search`,
-    { params: { keyword } }
-  );
-  return res.data;
+// --- SEARCH ---
+export const searchAccounts = (keyword: string): Promise<ApiResponse<Account[]>> => {
+  return axiosInstance.get(`${ACCOUNT_ENDPOINTS.SEARCH}?keyword=${keyword}`).then(res => res.data);
 };

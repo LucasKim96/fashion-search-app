@@ -20,22 +20,24 @@ const nextConfig = {
     externalDir: true, // Cho phép import từ ../shared
   },
 
-  remotePatterns: [
-    {
-      protocol: "http",
-      hostname: IMAGE_DOMAIN,
-      port: process.env.NODE_ENV === "development" ? "5000" : "",
-      pathname: "/uploads/**",
-    },
-    {
-      protocol: "http",
-      hostname: IMAGE_DOMAIN,
-      port: process.env.NODE_ENV === "development" ? "5000" : "",
-      pathname: "/assets/**",
-    },
-  ],
+  images: {
+    remotePatterns: [
+      {
+        protocol: "http",
+        hostname: "localhost",
+        port: "5000",
+        pathname: "/uploads/**",
+      },
+      {
+        protocol: "http",
+        hostname: "localhost",
+        port: "5000",
+        pathname: "/assets/**",
+      },
+    ],
+  },
 
-  // ⚡ Bắt buộc để Turbopack hiểu có cấu hình hợp lệ
+  // Bắt buộc để Turbopack hiểu có cấu hình hợp lệ
   turbopack: {},
 };
 

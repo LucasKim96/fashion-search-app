@@ -6,43 +6,47 @@ export interface Account {
   _id: string;
   username: string;
   phoneNumber: string;
-  password?: string;
+  // password?: string;
   status: "active" | "inactive";
-  lastActive?: string | null;
   isBanned: boolean;
   roles: Role[];
   userInfoId?: UserInfo | string;
+  lastActiveVN?: string; // từ backend tính sẵn
+  lastActive?: string | null;
   createdAt?: string;
   updatedAt?: string;
-  lastActiveVN?: string; // từ backend tính sẵn
 }
 
-export interface AccountStatsByStatus {
-  active: number;
-  inactive: number;
-}
-
-export interface AccountStatsByBanned {
-  banned: number;
-  unbanned: number;
-}
-
-export interface AccountStatsByRole {
-  roleName: string;
-  count: number;
-}
-
-export interface UpdateBasicInfoPayload {
+/** Payload để update thông tin cơ bản */
+export interface UpdateAccountBasicInfoRequest {
   username?: string;
   phoneNumber?: string;
 }
 
-export interface UpdateRolesPayload {
+/** Payload để update roles (ghi đè) */
+export interface UpdateRolesRequest {
   roleIds: string[];
 }
 
-export interface ModifyRolesPayload {
+/** Payload để modify roles (thêm / xóa) */
+export interface ModifyRolesRequest {
   roleIds: string[];
   action: "add" | "remove";
 }
 
+/** Thống kê tài khoản theo trạng thái */
+export interface AccountStatsByStatus {
+  [status: string]: number; // ví dụ: { active: 10, inactive: 5 }
+}
+
+/** Thống kê tài khoản bị khóa / không khóa */
+export interface AccountStatsBanned {
+  banned: number;
+  unbanned: number;
+}
+
+/** Thống kê tài khoản theo role */
+export interface AccountStatsByRole {
+  roleName: string;
+  count: number;
+}

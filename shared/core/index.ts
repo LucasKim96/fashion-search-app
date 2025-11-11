@@ -9,7 +9,9 @@ export * from "./utils/token.utils";
 export * from "./utils/storage.utils";
 export * from "./utils/error.utils";
 export * from "./utils/logger.utils"
-export * from "./utils/role.utils"
+export * from "./utils/role.utils";
+export * from  "./utils/image.utils";
+export * from  "./utils/user.utils";
 export { NotificationProvider, useNotification } from "./ui/NotificationProvider";
 // export * from "./utils/date.utils";
 
