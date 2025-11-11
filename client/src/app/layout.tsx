@@ -1,5 +1,6 @@
 // client/src/app/layout.tsx
 import "./globals.css";
+import "@/styles/theme.css";
 import React from "react";
 import { NotificationProvider } from "@shared/core/ui/NotificationProvider";
 
@@ -18,9 +19,7 @@ export default function RootLayout({
       <body className="bg-gray-100 min-h-screen">
         {/* Container toast luôn ở ngoài NotificationProvider */}
         <div id="toast-root" />
-        <NotificationProvider>
-          {children}
-        </NotificationProvider>
+        <NotificationProvider>{children}</NotificationProvider>
       </body>
     </html>
   );
