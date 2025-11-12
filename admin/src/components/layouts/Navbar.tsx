@@ -1,26 +1,167 @@
 "use client";
+
 import React from "react";
-import { User, LogOut } from "lucide-react";
 import { useAdminNavbar } from "@/features/auth/useAdminNavbar.hook";
+import clsx from "clsx";
 
 export const AdminNavbar: React.FC = () => {
-  const { user, roleLabel, handleAccountClick, handleLogout } = useAdminNavbar();
+  const { userInfo, handleAccountClick } = useAdminNavbar();
 
   return (
-    <nav className="bg-white shadow px-6 py-3 flex items-center justify-end gap-4">
+    <nav className="flex items-center justify-end gap-6 px-6 py-3
+      bg-gradient-to-r from-[#f3f4f6]/80 via-[#faf9f8]/70 to-[#f3f4f6]/80
+      backdrop-blur-xl shadow-lg border-b border-white/30 transition-all">
+
+      {/* User Info */}
       <div
         onClick={handleAccountClick}
-        className="flex items-center gap-2 cursor-pointer hover:text-blue-600 transition-colors"
+        className="relative flex items-center gap-3 cursor-pointer group mr-10"
       >
-        <User size={18} />
-        <span>
-          {user?.username || "Chưa đăng nhập"} ({roleLabel})
-        </span>
+        {/* Avatar với viền gradient glow */}
+        <div className="relative w-12 h-12 group">
+          <div className="absolute -inset-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-0 animate-spin-slow border-2 border-transparent">
+            <div className="w-full h-full rounded-full"
+              style={{
+                background: 'conic-gradient(from 0deg, #3b82f6, #ec4899, #a78bfa, #3b82f6)'
+              }}
+            />
+          </div>
+          <div className="relative w-full h-full rounded-full overflow-hidden border border-gray-300 transition-transform duration-300 group-hover:scale-105 z-10">
+            {userInfo.avatar ? (
+              <img
+                src={userInfo.avatar}
+                alt={userInfo.name || "avatar"}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-500 font-semibold text-sm">
+                {userInfo.name?.charAt(0)?.toUpperCase() || "?"}
+              </div>
+            )}
+          </div>
+        </div>
+        {/* <div className="relative w-12 h-12 group">
+          <span
+            className="absolute -inset-1 rounded-full opacity-0 transition-opacity duration-300 group-hover:opacity-100 z-0 animate-spin-slow"
+            style={{
+              background: "conic-gradient(from 0deg, #3b82f6, #ec4899, #a78bfa, #3b82f6)",
+              padding: "2px",      // tạo độ rộng cho viền
+              boxSizing: "border-box",
+            }}
+          ></span>
+          <div className="relative w-full h-full rounded-full overflow-hidden border border-gray-300 transition-transform duration-300 group-hover:scale-105 z-10">
+            {userInfo.avatar ? (
+              <img
+                src={userInfo.avatar}
+                alt={userInfo.name || "avatar"}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-500 font-semibold text-sm">
+                {userInfo.name?.charAt(0)?.toUpperCase() || "?"}
+              </div>
+            )}
+          </div>
+        </div> */}
+
+        {/* Thông tin người dùng */}
+        <div className="hidden sm:flex flex-col items-start relative group z-10">
+          {/* Tên người dùng với hiệu ứng hover */}
+          <span
+            className="font-medium text-gray-800 transition-all duration-300
+              group-hover:translate-x-1 group-hover:text-gray-900 group-hover:drop-shadow-sm"
+          >
+            {userInfo.name || userInfo.username || "Chưa đăng nhập"}
+          </span>
+
+          {/* Vai trò người dùng */}
+          <span
+            className="text-sm text-gray-500 transition-all duration-300
+              group-hover:translate-x-1 group-hover:text-gray-700"
+          >
+            {userInfo.roleLabel}
+          </span>
+        </div>
       </div>
-      <LogOut
-        className="cursor-pointer hover:text-red-500 transition-colors"
-        onClick={handleLogout}
-      />
     </nav>
   );
 };
+
+
+// "use client";
+
+// import React from "react";
+// import { useAdminNavbar } from "@/features/auth/useAdminNavbar.hook";
+// import clsx from "clsx";
+
+// export const AdminNavbar: React.FC = () => {
+//   const { userInfo, handleAccountClick } = useAdminNavbar();
+
+//   return (
+//     <nav className="bg-gradient-to-r from-[#f3f4f6]/80 via-[#faf9f8]/70 to-[#f3f4f6]/80 shadow px-6 py-3 flex items-center justify-end gap-6 backdrop-blur-md">
+      
+//       <div
+//         onClick={handleAccountClick}
+//         className="relative flex items-center gap-3 cursor-pointer group"
+//       >
+//         {/* Avatar với hiệu ứng loang màu */}
+        // <div className="relative w-10 h-10 group">
+        //   <span
+        //     className="absolute -inset-1 rounded-full opacity-0 transition-opacity duration-300 group-hover:opacity-100 z-0 animate-spin-slow"
+        //     style={{
+        //       background: "conic-gradient(from 0deg, #3b82f6, #ec4899, #a78bfa, #3b82f6)",
+        //       padding: "2px",      // tạo độ rộng cho viền
+        //       boxSizing: "border-box",
+        //     }}
+        //   ></span>
+        //   <div className="relative w-full h-full rounded-full overflow-hidden border border-gray-300 transition-transform duration-300 group-hover:scale-105 z-10">
+        //     {userInfo.avatar ? (
+        //       <img
+        //         src={userInfo.avatar}
+        //         alt={userInfo.name || "avatar"}
+        //         className="w-full h-full object-cover"
+        //       />
+        //     ) : (
+        //       <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-500 font-semibold text-sm">
+        //         {userInfo.name?.charAt(0)?.toUpperCase() || "?"}
+        //       </div>
+        //     )}
+        //   </div>
+        // </div>
+//         {/* <div className="relative w-10 h-10 group">
+//           <div className="absolute -inset-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-0 animate-spin-slow border-2 border-transparent">
+//             <div className="w-full h-full rounded-full"
+//               style={{
+//                 background: 'conic-gradient(from 0deg, #3b82f6, #ec4899, #a78bfa, #3b82f6)'
+//               }}
+//             />
+//           </div>
+
+//           <div className="relative w-full h-full rounded-full overflow-hidden border border-gray-300 transition-transform duration-300 group-hover:scale-105 z-10">
+//             {userInfo.avatar ? (
+//               <img
+//                 src={userInfo.avatar}
+//                 alt={userInfo.name || "avatar"}
+//                 className="w-full h-full object-cover"
+//               />
+//             ) : (
+//               <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-500 font-semibold text-sm">
+//                 {userInfo.name?.charAt(0)?.toUpperCase() || "?"}
+//               </div>
+//             )}
+//           </div>
+//         </div> */}
+//         {/* Thông tin người dùng */}
+//         <div className="hidden sm:flex flex-col items-start">
+//           <span className="font-medium text-gray-800">{userInfo.name || "Chưa đăng nhập"}</span>
+//           <span className="text-sm text-gray-500">{userInfo.roleLabel}</span>
+//         </div>
+//       </div>
+//     </nav>
+//   );
+// };
+
+
+
+
+

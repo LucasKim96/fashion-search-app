@@ -25,10 +25,3 @@ export default function RootLayout({
     </html>
   );
 }
-    // <html lang="vi">
-    //   <body className="bg-gray-100 ">
-    //     <NotificationProvider>{children}</NotificationProvider>
-    //   </body>
-    // </html>
-
-// min-h-screen

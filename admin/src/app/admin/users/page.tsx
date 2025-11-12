@@ -305,7 +305,7 @@ export default function UserListPage() {
             className={`px-2 py-1 text-xs rounded-full ${
                 user.role === "Admin"
                 ? "bg-blue-100 text-blue-700"
-                : "bg-gray-100 text-gray-600"
+                : "bg-gray-900 text-gray-100"
             }`}
             >
             {user.role}
@@ -352,6 +352,50 @@ export default function UserListPage() {
             // paginationActiveColor="bg-blue-500 text-white border-blue-500"
             rowsPerPage={8}
         />
+        ///////////
+        <br></br>
+        /////////////////
+        <br></br>
+        ///////////
+        <br></br>
+        /////////////////
+        <br></br>
+                ///////////
+        <br></br>
+        /////////////////
+        <br></br>
+
+                ///////////
+        <br></br>
+        /////////////////
+        <br></br>        ///////////
+        <br></br>
+        /////////////////
+        <br></br>
+                ///////////
+        <br></br>
+        /////////////////
+        <br></br>
+                ///////////
+        <br></br>
+        /////////////////
+        <br></br>
+                ///////////
+        <br></br>
+        /////////////////
+        <br></br>
+                ///////////
+        <br></br>
+        /////////////////
+        <br></br>
+                ///////////
+        <br></br>
+        /////////////////
+        <br></br>        ///////////
+        <br></br>
+        /////////////////
+        <br></br>
+        
         </div>
     );
 }

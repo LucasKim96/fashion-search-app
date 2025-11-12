@@ -31,7 +31,7 @@ export function Table<T extends object>({
     columns,
     data,
     showIndex = false,
-    headerColor = "bg-blue-100 text-blue-700",
+    headerColor = "bg-blue-100 text-blue-800",
     rowsPerPage = 10,
     showPagination = true,
     paginationBg = "dark:bg-blue-100", //bg-gray-50 dark:bg-gray-800

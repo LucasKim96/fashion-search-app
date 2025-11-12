@@ -34,6 +34,7 @@ const nextConfig = {
     ],
   },
 
+  // Bắt buộc để Turbopack hiểu có cấu hình hợp lệ
   // ⚡ Turbopack config (nếu sếp dùng dev server mới)
   turbopack: {},
 };
