@@ -27,8 +27,8 @@ export const useAdminNavbar = () => {
 
   useEffect(() => {
     fetchUserInfo();
-    console.log("authUser:", authUser);
-    console.log("extractUserDisplayInfo:", extractUserDisplayInfo(authUser));
+    // console.log("authUser:", authUser);
+    // console.log("extractUserDisplayInfo:", extractUserDisplayInfo(authUser));
   }, [authUser, fetchUserInfo]);
 
   // ====== Xử lý click account ======
