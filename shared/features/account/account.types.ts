@@ -30,8 +30,9 @@ export interface UpdateRolesRequest {
 
 /** Payload để modify roles (thêm / xóa) */
 export interface ModifyRolesRequest {
-  roleIds: string[];
-  action: "add" | "remove";
+  // Với add/remove thì roleIds là mảng string, với replace là object { old: string[], new: string[] }
+  roleIds: string[] | { old: string[]; new: string[] };
+  action: "add" | "remove" | "replace";
 }
 
 /** Thống kê tài khoản theo trạng thái */

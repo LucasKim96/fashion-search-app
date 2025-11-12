@@ -9,6 +9,7 @@ interface Column<T> {
     key: keyof T | string;
     title: string;
     icon?: LucideIcon;
+    iconColor?: string;
     align?: "left" | "center" | "right";
     width?: number;
     render?: (item: T, index: number) => React.ReactNode;
@@ -18,6 +19,7 @@ interface TableProps<T> {
     columns: Column<T>[];
     data: T[];
     showIndex?: boolean;
+    sttIconColor?: string;
     headerColor?: string;
     rowsPerPage?: number;
     showPagination?: boolean;
@@ -31,6 +33,7 @@ export function Table<T extends object>({
     columns,
     data,
     showIndex = false,
+    sttIconColor = "text-blue-800",
     headerColor = "bg-blue-100 text-blue-800",
     rowsPerPage = 10,
     showPagination = true,
@@ -45,8 +48,29 @@ export function Table<T extends object>({
 
     // --- Resize ---
     const [colWidths, setColWidths] = useState<{ [key: string]: number }>({});
+    const headerRefs = useRef<{ [key: string]: HTMLTableCellElement | null }>({});
     const startX = useRef<number | null>(null);
     const resizingKey = useRef<string | null>(null);
+    const setHeaderRef = (key: string) => (el: HTMLTableCellElement | null) => {
+        headerRefs.current[key] = el;
+    };
+
+    useEffect(() => {
+        const initialWidths: { [key: string]: number } = {};
+        columns.forEach((col) => {
+            if (col.width) {
+            initialWidths[col.key as string] = col.width;
+            } else {
+            const thEl = headerRefs.current[col.key as string];
+            if (thEl) {
+                initialWidths[col.key as string] = thEl.scrollWidth + 20;
+            } else {
+                initialWidths[col.key as string] = 150;
+            }
+            }
+        });
+    setColWidths(initialWidths);
+    }, [columns]);
 
     const handleMouseDown = (key: string, e: React.MouseEvent) => {
         startX.current = e.clientX;
@@ -82,94 +106,95 @@ export function Table<T extends object>({
         <table className="w-full border-collapse">
             {/* --- Header --- */}
             <thead className={clsx(headerColor, "text-sm font-semibold")}>
-            <tr>
-                {showIndex && (
-                <th 
-                    className="p-2 border text-center"
-                    style={{ width: 70, minWidth: 60, maxWidth: 80 }}
-                >
-                    <div className="flex justify-center items-center gap-1">
-                    <Hash className="w-4 h-4" />
-                    <span>STT</span>
-                    </div>
-                </th>
-                )}
-
-                {columns.map((col) => {
-                const Icon = col.icon;
-                const colWidth = colWidths[col.key as string] || col.width || "auto";
-                return (
-                    <th
-                    key={String(col.key)}
-                    style={{ width: colWidth, minWidth: 100 }}
-                    className={clsx(
-                        "relative p-2 border select-none",
-                        col.align === "left" && "text-left",
-                        col.align === "right" && "text-right",
-                        !col.align && "text-center"
-                    )}
+                <tr>
+                    {showIndex && (
+                    <th 
+                        className="p-2 border text-center"
+                        style={{ width: 70, minWidth: 60, maxWidth: 80 }}
                     >
-                    <div
-                        className={clsx(
-                        "flex items-center gap-1",
-                        col.align === "center" && "justify-center",
-                        col.align === "right" && "justify-end",
-                        col.align === "left" && "justify-start"
-                        )}
-                    >
-                        {Icon && <Icon className="w-4 h-4 shrink-0 text-blue-600" />}
-                        <span>{col.title}</span>
-                    </div>
-
-                    {/* Resize handle */}
-                    <span
-                        className="absolute right-0 top-0 h-full w-1 cursor-col-resize bg-transparent hover:bg-blue-200 transition"
-                        onMouseDown={(e) => handleMouseDown(String(col.key), e)}
-                    />
+                        <div className="flex justify-center items-center gap-1">
+                        <Hash className={clsx("w-4 h-4", sttIconColor || "text-blue-800")} />
+                        <span>STT</span>
+                        </div>
                     </th>
-                );
-                })}
-            </tr>
+                    )}
+
+                    {columns.map((col) => {
+                    const Icon = col.icon;
+                    const colWidth = colWidths[col.key as string] || col.width || "auto";
+                    return (
+                        <th
+                            key={String(col.key)}
+                            ref={setHeaderRef(String(col.key))}
+                            style={{ width: colWidths[col.key as string] || col.width || 'auto', minWidth: 100 }}
+                            // style={{ width: colWidth, minWidth: 100 }}
+                            className="relative p-2 border text-center select-none"
+                        >
+                        <div className="flex justify-center items-center gap-1">
+                            {Icon && <Icon
+                                className={clsx("w-4 h-4 shrink-0", col.iconColor || "text-blue-600")}
+                            />}
+                            <span>{col.title}</span>
+                        </div>
+
+                        {/* Resize handle */}
+                        <span
+                            className="absolute right-0 top-0 h-full w-1 cursor-col-resize bg-transparent hover:bg-blue-200 transition"
+                            onMouseDown={(e) => handleMouseDown(String(col.key), e)}
+                        />
+                        </th>
+                    );
+                    })}
+                </tr>
             </thead>
 
             {/* --- Body --- */}
             <tbody>
-            {paginatedData.length > 0 ? (
-                paginatedData.map((row, i) => (
-                <tr
-                    key={i}
-                    className="hover:bg-blue-50 transition-colors border-b last:border-b-0"
-                >
-                    {showIndex && (
-                    <td className="p-2 border text-center text-blue-800 font-medium">
-                        {(page - 1) * rowsPerPage + i + 1}
-                    </td>
-                    )}
-                    {columns.map((col) => (
-                    <td
-                        key={String(col.key)}
-                        className={clsx(
-                        "p-2 border text-sm text-blue-900",
-                        col.align === "left" && "text-left",
-                        col.align === "right" && "text-right",
-                        !col.align && "text-center"
-                        )}
+                {paginatedData.length > 0 ? (
+                    paginatedData.map((row, i) => (
+                    <tr
+                        key={i}
+                        className="hover:bg-blue-50 transition-colors border-b last:border-b-0"
                     >
-                        {col.render ? col.render(row, i) : String((row as any)[col.key] ?? "")}
+                        {showIndex && (
+                        <td className="p-2 border text-center text-blue-800 font-medium">
+                            {(page - 1) * rowsPerPage + i + 1}
+                        </td>
+                        )}
+                        {columns.map((col) => (
+                            <td
+                                key={String(col.key)}
+                                className={clsx(
+                                "p-2 border text-sm text-blue-900 align-middle",
+                                col.align === "left" && "text-left",
+                                col.align === "right" && "text-right",
+                                col.align === "center" && "text-center"
+                                )}
+                            >
+                                <div
+                                className={clsx(
+                                    "flex items-center",
+                                    col.align === "left" && "justify-start",
+                                    col.align === "center" && "justify-center",
+                                    col.align === "right" && "justify-end"
+                                )}
+                                >
+                                {col.render ? col.render(row, i) : String((row as any)[col.key] ?? "")}
+                                </div>
+                            </td>
+                        ))}
+                    </tr>
+                    ))
+                ) : (
+                    <tr>
+                    <td
+                        colSpan={columns.length + (showIndex ? 1 : 0)}
+                        className="text-center p-4 text-blue-700 bg-blue-50"
+                    >
+                        Không có dữ liệu để hiển thị
                     </td>
-                    ))}
-                </tr>
-                ))
-            ) : (
-                <tr>
-                <td
-                    colSpan={columns.length + (showIndex ? 1 : 0)}
-                    className="text-center p-4 text-blue-700 bg-blue-50"
-                >
-                    Không có dữ liệu để hiển thị
-                </td>
-                </tr>
-            )}
+                    </tr>
+                )}
             </tbody>
         </table>
 

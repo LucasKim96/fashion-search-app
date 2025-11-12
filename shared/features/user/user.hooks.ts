@@ -27,23 +27,63 @@ export const useUser = () => {
   const { showToast } = useNotification();
 
   // ====== Hook chung tạo state cho từng API call ======
+  // const createApiState = <T,>() => {
+  //   const [data, setData] = useState<T | null>(null);
+  //   const [loading, setLoading] = useState(false);
+  //   const [error, setError] = useState<string | null>(null);
+
+  //   const run = useCallback(
+  //     async (apiCall: () => Promise<ApiResponse<T>>): Promise<ApiResponse<T>> => {
+  //       setLoading(true);
+  //       setError(null);
+  //       try {
+  //         const res = await apiCall();
+  //         if (!res.success) {
+  //           setError(res.message || "Lỗi API");
+  //           showToast(res.message || "Lỗi API", "error");
+  //         } else {
+  //           setData(res.data);
+  //         }
+  //         return res;
+  //       } catch (err: unknown) {
+  //         const message = errorUtils.parseApiError(err);
+  //         setError(message);
+  //         showToast(message, "error");
+  //         return { success: false, message, data: null };
+  //       } finally {
+  //         setLoading(false);
+  //       }
+  //     },
+  //     [showToast]
+  //   );
+
+  //   return { data, loading, error, run, setData };
+  // };
   const createApiState = <T,>() => {
     const [data, setData] = useState<T | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     const run = useCallback(
-      async (apiCall: () => Promise<ApiResponse<T>>): Promise<ApiResponse<T>> => {
+      async (
+        apiCall: () => Promise<ApiResponse<T>>,
+        options?: { showToastOnSuccess?: boolean }
+      ): Promise<ApiResponse<T>> => {
         setLoading(true);
         setError(null);
         try {
           const res = await apiCall();
+
           if (!res.success) {
             setError(res.message || "Lỗi API");
             showToast(res.message || "Lỗi API", "error");
           } else {
             setData(res.data);
+            if (options?.showToastOnSuccess) {
+              showToast(res.message || "Thành công", "success");
+            }
           }
+
           return res;
         } catch (err: unknown) {
           const message = errorUtils.parseApiError(err);
@@ -59,6 +99,7 @@ export const useUser = () => {
 
     return { data, loading, error, run, setData };
   };
+
 
   // ====== Các state riêng cho từng action ======
   const allUsersState = createApiState<UserInfo[]>();
@@ -88,9 +129,16 @@ export const useUser = () => {
   );
 
   const searchUsers = useCallback(
-    (keyword: string) => searchState.run(() => searchUsersApi(keyword)),
-    [searchState]
+    (keyword: string) => {
+      if (!keyword.trim()) {
+        // keyword rỗng → trả về toàn bộ users
+        return allUsersState.run(() => getAllUsersApi());
+      }
+      return searchState.run(() => searchUsersApi(keyword));
+    },
+    [searchState, allUsersState]
   );
+
 
   const statsByGender = useCallback(
     () => genderStatsState.run(() => statsByGenderApi()),
@@ -117,24 +165,27 @@ export const useUser = () => {
   // ====== Actions cập nhật ======
   const updateBasicInfo = useCallback(
     (id: string, payload: UpdateUserBasicInfoRequest) =>
-      basicInfoState.run(() =>
-        runAndRefreshAllUsers(() => updateUserBasicInfoApi(id, payload))
+      basicInfoState.run(
+        () => runAndRefreshAllUsers(() => updateUserBasicInfoApi(id, payload)),
+        { showToastOnSuccess: true }
       ),
     [basicInfoState, runAndRefreshAllUsers]
   );
 
   const updateAvatar = useCallback(
     (id: string, file: File) =>
-      avatarState.run(() =>
-        runAndRefreshAllUsers(() => updateUserAvatarApi(id, file))
+      avatarState.run(
+        () => runAndRefreshAllUsers(() => updateUserAvatarApi(id, file)),
+        { showToastOnSuccess: true }
       ),
     [avatarState, runAndRefreshAllUsers]
   );
 
   const updateDefaultAvatar = useCallback(
     (file: File) =>
-      defaultAvatarState.run(() =>
-        runAndRefreshAllUsers(() => updateDefaultAvatarApi(file))
+      defaultAvatarState.run(
+        () => runAndRefreshAllUsers(() => updateDefaultAvatarApi(file)),
+        { showToastOnSuccess: true }
       ),
     [defaultAvatarState, runAndRefreshAllUsers]
   );

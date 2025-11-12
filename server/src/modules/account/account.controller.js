@@ -2,6 +2,11 @@
 import { handleValidation} from "../../utils/index.js";
 import * as AccountService from "./account.service.js";
 
+export const getAllRoles = async (req, res) => {
+  const result = await AccountService.getAllRoles();
+  res.status(result.success ? 200 : 400).json(result);
+};
+
 // [GET] /api/accounts
 export const getAllAccounts = async (req, res) => {
   const result = await AccountService.getAllAccounts();
@@ -61,28 +66,73 @@ export const updateRoles = async (req, res) => {
   res.status(result.success ? 200 : 400).json(result);
 };
 
-export const modifyRoles = async (req, res) => {
-  const { roleIds, action } = req.body;
+// export const modifyRoles = async (req, res) => {
+//   const { roleIds, action } = req.body;
 
-  // Kiểm tra dữ liệu đầu vào
-  if (!action || !["add", "remove"].includes(action)) {
-    return res
-      .status(400)
-      .json({ success: false, message: "Hành động không hợp lệ! (chỉ hỗ trợ 'add' hoặc 'remove')" });
-  }
+//   // Kiểm tra dữ liệu đầu vào
+//   if (!action || !["add", "remove"].includes(action)) {
+//     return res
+//       .status(400)
+//       .json({ success: false, message: "Hành động không hợp lệ! (chỉ hỗ trợ 'add' hoặc 'remove')" });
+//   }
 
-  if (!Array.isArray(roleIds) || roleIds.length === 0) {
-    return res
-      .status(400)
-      .json({ success: false, message: "Danh sách vai trò (roleIds) không hợp lệ hoặc trống!" });
-  }
+//   if (!Array.isArray(roleIds) || roleIds.length === 0) {
+//     return res
+//       .status(400)
+//       .json({ success: false, message: "Danh sách vai trò (roleIds) không hợp lệ hoặc trống!" });
+//   }
 
-  const result = await AccountService.modifyRoles(req.params.id, roleIds, action);
-  res.status(result.success ? 200 : 400).json(result);
-};
+//   const result = await AccountService.modifyRoles(req.params.id, roleIds, action);
+//   res.status(result.success ? 200 : 400).json(result);
+// };
 
 
 // [GET] /api/accounts/stats/status 
+
+export const modifyRoles = async (req, res) => {
+  try {
+    const { roleIds, action } = req.body;
+
+    if (!action || !["add", "remove", "replace"].includes(action)) {
+      return res.status(400).json({
+        success: false,
+        message: "Hành động không hợp lệ! (chỉ hỗ trợ 'add', 'remove' hoặc 'replace')",
+      });
+    }
+
+    if (!roleIds || (typeof roleIds !== "object" && !Array.isArray(roleIds))) {
+      return res.status(400).json({
+        success: false,
+        message: "roleIds không hợp lệ hoặc trống!",
+      });
+    }
+
+    // Với replace, cần có cả old và new
+    if (action === "replace") {
+      if (!roleIds.old || !Array.isArray(roleIds.old)) roleIds.old = [];
+      if (!roleIds.new || !Array.isArray(roleIds.new) || roleIds.new.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Danh sách vai trò mới (roleIds.new) không hợp lệ hoặc trống!",
+        });
+      }
+    } else {
+      // add/remove phải là mảng không rỗng
+      if (!Array.isArray(roleIds) || roleIds.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Danh sách roleIds không hợp lệ hoặc trống!",
+        });
+      }
+    }
+
+    const result = await AccountService.modifyRoles(req.params.id, roleIds, action);
+    res.status(result.success ? 200 : 400).json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 export const countByStatus = async (req, res) => {
   const result = await AccountService.countByStatus();
   res.status(result.success ? 200 : 400).json(result);
