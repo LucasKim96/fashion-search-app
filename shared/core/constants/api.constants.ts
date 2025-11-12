@@ -40,3 +40,4 @@ export const ACCOUNT_ENDPOINTS = {
   UPDATE_BASIC_INFO: (id: string) => `/accounts/update-basic/${id}`,
   BY_ID: (id: string) => `/accounts/${id}`,
 };
+
