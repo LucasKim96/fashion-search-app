@@ -2,9 +2,11 @@
 
 import { ShoppingCart, User, Search, Menu } from "lucide-react";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function ClientHeader() {
-  const [cartCount] = useState(3); // ví dụ số lượng trong giỏ
+  const [cartCount] = useState(0); // ví dụ số lượng trong giỏ
+  const router = useRouter();
 
   return (
     <header className="w-full bg-bg text-text shadow-md py-3 px-6 flex items-center justify-between sticky top-0 z-40">
@@ -12,7 +14,10 @@ export default function ClientHeader() {
       <div className="flex items-center gap-4">
         {/* Mobile Menu icon */}
         <Menu className="w-6 h-6 md:hidden cursor-pointer text-text/80 hover:text-primary transition" />
-        <div className="font-extrabold text-2xl text-primary">
+        <div
+          className="font-extrabold text-2xl text-primary cursor-pointer"
+          onClick={() => router.push("/")}
+        >
           FashionSearch
         </div>
       </div>
@@ -33,7 +38,10 @@ export default function ClientHeader() {
       {/* Action Icons */}
       <div className="flex items-center gap-4">
         {/* Cart with badge */}
-        <div className="relative cursor-pointer">
+        <div
+          className="relative cursor-pointer"
+          onClick={() => router.push("/cart")}
+        >
           <ShoppingCart className="w-6 h-6 hover:text-primary transition" />
           {cartCount > 0 && (
             <span className="absolute -top-3 -right-3 bg-primary text-bg text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center shadow-lg z-10">
@@ -43,7 +51,10 @@ export default function ClientHeader() {
         </div>
 
         {/* User */}
-        <User className="w-6 h-6 cursor-pointer hover:text-primary transition" />
+        <User
+          className="w-6 h-6 cursor-pointer hover:text-primary transition"
+          onClick={() => router.push("/user/profile")}
+        />
       </div>
     </header>
   );
