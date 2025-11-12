@@ -1,18 +1,28 @@
 "use client";
 
-import { ShoppingCart, User, Search, Menu } from "lucide-react";
-import { useState } from "react";
+import { ShoppingCart, Search, Menu } from "lucide-react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@shared/features/auth/useAuth.hook";
+import { parseUserProfile, UserProfile } from "@shared/core/utils/profile.utils";
 
 export default function ClientHeader() {
-  const [cartCount] = useState(0); // ví dụ số lượng trong giỏ
+  const { user: account, loading } = useAuth();
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const router = useRouter();
+  const [cartCount] = useState(0);
+
+  useEffect(() => {
+    if (account) setUserProfile(parseUserProfile(account));
+  }, [account]);
+
+  if (loading) return <p className="p-4 text-gray-500">Đang tải...</p>;
+  if (!userProfile) return <p className="p-4 text-red-500">Không lấy được thông tin user</p>;
 
   return (
     <header className="w-full bg-bg text-text shadow-md py-3 px-6 flex items-center justify-between sticky top-0 z-40">
       {/* Logo + Mobile Menu */}
       <div className="flex items-center gap-4">
-        {/* Mobile Menu icon */}
         <Menu className="w-6 h-6 md:hidden cursor-pointer text-text/80 hover:text-primary transition" />
         <div
           className="font-extrabold text-2xl text-primary cursor-pointer"
@@ -37,7 +47,7 @@ export default function ClientHeader() {
 
       {/* Action Icons */}
       <div className="flex items-center gap-4">
-        {/* Cart with badge */}
+        {/* Cart */}
         <div
           className="relative cursor-pointer"
           onClick={() => router.push("/cart")}
@@ -50,11 +60,28 @@ export default function ClientHeader() {
           )}
         </div>
 
-        {/* User */}
-        <User
-          className="w-6 h-6 cursor-pointer hover:text-primary transition"
+        {/* User Avatar */}
+        <div
+          className="relative w-12 h-12 group cursor-pointer"
           onClick={() => router.push("/user/profile")}
-        />
+        >
+          <div className="absolute -inset-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-0 animate-spin-slow border-2 border-transparent">
+            <div
+              className="w-full h-full rounded-full"
+              style={{
+                background:
+                  "conic-gradient(from 0deg, #3b82f6, #ec4899, #a78bfa, #3b82f6)",
+              }}
+            />
+          </div>
+          <div className="relative w-full h-full rounded-full overflow-hidden border border-gray-300 transition-transform duration-300 group-hover:scale-105 z-10">
+            <img
+              src={userProfile.avatarUrl || "/assets/avatars/default-avatar.jpg"}
+              alt={userProfile.name || "avatar"}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        </div>
       </div>
     </header>
   );
