@@ -10,8 +10,13 @@ import {
   AccountStatsBanned,
   AccountStatsByRole,
 } from "./account.types";
+import { Role } from "../role";
 
 // --- GET ---
+export const getAllRoles = (): Promise<ApiResponse<Role[]>> => {
+  return axiosInstance.get(ACCOUNT_ENDPOINTS.GET_ROLES).then(res => res.data);
+};
+
 export const getAllAccounts = (): Promise<ApiResponse<Account[]>> => {
   return axiosInstance.get(ACCOUNT_ENDPOINTS.GET_ALL).then(res => res.data);
 };

@@ -2,10 +2,11 @@ import express from "express";
 import * as AccountController from "./account.controller.js";
 import { validateUpdateBasicInfo } from "./account.validate.js";
 import { authMiddleware } from "../../middlewares/auth.middleware.js";
-import { isAdminOrSuperAdmin, isSelf, isSelfOrAdmin } from "../../middlewares/role.middleware.js";
+import { isAdminOrSuperAdmin, isSuperAdmin, isSelfOrAdmin } from "../../middlewares/role.middleware.js";
 
 const router = express.Router();
 
+router.get("/roles", authMiddleware, isAdminOrSuperAdmin, AccountController.getAllRoles);
 // Lấy danh sách tài khoản
 router.get("/", authMiddleware, isAdminOrSuperAdmin, AccountController.getAllAccounts);
 // Lấy danh sách theo trạng thái (active / inactive)
@@ -17,11 +18,11 @@ router.get("/banned", authMiddleware, isAdminOrSuperAdmin, AccountController.get
 // Lấy danh sách tài khoản không bị chặn
 router.get("/unbanned", authMiddleware, isAdminOrSuperAdmin, AccountController.getUnbannedAccounts);
 // Chặn hoặc mở chặn tài khoản
-router.put("/ban-toggle/:id", authMiddleware, isAdminOrSuperAdmin, AccountController.toggleBanAccount);
+router.patch("/ban-toggle/:id", authMiddleware, isSuperAdmin, AccountController.toggleBanAccount);
 // Cập nhật vai trò tài khoản (ghi đè toàn bộ mảng)
-router.put("/update-roles/:id", authMiddleware, isSelfOrAdmin, AccountController.updateRoles);
+router.put("/update-roles/:id", authMiddleware, isSuperAdmin, AccountController.updateRoles);
 // Cập nhật (thêm / xóa) vai trò tài khoản linh hoạt
-router.put("/modify-roles/:id", authMiddleware, isAdminOrSuperAdmin, AccountController.modifyRoles);
+router.put("/modify-roles/:id", authMiddleware, isSuperAdmin, AccountController.modifyRoles);
 // Thống kê số lượng tài khoản theo trạng thái
 router.get("/stats/status", authMiddleware, isAdminOrSuperAdmin, AccountController.countByStatus);
 // Thống kê số lượng tài khoản bị khóa / không bị khóa
