@@ -4,7 +4,7 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@shared/core/components/ui";
 import { useAuth } from "@shared/features/auth";
 import { parseUserProfile } from "@shared/core/utils/profile.utils";
-import { ProfileView } from "@/features/one_profile/ProfileView";
+import { ProfileView } from "@/features/profile/ProfileView";
 
 export default function ProfilePage() {
   const { user, loading } = useAuth();

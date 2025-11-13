@@ -1,5 +1,4 @@
-// export * from "./AccountInfoForm.component";
-// export * from "./AvatarEditor.component";
-// export * from "./BasicInfoForm.component";
-// export * from "./ChangePasswordForm.component";
-// export * from "./useProfile.hook";
+export * from "./ProfileAvatarUploader";
+export * from "./ProfileEditDialog";
+export * from "./ProfilePasswordDialog";
+export * from "./ProfileView";
