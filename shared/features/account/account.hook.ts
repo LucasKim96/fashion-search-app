@@ -14,45 +14,12 @@ import {
     AccountStatsByRole,
 } from "./account.types";
 import { Role } from "../role";
+import { useAuth } from "../auth";
 
 export const useAccount = () => {
     const { showToast } = useNotification();
-
+    const { refreshUser, user } = useAuth();
     // ====== Hook chung tạo state cho từng API call ======
-    // const createApiState = <T,>() => {
-    //     const [data, setData] = useState<T | null>(null);
-    //     const [loading, setLoading] = useState(false);
-    //     const [error, setError] = useState<string | null>(null);
-
-    //     const run = useCallback(
-    //     async (apiCall: () => Promise<ApiResponse<T>>): Promise<ApiResponse<T>> => {
-    //         setLoading(true);
-    //         setError(null);
-    //         try {
-    //         const res = await apiCall();
-    //         // console.log("[useAccount] API response:", res); // log data state
-    //         if (!res.success) {
-    //             setError(res.message || "Lỗi API");
-    //             showToast(res.message || "Lỗi API", "error");
-    //         } else {
-    //             setData(res.data);
-    //             // console.log("[useAccount] setData:", res.data); // log data state
-    //         }
-    //         return res;
-    //         } catch (err: unknown) {
-    //         const message = errorUtils.parseApiError(err);
-    //         setError(message);
-    //         showToast(message, "error");
-    //         return { success: false, message, data: null };
-    //         } finally {
-    //         setLoading(false);
-    //         }
-    //     },
-    //     [showToast]
-    //     );
-
-    //     return { data, loading, error, run, setData };
-    // };
     const createApiState = <T,>() => {
         const [data, setData] = useState<T | null>(null);
         const [loading, setLoading] = useState(false);
@@ -193,13 +160,30 @@ export const useAccount = () => {
     [updateRolesState, runAndRefreshAll]
     );
 
+    // const modifyRoles = useCallback(
+    // (id: string, payload: ModifyRolesRequest) =>
+    //     modifyRolesState.run(
+    //     () => runAndRefreshAll(() => AccountApi.modifyRoles(id, payload)),
+    //     { showToastOnSuccess: true }
+    //     ),
+    // [modifyRolesState, runAndRefreshAll]
+    // );
+
     const modifyRoles = useCallback(
-    (id: string, payload: ModifyRolesRequest) =>
-        modifyRolesState.run(
-        () => runAndRefreshAll(() => AccountApi.modifyRoles(id, payload)),
-        { showToastOnSuccess: true }
-        ),
-    [modifyRolesState, runAndRefreshAll]
+        async (id: string, payload: ModifyRolesRequest) => {
+            const res = await modifyRolesState.run(
+            () => runAndRefreshAll(() => AccountApi.modifyRoles(id, payload)),
+            { showToastOnSuccess: true }
+            );
+
+            // Nếu sửa role của chính user hiện tại → refetch lại auth
+            if (res.success && user?._id === id) {
+            await refreshUser();
+            }
+
+            return res;
+        },
+        [modifyRolesState, runAndRefreshAll, refreshUser, user]
     );
 
     const toggleBanAccount = useCallback(

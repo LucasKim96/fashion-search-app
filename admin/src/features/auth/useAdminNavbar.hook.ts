@@ -27,6 +27,7 @@ export const useAdminNavbar = () => {
 
   useEffect(() => {
     fetchUserInfo();
+    refreshUser();
     // console.log("authUser:", authUser);
     // console.log("extractUserDisplayInfo:", extractUserDisplayInfo(authUser));
   }, [authUser, fetchUserInfo]);
