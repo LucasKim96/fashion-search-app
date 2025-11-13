@@ -60,7 +60,7 @@ export default function UsersPage() {
     // console.log("filteredAccounts:", filteredAccounts);
     // console.log("selectedAccountData:", selectedAccountData);
     return (
-        <div className="p-6 space-y-4">
+        <div className="p-2 space-y-4">
         <AccountFilters
             displayMode={displayMode}
             setDisplayMode={setDisplayMode}

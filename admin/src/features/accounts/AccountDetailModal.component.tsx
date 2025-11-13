@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Account } from "@shared/features/account/account.types";
 import { useAuth } from "@shared/features/auth";
 import { useAccount } from "@shared/features/account";
@@ -20,6 +20,8 @@ import {
     Phone,
     Shield,
     Save,
+    X,
+    XCircle
 } from "lucide-react";
 import clsx from "clsx";
 
@@ -33,10 +35,17 @@ interface AccountDetailModalProps {
 export const AccountDetailModal: React.FC<AccountDetailModalProps> = ({ account, onClose, refreshAccounts, countByRole }) => {
     const { user } = useAuth();
     const { fetchAllRoles, allRolesState, modifyRoles, modifyRolesState} = useAccount();
-
+    const [isEditingRoles, setIsEditingRoles] = useState(false);
+    
     const [selectedRoles, setSelectedRoles] = useState<string[]>(() =>
         account.roles?.map((r) => r._id) || []
     );
+
+    // Lưu role ban đầu để có thể khôi phục khi nhấn "Hủy"
+    const originalRolesRef = useRef<string[]>([]);
+    useEffect(() => {
+    originalRolesRef.current = selectedRoles;
+    }, [selectedRoles]);
 
     const userInfo = typeof account.userInfoId === "object" ? account.userInfoId : null;
 
@@ -102,9 +111,9 @@ export const AccountDetailModal: React.FC<AccountDetailModalProps> = ({ account,
 
     return (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 animate-fadeIn">
-            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl p-6 relative border border-gray-200">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl p-10 relative border border-gray-200 transform translate-y-6 transition-all duration-300">
                 {/* Header */}
-                <div className="flex items-center gap-4 mb-6">
+                <div className="flex items-center gap-5 mb-5">
                     <img
                         src={userInfo ? buildImageUrl(userInfo.avatar) : "/default-avatar.png"}
                         alt="avatar"
@@ -220,62 +229,101 @@ export const AccountDetailModal: React.FC<AccountDetailModalProps> = ({ account,
                     )}
                 </div>
 
-                {/* ===== Chức năng thay đổi quyền ===== */}
-                {isSuperAdmin && canModifyTarget && (
-                    <div className="mt-6 border-t pt-4">
+                
+                {/* ===== Footer & Quản lý quyền ===== */}
+                <div className="mt-4 border-t pt-1">
+                {!isEditingRoles ? (
+                    <div className="flex justify-end gap-3">
+                    <button
+                        className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl shadow-sm font-medium flex items-center gap-2 transition"
+                        onClick={onClose}
+                    >
+                        <X size={16} />
+                        Đóng
+                    </button>
+
+                    {isSuperAdmin && canModifyTarget && (
+                        <button
+                        className="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl shadow-md font-medium flex items-center gap-2 transition"
+                        onClick={() => setIsEditingRoles(true)}
+                        >
+                        <Shield size={16} />
+                        Thay đổi quyền
+                        </button>
+                    )}
+                    </div>
+                ) : (
+                    <>
+                    {/* Form thay đổi quyền */}
+                    <div className="mt-4">
                         <h3 className="flex items-center gap-2 font-semibold text-indigo-700">
-                            <Shield size={18} /> Quản lý quyền
+                        <Shield size={18} /> Quản lý quyền
                         </h3>
 
                         {allRolesState.loading ? (
-                            <p className="text-sm text-gray-500 mt-2">Đang tải danh sách quyền...</p>
+                        <p className="text-sm text-gray-500 mt-2">
+                            Đang tải danh sách quyền...
+                        </p>
                         ) : (
-                            <div className="flex flex-wrap gap-2 mt-3">
-                                {allRolesState.data
-                                    ?.filter((role: Role) => role.roleName !== "Chủ shop" && role.roleName!== "Chủ shop") // loại bỏ quyền Chủ shop
-                                    .map((role: Role) => (
-                                    <label
-                                        key={role._id}
-                                        className={clsx(
-                                            "px-3 py-1 rounded-xl border text-sm cursor-pointer select-none transition",
-                                            selectedRoles.includes(role._id)
-                                                ? "bg-indigo-500 text-white border-indigo-500"
-                                                : "bg-gray-100 hover:bg-gray-200 border-gray-300"
-                                        )}
-                                    >
-                                        <input
-                                            type="checkbox"
-                                            className="hidden"
-                                            checked={selectedRoles.includes(role._id)}
-                                            onChange={() => handleRoleToggle(role._id)}
-                                        />
-                                        {role.roleName}
-                                    </label>
-                                ))}
-                            </div>
-                        )}
-
-                        <div className="text-right mt-4">
-                            <button
-                                className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-xl shadow-md font-medium flex items-center gap-2 ml-auto transition"
-                                onClick={handleSaveRoles}
-                                disabled={modifyRolesState.loading}
-                            >
-                                <Save size={16} />
-                                {modifyRolesState.loading ? "Đang lưu..." : "Lưu thay đổi"}
-                            </button>
+                        <div className="flex flex-wrap gap-2 mt-3">
+                            {allRolesState.data
+                            ?.filter(
+                                (role: Role) =>
+                                role.roleName !== "Chủ shop" && role.roleName !== "Chủ shop"
+                            )
+                            .map((role: Role) => (
+                                <label
+                                key={role._id}
+                                className={clsx(
+                                    "px-3 py-1 rounded-xl border text-sm cursor-pointer select-none transition",
+                                    selectedRoles.includes(role._id)
+                                    ? "bg-indigo-500 text-white border-indigo-500"
+                                    : "bg-gray-100 hover:bg-gray-200 border-gray-300"
+                                )}
+                                >
+                                <input
+                                    type="checkbox"
+                                    className="hidden"
+                                    checked={selectedRoles.includes(role._id)}
+                                    onChange={() => handleRoleToggle(role._id)}
+                                />
+                                {role.roleName}
+                                </label>
+                            ))}
                         </div>
+                        )}
                     </div>
-                )}
 
-                {/* Footer */}
-                <div className="mt-6 text-right">
-                    <button
-                        className="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl shadow-md font-medium transition"
-                        onClick={onClose}
-                    >
-                        Đóng
-                    </button>
+                    {/* Nút hành động khi đang chỉnh sửa */}
+                    <div className="flex justify-end gap-3 mt-5">
+                        <button
+                        className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl shadow-sm font-medium flex items-center gap-2 transition"
+                        onClick={() => {
+                            setIsEditingRoles(false);
+                            setSelectedRoles(originalRolesRef.current);
+                        }}
+                        disabled={modifyRolesState.loading}
+                        >
+                        <XCircle size={16} />
+                        Hủy
+                        </button>
+
+                        <button
+                        className={clsx(
+                            "px-4 py-2 rounded-xl shadow-md font-medium flex items-center gap-2 transition",
+                            modifyRolesState.loading
+                            ? "bg-green-400 cursor-not-allowed"
+                            : "bg-green-500 hover:bg-green-600 text-white"
+                        )}
+                        onClick={handleSaveRoles}
+                        disabled={modifyRolesState.loading}
+                        >
+                        <Save size={16} />
+                        {modifyRolesState.loading ? "Đang lưu..." : "Lưu thay đổi"}
+                        </button>
+                    </div>
+                    </>
+                )}
                 </div>
             </div>
         </div>
