@@ -1,6 +1,6 @@
 "use client";
 
-import RegisterShopForm from "@/features/shop/RegisterForm.component";
+import RegisterShopForm from "@/features/shop/RegisterShopForm";
 
 export default function RegisterShopPage() {
 	return (
