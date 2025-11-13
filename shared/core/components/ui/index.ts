@@ -6,3 +6,5 @@ export * from "./Table";
 export * from "./SidebarTooltip";
 export * from "./Dialog";
 export * from "./Badge";
+export * from  "./Select";
+export * from "./PasswordInput";

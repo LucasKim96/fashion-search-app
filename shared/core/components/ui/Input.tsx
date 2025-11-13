@@ -4,7 +4,7 @@ import React from "react";
 import clsx from "clsx";
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
-  label?: string;
+  label?: React.ReactNode; // sửa từ string -> ReactNode
   error?: string;
   fullWidth?: boolean;
 }
@@ -19,8 +19,8 @@ export const Input: React.FC<InputProps> = ({
   return (
     <div className={clsx("flex flex-col gap-1", fullWidth && "w-full")}>
       {label && (
-        <label className="text-sm font-medium text-gray-700 select-none">
-          {label}
+        <label className="font-medium text-gray-700 select-none">
+          {label} {/* giờ có thể truyền JSX */}
         </label>
       )}
 

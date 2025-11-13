@@ -163,7 +163,7 @@ export const AccountTable: React.FC<AccountTableProps> = ({
                     ? "Bị khóa"
                     : isActive
                     ? "Đang hoạt động"
-                    : "Ngưng hoạt động"}
+                    : "Không hoạt động"}
                 </span>
                 </div>
             );

@@ -1,262 +1,471 @@
 "use client";
 
-import React, { useState } from "react";
-import { UserProfile } from "@shared/core/utils/profile.utils";
-import { Button, Input, Badge } from "@shared/core/components/ui";
-import { Check, Edit3, Lock, X } from "lucide-react";
+import React, {useState} from "react";
+import { UserProfile, toInputDate, ROLES } from "@shared/core";
+import { GradientButton, Input, Badge, Select, SelectItem, PasswordInput } from "@shared/core/components/ui";
+import { 
+  User,       // Họ và tên
+  Mail,       // Email
+  Calendar,   // Ngày sinh / Ngày tạo
+  UserCheck,  // Giới tính
+  Lock,       // Thông tin tài khoản & quyền
+  Key,        // Đổi mật khẩu
+  Shield,     // Trạng thái / Quyền hạn
+  Edit3,      // Icon chỉnh sửa
+  X,          // Icon Hủy
+  Check,      // Icon Lưu / Đổi mật khẩu
+  Phone,      // Số điện thoại
+  Activity    // Cập nhật lần cuối
+} from "lucide-react";
+
 import { formatVNDate } from "@shared/core/utils/dateTime";
 import { ProfileAvatarUploader } from "./ProfileAvatarUploader";
+import { useProfileLogic } from "./profile.hooks";
 
 interface Props {
   profile: UserProfile;
+  onUpdate?: () => void;
 }
 
-export const ProfileView: React.FC<Props> = ({ profile }) => {
-  const [editSection, setEditSection] = useState<"none" | "account" | "user">("none");
-  const [form, setForm] = useState({
-    name: profile.name || "",
-    email: profile.email || "",
-    phoneNumber: profile.phoneNumber || "",
-    username: profile.username || "",
-  });
-
-  const handleCancel = () => {
-    setForm({
-      name: profile.name || "",
-      email: profile.email || "",
-      phoneNumber: profile.phoneNumber || "",
-      username: profile.username || "",
-    });
-    setEditSection("none");
+export const ProfileView: React.FC<Props> = ({ profile, onUpdate }) => {
+  const {
+    form,
+    setForm,
+    editSection,
+    setEditSection,
+    saving,
+    passwordForm,
+    setPasswordForm,
+    handleCancel,
+    handleSaveAccount,
+    handleSaveUser,
+    handleChangePassword,
+  } = useProfileLogic(profile,  { onUpdate });
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const genderMapping = {
+      male: "Nam",
+      female: "Nữ",
+      other: "Khác",
   };
-
-  const handleSave = () => {
-    // TODO: gọi update API ở đây (updateAccountBasic / updateUserBasic)
-    setEditSection("none");
-  };
-
   return (
-    <div className="flex flex-col items-center gap-8 p-6">
-      {/* Avatar */}
-      <div className="relative group">
-        <ProfileAvatarUploader profile={profile} size={140} />
-      </div>
+    <div className="flex flex-col items-center gap-6 p-4">
+      <div className="flex flex-col md:flex-row items-center md:items-start gap-6 w-full max-w-4xl">
+        {/* Avatar */}
+        <div className="flex-shrink-0">
+          <ProfileAvatarUploader profile={profile} size={140} />
+        </div>
 
-      {/* Thông tin chia 2 phần */}
-      <div className="w-full max-w-3xl space-y-8">
-        {/* ========== PHẦN TÀI KHOẢN & QUYỀN ========== */}
-        <div className="bg-gradient-to-br from-gray-50 to-white border border-gray-200 rounded-2xl shadow-sm p-6 transition-all">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
-              <Lock className="w-5 h-5 text-blue-500" />
-              Thông tin tài khoản & quyền
-            </h2>
-            {editSection !== "account" ? (
-              <Button
-                variant="outline"
-                onClick={() => setEditSection("account")}
-                className="flex items-center gap-2"
-              >
-                <Edit3 className="w-4 h-4" /> Chỉnh sửa
-              </Button>
-            ) : (
+        {/* Card thông tin */}
+        <div className="flex-1 flex flex-col gap-4 w-full">
+          {/* ===== TÀI KHOẢN & QUYỀN ===== */}
+          <div className="bg-gradient-to-br from-gray-50 to-white border border-gray-200 rounded-2xl shadow-sm p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
+                <Lock className="w-5 h-5 text-blue-500" />
+                Thông tin tài khoản & quyền
+              </h2>
+
+              {/* Các nút hành động */}
               <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={handleCancel}
-                  className="flex items-center gap-2"
-                >
-                  <X className="w-4 h-4" /> Hủy
-                </Button>
-                <Button onClick={handleSave} className="flex items-center gap-2">
-                  <Check className="w-4 h-4" /> Lưu
-                </Button>
-              </div>
-            )}
-          </div>
+                {/* Mặc định */}
+                {editSection !== "account" && !showPasswordDialog && (
+                  <>
+                    <GradientButton
+                      label="Chỉnh sửa"
+                      icon={Edit3}
+                      iconColor="text-white"
+                      labelColor="text-white"
+                      gradient="bg-gradient-to-r from-blue-300 to-indigo-400"
+                      hoverGradient="hover:from-blue-500 hover:to-indigo-800"
+                      onClick={() => setEditSection("account")}
+                      className="flex items-center gap-2 px-3 py-1 text-sm shadow-md"
+                      roundedFull
+                      shadow
+                    />
+                    <GradientButton
+                      label="Đổi mật khẩu"
+                      icon={Key}
+                      iconColor="text-white"
+                      labelColor="text-white"
+                      gradient="bg-gradient-to-r from-yellow-300 to-orange-400"
+                      hoverGradient="hover:from-yellow-500 hover:to-orange-700"
+                      onClick={() => setShowPasswordDialog(true)}
+                      className="flex items-center gap-2 px-3 py-1 text-sm shadow-md"
+                      roundedFull
+                      shadow
+                    />
+                  </>
+                )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Username */}
-            {editSection === "account" ? (
-              <Input
-                label="Tên đăng nhập"
-                value={form.username}
-                onChange={(e) => setForm({ ...form, username: e.target.value })}
-              />
-            ) : (
-              <div>
-                <p className="text-sm text-gray-500">Tên đăng nhập</p>
-                <p className="font-medium text-gray-800">{profile.username}</p>
-              </div>
-            )}
+                {/* Khi đang chỉnh sửa account */}
+                {editSection === "account" && (
+                  <>
+                    <GradientButton
+                      label="Hủy"
+                      icon={X}
+                      iconColor="text-gray-500"
+                      labelColor="text-gray-500"
+                      gradient="bg-gray-100"
+                      hoverGradient="hover:bg-gray-200"
+                      onClick={handleCancel}
+                      className="flex items-center gap-2 px-3 py-1 text-sm shadow-sm"
+                      roundedFull
+                      shadow={false}
+                    />
+                    <GradientButton
+                      label="Lưu"
+                      icon={Check}
+                      loading={saving}
+                      onClick={handleSaveAccount}
+                      className="flex items-center gap-2 px-3 py-1 text-sm"
+                      roundedFull
+                      shadow
+                    />
+                  </>
+                )}
 
-            {/* Phone */}
-            {editSection === "account" ? (
-              <Input
-                label="Số điện thoại"
-                value={form.phoneNumber}
-                onChange={(e) => setForm({ ...form, phoneNumber: e.target.value })}
-              />
-            ) : (
-              <div>
-                <p className="text-sm text-gray-500">Số điện thoại</p>
-                <p className="font-medium text-gray-800">{profile.phoneNumber || "Chưa có"}</p>
-              </div>
-            )}
-
-            {/* Roles */}
-            <div className="col-span-full">
-              <p className="text-sm text-gray-500">Quyền hạn</p>
-              <div className="flex flex-wrap gap-2 mt-1">
-                {profile.roles && profile.roles.length > 0 ? (
-                  profile.roles.map((role) => (
-                    <Badge key={role} variant="secondary">
-                      {role}
-                    </Badge>
-                  ))
-                ) : (
-                  <span className="text-gray-400 text-sm">Chưa có quyền</span>
+                {/* Khi đang đổi mật khẩu */}
+                {showPasswordDialog && (
+                  <>
+                    <GradientButton
+                      label="Hủy"
+                      icon={X}
+                      iconColor="text-gray-500"
+                      labelColor="text-gray-500"
+                      gradient="bg-gray-100"
+                      hoverGradient="hover:bg-gray-200"
+                      onClick={() => setShowPasswordDialog(false)}
+                      className="flex items-center gap-2 px-3 py-1 text-sm shadow-sm"
+                      roundedFull
+                      shadow={false}
+                    />
+                    <GradientButton
+                      label="Lưu mật khẩu"
+                      icon={Check}
+                      loading={saving}
+                      onClick={() => handleChangePassword(() => setShowPasswordDialog(false))}
+                      className="flex items-center gap-2 px-3 py-1 text-sm"
+                      roundedFull
+                      shadow
+                    />
+                  </>
                 )}
               </div>
             </div>
-          </div>
-        </div>
 
-        {/* ========== PHẦN THÔNG TIN CÁ NHÂN ========== */}
-        <div className="bg-gradient-to-br from-gray-50 to-white border border-gray-200 rounded-2xl shadow-sm p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
-              <Edit3 className="w-5 h-5 text-green-500" />
-              Thông tin cá nhân
-            </h2>
-            {editSection !== "user" ? (
-              <Button
-                variant="outline"
-                onClick={() => setEditSection("user")}
-                className="flex items-center gap-2"
-              >
-                <Edit3 className="w-4 h-4" /> Chỉnh sửa
-              </Button>
-            ) : (
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={handleCancel}
-                  className="flex items-center gap-2"
+            {/* Form thông tin tài khoản */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {editSection === "account" ? (
+                <>
+                <Input
+                  label={<span className="font-semibold flex items-center gap-1 text-indigo-600"><User className="w-4 h-4"/> Tên đăng nhập</span>}
+                  value={form.username}
+                  onChange={(e) => setForm({ ...form, username: e.target.value })}
+                />
+                <Input
+                  label={<span className="font-semibold flex items-center gap-1 text-indigo-600"><Phone className="w-4 h-4"/> Số điện thoại</span>}
+                  value={form.phoneNumber}
+                  onChange={(e) => setForm({ ...form, phoneNumber: e.target.value })}
+                />
+                </>
+              ) : (
+                <>
+                  <div>
+                    <p className="font-semibold flex items-center gap-1 text-indigo-600">
+                      <User className="w-4 h-4"/> Tên đăng nhập
+                    </p>
+                    <p className="font-medium text-gray-800">{profile.username}</p>
+                  </div>
+                  <div>
+                    <p className="font-semibold flex items-center gap-1 text-indigo-600">
+                      <Phone className="w-4 h-4"/> Số điện thoại
+                    </p>
+                    <p className="font-medium text-gray-800">{profile.phoneNumber || "Chưa có"}</p>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Ngày tạo & Cập nhật */}
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <p className="font-semibold flex items-center gap-1 text-indigo-600">
+                  <Calendar className="w-4 h-4"/> Ngày tạo tài khoản
+                </p>
+                <p className="font-medium text-gray-800">
+                  {profile.createdAt ? formatVNDate(profile.createdAt) : "Không có"}
+                </p>
+              </div>
+              <div>
+                <p className="font-semibold flex items-center gap-1 text-indigo-600">
+                  <Activity className="w-4 h-4"/> Cập nhật lần cuối
+                </p>
+                <p className="font-medium text-gray-800">
+                  {profile.updatedAt ? formatVNDate(profile.updatedAt) : "Chưa cập nhật"}
+                </p>
+              </div>
+            </div>
+
+            {/* Trạng thái & quyền hạn */}
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="flex flex-col gap-1">
+                <p className="font-semibold flex items-center gap-1 text-indigo-600">
+                  <Shield className="w-4 h-4"/> Trạng thái tài khoản
+                </p>
+                <div
+                  className="inline-flex items-center gap-2 px-2 py-0.5 rounded-full 
+                            text-sm font-semibold 
+                            bg-gray-200 dark:bg-gray-700 
+                            text-gray-700 dark:text-gray-100
+                            border border-gray-200 dark:border-gray-600
+                            cursor-default
+                            w-max" // <--- thêm w-max
                 >
-                  <X className="w-4 h-4" /> Hủy
-                </Button>
-                <Button onClick={handleSave} className="flex items-center gap-2">
-                  <Check className="w-4 h-4" /> Lưu
-                </Button>
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      profile.isBanned
+                        ? "bg-red-400"
+                        : profile.status === "active"
+                        ? "bg-green-400"
+                        : "bg-yellow-400"
+                    }`}
+                  ></span>
+                  <span className="whitespace-nowrap">
+                    {profile.isBanned
+                      ? "Bị cấm"
+                      : profile.status === "active"
+                      ? "Đang hoạt động"
+                      : "Không hoạt động"}
+                  </span>
+                </div>
+              </div>
+              {/* Quyền hạn */}
+              <div className="flex flex-col gap-1">
+                <p className="font-semibold flex items-center gap-1 text-indigo-600">
+                  <Shield className="w-4 h-4"/> Quyền hạn
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {profile.roles.length ? (
+                    profile.roles.map((role) => (
+                      <span
+                        key={role}
+                        className="px-2 py-0.5 rounded-full text-sm font-medium
+                                  bg-blue-100 text-blue-700 border border-blue-200
+                                  cursor-default" // bỏ con trỏ pointer
+                      >
+                        {ROLES[role]?.roleName || role}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-gray-400 text-sm">Chưa có quyền</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Nút Lưu/Hủy khi đang edit */}
+            {/* {editSection === "account" && (
+              <div className="flex justify-end gap-2 mt-4">
+                <GradientButton
+                  label="Hủy"
+                  icon={X}
+                  iconColor="text-gray-500"
+                  labelColor="text-gray-500"
+                  gradient="bg-gray-100"
+                  hoverGradient="hover:bg-gray-200"
+                  onClick={handleCancel}
+                  className="flex items-center gap-2 px-3 py-1 text-sm shadow-sm"
+                  roundedFull
+                  shadow={false}
+                />
+                <GradientButton
+                  label="Lưu"
+                  icon={Check}
+                  loading={saving}
+                  onClick={handleSaveAccount}
+                  className="flex items-center gap-2 px-3 py-1 text-sm"
+                  roundedFull
+                  shadow
+                />
+              </div>
+            )} */}
+
+            {/* Phần đổi mật khẩu hiển thị ngay bên dưới */}
+            {showPasswordDialog && (
+              <div className="mt-6 p-4 border border-gray-200 rounded-xl bg-gray-50">
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <Key className="w-5 h-5 text-yellow-600" /> Đổi mật khẩu
+                </h3>
+                {["oldPassword", "newPassword", "confirmPassword"].map((field, idx) => (
+                  <PasswordInput
+                    key={field}
+                    label={
+                      field === "oldPassword" ? "Mật khẩu cũ" :
+                      field === "newPassword" ? "Mật khẩu mới" : "Xác nhận mật khẩu mới"
+                    }
+                    value={passwordForm[field as keyof typeof passwordForm]}
+                    onChange={(val: string) => setPasswordForm({ ...passwordForm, [field]: val })}
+                  />
+                ))}
+                {/* <div className="flex justify-end gap-2 mt-4">
+                  <GradientButton
+                    label="Hủy"
+                    icon={X}
+                    iconColor="text-gray-500"
+                    labelColor="text-gray-500"
+                    gradient="bg-gray-100"
+                    hoverGradient="hover:bg-gray-200"
+                    onClick={() => setShowPasswordDialog(false)}
+                    className="flex items-center gap-2 px-3 py-1 text-sm shadow-sm"
+                    roundedFull
+                    shadow={false}
+                  />
+                  <GradientButton
+                    label="Đổi mật khẩu"
+                    icon={Check}
+                    loading={saving}
+                    onClick={() => handleChangePassword(() => setShowPasswordDialog(false))}
+                    className="flex items-center gap-2 px-3 py-1 text-sm"
+                    roundedFull
+                    shadow
+                  />
+                </div> */}
               </div>
             )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {editSection === "user" ? (
-              <>
-                <Input
-                  label="Họ và tên"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+          {/* ===== THÔNG TIN CÁ NHÂN ===== */}
+          <div className="bg-gradient-to-br from-gray-50 to-white border border-gray-200 rounded-2xl shadow-sm p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
+                <Edit3 className="w-5 h-5 text-green-500" />
+                Thông tin cá nhân
+              </h2>
+              {editSection !== "user" ? (
+                <GradientButton
+                  label="Chỉnh sửa"
+                  icon={Edit3}
+                  iconColor="text-white"
+                  labelColor="text-white"
+                  gradient="bg-gradient-to-r from-green-400 to-green-500"
+                  hoverGradient="hover:from-green-500 hover:to-green-700"
+                  onClick={() => setEditSection("user")}
+                  className="flex items-center gap-2 px-3 py-1 text-sm shadow-md"
+                  roundedFull
+                  shadow
                 />
-                <Input
-                  label="Email"
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                />
-              </>
-            ) : (
-              <>
-                <div>
-                  <p className="text-sm text-gray-500">Họ và tên</p>
-                  <p className="font-medium text-gray-800">{profile.name || "Chưa có tên"}</p>
+              ) : (
+                <div className="flex gap-2">
+                  <GradientButton
+                    label="Hủy"
+                    icon={X}
+                    iconColor="text-gray-500"
+                    labelColor="text-gray-500"
+                    gradient="bg-gray-100"
+                    hoverGradient="hover:bg-gray-200"
+                    onClick={handleCancel}
+                    className="flex items-center gap-2 px-3 py-1 text-sm shadow-sm"
+                    roundedFull={true}
+                    shadow={false}
+                  />
+                  <GradientButton
+                    label="Lưu"
+                    icon={Check}
+                    loading={saving}
+                    onClick={handleSaveUser}
+                    className="flex items-center gap-2 px-3 py-1 text-sm"
+                    roundedFull={true}
+                    shadow={true}
+                  />
                 </div>
-                <div>
-                  <p className="text-sm text-gray-500">Email</p>
-                  <p className="font-medium text-gray-800">{profile.email || "Chưa có email"}</p>
-                </div>
-              </>
-            )}
+              )}
 
-            <div className="col-span-full">
-              <p className="text-sm text-gray-500">Ngày tạo</p>
-              <p className="font-medium text-gray-800">
-                {formatVNDate(profile.createdAt ?? new Date())}
-              </p>
             </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {editSection === "user" ? (
+                <>
+                  <Input
+                    label={
+                      <span className="font-semibold flex items-center gap-1 text-indigo-600">
+                        <User className="w-4 h-4" /> Họ và tên
+                      </span>
+                    }
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  />
+                  <Input
+                    label={
+                      <span className="font-semibold flex items-center gap-1 text-indigo-600">
+                        <Mail className="w-4 h-4" /> Email
+                      </span>
+                    }
+                    value={form.email}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  />
+                  <Input
+                    label={
+                      <span className="font-semibold flex items-center gap-1 text-indigo-600">
+                        <Calendar className="w-4 h-4" /> Ngày sinh
+                      </span>
+                    }
+                    type="date"
+                    value={toInputDate(form.dayOfBirth)}
+                    onChange={(e) => setForm({ ...form, dayOfBirth: e.target.value })}
+                  />
+                  <Select
+                    label={
+                      <span className="font-semibold flex items-center gap-1 text-indigo-600">
+                        <UserCheck className="w-4 h-4" /> Giới tính
+                      </span>
+                    }
+                    value={form.gender}
+                    onValueChange={(value) =>
+                      setForm({ ...form, gender: value as "male" | "female" | "other" })
+                    }
+                  >
+                    <SelectItem value="male">Nam</SelectItem>
+                    <SelectItem value="female">Nữ</SelectItem>
+                    <SelectItem value="other">Khác</SelectItem>
+                  </Select>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <p className="font-semibold flex items-center gap-1 text-indigo-600">
+                      <User className="w-4 h-4" /> Họ và tên
+                    </p>
+                    <p className="font-medium text-gray-800">{profile.name || "Chưa có tên"}</p>
+                  </div>
+                  <div>
+                    <p className="font-semibold flex items-center gap-1 text-indigo-600">
+                      <Mail className="w-4 h-4" /> Email
+                    </p>
+                    <p className="font-medium text-gray-800">{profile.email || "Chưa có email"}</p>
+                  </div>
+                  <div>
+                    <p className="font-semibold flex items-center gap-1 text-indigo-600">
+                      <Calendar className="w-4 h-4" /> Ngày sinh
+                    </p>
+                    <p className="font-medium text-gray-800">
+                      {profile.dayOfBirth ? formatVNDate(profile.dayOfBirth) : "Chưa có"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="font-semibold flex items-center gap-1 text-indigo-600">
+                      <UserCheck className="w-4 h-4" /> Giới tính
+                    </p>
+                    <p className="font-medium text-gray-800">
+                      {profile.gender ? genderMapping[profile.gender] || "Không xác định" : "Chưa xác định"}
+                    </p>
+                  </div>
+                </>
+              )}
+            </div>
+
           </div>
         </div>
       </div>
     </div>
   );
 };
-
-
-// "use client";
-
-// import React, { useState } from "react";
-// import { UserProfile } from "@shared/core/utils/profile.utils";
-// import { Button } from "@shared/core/components/ui";
-// import { Pencil, Lock, UserCog } from "lucide-react";
-// import { formatVNDate } from "@shared/core/utils/dateTime";
-// import { ProfileEditDialog, ProfileAvatarUploader, ProfilePasswordDialog } from "./index";
-
-
-// interface Props {
-//     profile: UserProfile;
-// }
-
-// export const ProfileView: React.FC<Props> = ({ profile }) => {
-//     const [showEditUser, setShowEditUser] = useState(false);
-//     const [showEditAccount, setShowEditAccount] = useState(false);
-//     const [showPassword, setShowPassword] = useState(false);
-
-//     return (
-//         <div className="flex flex-col items-center gap-6">
-//         {/* ===== Avatar ===== */}
-//         <div className="relative group">
-//             <ProfileAvatarUploader profile={profile} />
-//         </div>
-
-//         {/* ===== Basic Info ===== */}
-//         <div className="text-center">
-//             <h2 className="text-2xl font-semibold">{profile.name || "Chưa có tên"}</h2>
-//             <p className="text-gray-600">{profile.email || "Chưa có email"}</p>
-//             <p className="text-sm text-gray-500">Tài khoản: {profile.username}</p>
-//             <p className="text-sm text-gray-500 mt-1">
-//             Ngày tạo: {formatVNDate(profile.createdAt ?? new Date())}
-//             </p>
-//         </div>
-
-//         {/* ===== Buttons ===== */}
-//         <div className="flex flex-wrap justify-center gap-4 mt-4">
-//             <Button variant="outline" onClick={() => setShowEditUser(true)}>
-//             <UserCog className="w-4 h-4 mr-2" /> Cập nhật thông tin cá nhân
-//             </Button>
-//             <Button variant="outline" onClick={() => setShowEditAccount(true)}>
-//             <Pencil className="w-4 h-4 mr-2" /> Cập nhật tài khoản
-//             </Button>
-//             <Button variant="default" onClick={() => setShowPassword(true)}>
-//             <Lock className="w-4 h-4 mr-2" /> Đổi mật khẩu
-//             </Button>
-//         </div>
-
-//         {/* Dialogs */}
-//         <ProfileEditDialog
-//             type="user"
-//             open={showEditUser}
-//             onClose={() => setShowEditUser(false)}
-//             profile={profile}
-//         />
-//         <ProfileEditDialog
-//             type="account"
-//             open={showEditAccount}
-//             onClose={() => setShowEditAccount(false)}
-//             profile={profile}
-//         />
-//         <ProfilePasswordDialog open={showPassword} onClose={() => setShowPassword(false)} />
-//         </div>
-//     );
-// };
