@@ -5,3 +5,4 @@ export * from "./Pagination";
 export * from "./Table";
 export * from "./SidebarTooltip";
 export * from "./Dialog";
+export * from "./Badge";
