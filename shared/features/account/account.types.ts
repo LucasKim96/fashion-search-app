@@ -10,7 +10,7 @@ export interface Account {
   status: "active" | "inactive";
   isBanned: boolean;
   roles: Role[];
-  userInfoId?: UserInfo | string;
+  userInfoId?: UserInfo;
   lastActiveVN?: string; // từ backend tính sẵn
   lastActive?: string | null;
   createdAt?: string;

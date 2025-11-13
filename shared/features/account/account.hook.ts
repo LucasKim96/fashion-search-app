@@ -160,15 +160,6 @@ export const useAccount = () => {
     [updateRolesState, runAndRefreshAll]
     );
 
-    // const modifyRoles = useCallback(
-    // (id: string, payload: ModifyRolesRequest) =>
-    //     modifyRolesState.run(
-    //     () => runAndRefreshAll(() => AccountApi.modifyRoles(id, payload)),
-    //     { showToastOnSuccess: true }
-    //     ),
-    // [modifyRolesState, runAndRefreshAll]
-    // );
-
     const modifyRoles = useCallback(
         async (id: string, payload: ModifyRolesRequest) => {
             const res = await modifyRolesState.run(

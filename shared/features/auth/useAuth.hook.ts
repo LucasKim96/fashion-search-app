@@ -131,10 +131,24 @@ export const useAuth = ({
 
   // ====== Đổi mật khẩu ======
   const changePassword = useCallback(
-    (data: ChangePasswordRequest) =>
-      runAndRefreshUser(() => changePasswordApi(data)),
-    [runAndRefreshUser]
+    async (data: ChangePasswordRequest) => {
+      try {
+        const res = await runAndRefreshUser(() => changePasswordApi(data));
+        if (res.success) {
+          showToast(res.message || "Đổi mật khẩu thành công!", "success");
+        } else {
+          showToast(res.message || "Đổi mật khẩu thất bại!", "error");
+        }
+        return res;
+      } catch (error) {
+        const message = errorUtils.parseApiError(error);
+        showToast(message, "error");
+        return { success: false, message, data: null };
+      }
+    },
+    [runAndRefreshUser, showToast]
   );
+
 
   // ====== Làm mới token ======
   const handleRefreshToken = useCallback(async () => {

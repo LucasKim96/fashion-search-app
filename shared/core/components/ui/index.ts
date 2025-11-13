@@ -1,6 +1,7 @@
-export { Button } from "./Button";
-export { Input } from "./Input";
-export { Card } from "./Card";
-export { Pagination } from "./Pagination";
-export { Table } from "./Table";
-export { SidebarTooltip } from "./SidebarTooltip";
+export * from "./Button";
+export * from "./Input";
+export * from "./Card";
+export * from "./Pagination";
+export * from "./Table";
+export * from "./SidebarTooltip";
+export * from "./Dialog";
