@@ -4,9 +4,10 @@ import RegisterShopForm from "@/features/shop/RegisterShopForm";
 
 export default function RegisterShopPage() {
 	return (
-		<div className="p-6">
-			<h1 className="text-2xl font-bold text-primary mb-6">Đăng ký cửa hàng</h1>
-			<RegisterShopForm />
+		<div className="p-12 flex justify-center">
+			<div className="w-full max-w-md">
+				<RegisterShopForm />
+			</div>
 		</div>
 	);
 }

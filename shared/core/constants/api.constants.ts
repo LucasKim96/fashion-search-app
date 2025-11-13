@@ -41,3 +41,17 @@ export const ACCOUNT_ENDPOINTS = {
   BY_ID: (id: string) => `/accounts/${id}`,
 };
 
+export const SHOP_ENDPOINTS = {
+	GET_ALL: "/shops",
+	BY_ID: (id: string) => `/shops/${id}`,
+	CREATE: "/shops/owner",
+	UPDATE: (id: string) => `/shops/owner/${id}`,
+	DELETE: (id: string) => `/shops/owner/${id}`,
+	CHANGE_STATUS: (id: string) => `/shops/owner/${id}/status`,
+	UPDATE_LOGO: (id: string) => `/shops/owner/${id}/logo`,
+	UPDATE_COVER: (id: string) => `/shops/owner/${id}/cover`,
+	RESTORE: (id: string) => `/shops/admin//${id}/restore`,
+	UPDATE_DEFAULT_LOGO: "/shops/admin/default-logo",
+	UPDATE_DEFAULT_COVER: "/shops/admin/default-cover",
+	CLEANUP_NULL: "/shops/admin/cleanup/null-accounts",
+};
