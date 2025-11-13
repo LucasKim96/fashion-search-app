@@ -83,6 +83,7 @@ export default function UsersPage() {
             account={selectedAccountData}
             onClose={() => setSelectedAccount(null)}
             refreshAccounts={searchAccounts}
+            countByRole={countByRole}
             />
         )}
         </div>

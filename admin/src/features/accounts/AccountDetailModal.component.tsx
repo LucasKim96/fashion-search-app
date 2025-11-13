@@ -27,9 +27,10 @@ interface AccountDetailModalProps {
     account: Account;
     onClose: () => void;
     refreshAccounts: (keyword?: string) => void;
+    countByRole: () => void;
 }
 
-export const AccountDetailModal: React.FC<AccountDetailModalProps> = ({ account, onClose, refreshAccounts }) => {
+export const AccountDetailModal: React.FC<AccountDetailModalProps> = ({ account, onClose, refreshAccounts, countByRole }) => {
     const { user } = useAuth();
     const { fetchAllRoles, allRolesState, modifyRoles, modifyRolesState} = useAccount();
 
@@ -92,6 +93,8 @@ export const AccountDetailModal: React.FC<AccountDetailModalProps> = ({ account,
 
             // Reload lại danh sách tài khoản
             await refreshAccounts("");
+            // Reload thống kê vai trò
+            countByRole?.();
         } catch (error) {
             console.error("Lỗi khi lưu roles:", error);
         }
@@ -228,7 +231,9 @@ export const AccountDetailModal: React.FC<AccountDetailModalProps> = ({ account,
                             <p className="text-sm text-gray-500 mt-2">Đang tải danh sách quyền...</p>
                         ) : (
                             <div className="flex flex-wrap gap-2 mt-3">
-                                {allRolesState.data?.map((role: Role) => (
+                                {allRolesState.data
+                                    ?.filter((role: Role) => role.roleName !== "Chủ shop" && role.roleName!== "Chủ shop") // loại bỏ quyền Chủ shop
+                                    .map((role: Role) => (
                                     <label
                                         key={role._id}
                                         className={clsx(
