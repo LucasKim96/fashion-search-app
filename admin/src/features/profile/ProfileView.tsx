@@ -15,7 +15,8 @@ import {
   X,          // Icon Hủy
   Check,      // Icon Lưu / Đổi mật khẩu
   Phone,      // Số điện thoại
-  Activity    // Cập nhật lần cuối
+  Activity,    // Cập nhật lần cuối
+  LockKeyhole, 
 } from "lucide-react";
 
 import { formatVNDate } from "@shared/core/utils/dateTime";
@@ -48,7 +49,7 @@ export const ProfileView: React.FC<Props> = ({ profile, onUpdate }) => {
       other: "Khác",
   };
   return (
-    <div className="flex flex-col items-center gap-6 p-4">
+    <div className="flex flex-col items-center gap-6 p-0">
       <div className="flex flex-col md:flex-row items-center md:items-start gap-6 w-full max-w-4xl">
         {/* Avatar */}
         <div className="flex-shrink-0">
@@ -262,76 +263,49 @@ export const ProfileView: React.FC<Props> = ({ profile, onUpdate }) => {
                 </div>
               </div>
             </div>
-
-            {/* Nút Lưu/Hủy khi đang edit */}
-            {/* {editSection === "account" && (
-              <div className="flex justify-end gap-2 mt-4">
-                <GradientButton
-                  label="Hủy"
-                  icon={X}
-                  iconColor="text-gray-500"
-                  labelColor="text-gray-500"
-                  gradient="bg-gray-100"
-                  hoverGradient="hover:bg-gray-200"
-                  onClick={handleCancel}
-                  className="flex items-center gap-2 px-3 py-1 text-sm shadow-sm"
-                  roundedFull
-                  shadow={false}
-                />
-                <GradientButton
-                  label="Lưu"
-                  icon={Check}
-                  loading={saving}
-                  onClick={handleSaveAccount}
-                  className="flex items-center gap-2 px-3 py-1 text-sm"
-                  roundedFull
-                  shadow
-                />
-              </div>
-            )} */}
-
             {/* Phần đổi mật khẩu hiển thị ngay bên dưới */}
+            {/* Phần đổi mật khẩu – hiển thị liền mạch với thông tin tài khoản */}
             {showPasswordDialog && (
-              <div className="mt-6 p-4 border border-gray-200 rounded-xl bg-gray-50">
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <Key className="w-5 h-5 text-yellow-600" /> Đổi mật khẩu
-                </h3>
-                {["oldPassword", "newPassword", "confirmPassword"].map((field, idx) => (
+              <>
+                <hr className="my-6 border-t border-gray-200" />
+
+                <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
+                  <Key className="w-5 h-5 text-yellow-500" />
+                  Đổi mật khẩu
+                </h2>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-5">
                   <PasswordInput
-                    key={field}
                     label={
-                      field === "oldPassword" ? "Mật khẩu cũ" :
-                      field === "newPassword" ? "Mật khẩu mới" : "Xác nhận mật khẩu mới"
+                      <span className="font-semibold flex items-center gap-1 text-indigo-600">
+                        <LockKeyhole className="w-4 h-4" /> Mật khẩu cũ
+                      </span>
                     }
-                    value={passwordForm[field as keyof typeof passwordForm]}
-                    onChange={(val: string) => setPasswordForm({ ...passwordForm, [field]: val })}
+                    value={passwordForm.oldPassword}
+                    onChange={(val) => setPasswordForm({ ...passwordForm, oldPassword: val })}
                   />
-                ))}
-                {/* <div className="flex justify-end gap-2 mt-4">
-                  <GradientButton
-                    label="Hủy"
-                    icon={X}
-                    iconColor="text-gray-500"
-                    labelColor="text-gray-500"
-                    gradient="bg-gray-100"
-                    hoverGradient="hover:bg-gray-200"
-                    onClick={() => setShowPasswordDialog(false)}
-                    className="flex items-center gap-2 px-3 py-1 text-sm shadow-sm"
-                    roundedFull
-                    shadow={false}
+                  <PasswordInput
+                    label={
+                      <span className="font-semibold flex items-center gap-1 text-indigo-600">
+                        <LockKeyhole className="w-4 h-4" /> Mật khẩu mới
+                      </span>
+                    }
+                    value={passwordForm.newPassword}
+                    onChange={(val) => setPasswordForm({ ...passwordForm, newPassword: val })}
                   />
-                  <GradientButton
-                    label="Đổi mật khẩu"
-                    icon={Check}
-                    loading={saving}
-                    onClick={() => handleChangePassword(() => setShowPasswordDialog(false))}
-                    className="flex items-center gap-2 px-3 py-1 text-sm"
-                    roundedFull
-                    shadow
+                  <PasswordInput
+                    label={
+                      <span className="font-semibold flex items-center gap-1 text-indigo-600">
+                        <LockKeyhole className="w-4 h-4" /> Xác nhận mật khẩu
+                      </span>
+                    }
+                    value={passwordForm.confirmPassword}
+                    onChange={(val) => setPasswordForm({ ...passwordForm, confirmPassword: val })}
                   />
-                </div> */}
-              </div>
+                </div>
+              </>
             )}
+
           </div>
 
           {/* ===== THÔNG TIN CÁ NHÂN ===== */}
