@@ -27,38 +27,6 @@ export const useUser = () => {
   const { showToast } = useNotification();
 
   // ====== Hook chung tạo state cho từng API call ======
-  // const createApiState = <T,>() => {
-  //   const [data, setData] = useState<T | null>(null);
-  //   const [loading, setLoading] = useState(false);
-  //   const [error, setError] = useState<string | null>(null);
-
-  //   const run = useCallback(
-  //     async (apiCall: () => Promise<ApiResponse<T>>): Promise<ApiResponse<T>> => {
-  //       setLoading(true);
-  //       setError(null);
-  //       try {
-  //         const res = await apiCall();
-  //         if (!res.success) {
-  //           setError(res.message || "Lỗi API");
-  //           showToast(res.message || "Lỗi API", "error");
-  //         } else {
-  //           setData(res.data);
-  //         }
-  //         return res;
-  //       } catch (err: unknown) {
-  //         const message = errorUtils.parseApiError(err);
-  //         setError(message);
-  //         showToast(message, "error");
-  //         return { success: false, message, data: null };
-  //       } finally {
-  //         setLoading(false);
-  //       }
-  //     },
-  //     [showToast]
-  //   );
-
-  //   return { data, loading, error, run, setData };
-  // };
   const createApiState = <T,>() => {
     const [data, setData] = useState<T | null>(null);
     const [loading, setLoading] = useState(false);

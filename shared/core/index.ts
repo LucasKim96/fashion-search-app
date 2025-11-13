@@ -12,7 +12,9 @@ export * from "./utils/logger.utils"
 export * from "./utils/role.utils";
 export * from  "./utils/image.utils";
 export * from  "./utils/user.utils";
-export * from "./utils/dateTime"
+export * from "./utils/dateTime";
+export * from "./utils/getCroppedImg";
+export * from "./utils/profile.utils";
 export { NotificationProvider, useNotification } from "./ui/NotificationProvider";
 // export * from "./utils/date.utils";
 
