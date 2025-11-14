@@ -259,12 +259,12 @@ export const AdminSidebar: React.FC = () => {
             >
               <div
                 className={clsx(
-                    "flex items-center gap-3 p-2.5 rounded-full cursor-pointer transition-all duration-500 peer select-none",
-                    collapsed ? "justify-center" : "justify-start",
-                    isActive
-                      ? "bg-white/70 text-gray-900 font-semibold shadow-md"
-                      : "text-gray-700 hover:text-gray-900"
-                  )}
+                  "group flex items-center gap-3 p-2.5 rounded-full cursor-pointer transition-all duration-500 peer select-none relative",
+                  collapsed ? "justify-center" : "justify-start",
+                  isActive
+                    ? "bg-white/70 text-gray-900 font-semibold shadow-md"
+                    : "text-gray-700 hover:text-gray-900 hover:border hover:border-white/90"
+                )}
               >
                 {/* Icon */}
                 <item.icon
@@ -283,20 +283,16 @@ export const AdminSidebar: React.FC = () => {
                   </span>
                 )}
 
-                {/* Hiệu ứng ánh sáng trắng dịu hơn */}
+                {/* Overlay glow chỉ hiển thị khi hover */}
                 <span
-                  className={clsx(
-                    "absolute inset-0 rounded-full z-10 pointer-events-none transition-all duration-300",
-                    isActive
-                      ? "bg-white/70 shadow-md border border-white/90"
-                      : ["hover:border hover:border-white/90",
-                          "hover:[background-image:linear-gradient(to_top_right,rgba(255,255,255,0.8),rgba(240,240,240,0.5))]",
-                          "hover:[box-shadow:inset_0_2px_4px_rgba(0,0,0,0.1),_0_5px_10px_rgba(0,0,0,0.1)]"
-                        ])}
-                >
-                </span>
-                
+                  className="absolute inset-0 rounded-full z-10 pointer-events-none
+                            bg-gradient-to-tr from-white/10 to-white/20
+                            opacity-0 group-hover:opacity-100
+                            transition-all duration-300
+                            shadow-[inset_0_2px_4px_rgba(0,0,0,0.1),_0_5px_10px_rgba(0,0,0,0.1)]"
+                />
               </div>
+
               {/* Hiển thị label khi rê chuột */}
               {collapsed && <SidebarTooltip label={item.label} />}
             </div>
