@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo } from "react";
-import { Table } from "@shared/core/components/ui";
+import { Table, SidebarTooltip } from "@shared/core/components/ui";
 import { Account } from "@shared/features/account/account.types";
 import {
     Eye,
@@ -189,26 +189,34 @@ export const AccountTable: React.FC<AccountTableProps> = ({
             align: "center" as const,
             width: 140,
             render: (acc: any) => (
-                <div className="flex justify-center gap-2">
-                    <button
-                        onClick={() => onSelect(acc._id)}
-                        className="p-2 rounded-lg bg-blue-100 hover:bg-blue-200 shadow-md transition"
-                        title="Xem chi tiết"
-                    >
-                        <Eye size={18} className="text-blue-600" />
-                    </button>
-                    <button
-                        onClick={() => toggleBanAccount(acc._id)}
-                        className={clsx(
-                        "p-2 rounded-lg shadow-md transition",
-                        acc.isBanned
-                            ? "bg-green-100 hover:bg-green-200 text-green-700"
-                            : "bg-red-100 hover:bg-red-200 text-red-700"
-                        )}
-                        title={acc.isBanned ? "Mở khóa" : "Khóa"}
-                    >
-                        {acc.isBanned ? <CheckCircle size={18} /> : <Ban size={18} />}
-                    </button>
+                <div className="flex justify-center gap-3">
+                    
+                    {/* Nút xem chi tiết */}
+                    <div className="relative inline-block">
+                        <button
+                            onClick={() => onSelect(acc._id)}
+                            className="p-2 rounded-lg bg-blue-100 hover:bg-blue-200 shadow-md transition peer"
+                        >
+                            <Eye size={18} className="text-blue-600" />
+                        </button>
+                        <SidebarTooltip position="left" label="Xem chi tiết" />
+                    </div>
+
+                    {/* Nút khóa / mở khóa */}
+                    <div className="relative inline-block">
+                        <button
+                            onClick={() => toggleBanAccount(acc._id)}
+                            className={clsx(
+                                "p-2 rounded-lg shadow-md transition peer",
+                                acc.isBanned
+                                    ? "bg-green-100 hover:bg-green-200 text-green-700"
+                                    : "bg-red-100 hover:bg-red-200 text-red-700"
+                            )}
+                        >
+                            {acc.isBanned ? <CheckCircle size={18} /> : <Ban size={18} />}
+                        </button>
+                        <SidebarTooltip position="left" label={acc.isBanned ? "Mở khóa" : "Khóa tài khoản"} />
+                    </div>
                 </div>
 
             ),
@@ -217,24 +225,23 @@ export const AccountTable: React.FC<AccountTableProps> = ({
         [onSelect, toggleBanAccount]
     );
 
-return (
-    <div className="rounded-3xl shadow-2xl overflow-hidden bg-white border border-gray-200">
-        <Table
-            columns={columns}
-            data={accounts}
-            showIndex
-            sttIconColor="text-indigo-600"
-            rowsPerPage={5}
-            headerColor="bg-gradient-to-r from-blue-100 via-indigo-200 to-pink-100 text-indigo-600 font-extrabold tracking-wider shadow-md"
-            paginationBg="bg-gradient-to-r from-gray-100 via-gray-50 to-gray-100"
-            paginationActiveColor="bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 text-white font-semibold shadow-md"
-            paginationTextColor="text-indigo-600 font-medium"
-            paginationHoverColor="hover:bg-gradient-to-r hover:from-blue-100 hover:via-indigo-150 hover:to-purple-100"
-        />
+    return (
+        <div className="rounded-3xl shadow-2xl overflow-visible bg-white border border-gray-200">
+            <Table
+                columns={columns}
+                data={accounts}
+                showIndex
+                sttIconColor="text-indigo-600"
+                rowsPerPage={5}
+                headerColor="bg-gradient-to-r from-blue-100 via-indigo-200 to-pink-100 text-indigo-600 font-extrabold tracking-wider shadow-md"
+                paginationBg="bg-gradient-to-r from-gray-100 via-gray-50 to-gray-100"
+                paginationActiveColor="bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 text-white font-semibold shadow-md"
+                paginationTextColor="text-indigo-600 font-medium"
+                paginationHoverColor="hover:bg-gradient-to-r hover:from-blue-100 hover:via-indigo-150 hover:to-purple-100"
+            />
 
-    </div>
-);
-
+        </div>
+    );
 };
 
         // <Table
