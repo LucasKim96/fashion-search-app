@@ -15,7 +15,7 @@ export * from  "./utils/user.utils";
 export * from "./utils/dateTime";
 export * from "./utils/getCroppedImg";
 export * from "./utils/profile.utils";
-export { NotificationProvider, useNotification } from "./ui/NotificationProvider";
+export * from "./ui/NotificationProvider";
 // export * from "./utils/date.utils";
 
 // export * from "./hooks/useAxios";

@@ -10,7 +10,8 @@ import {
   UserCheck,  // Giới tính
   Lock,       // Thông tin tài khoản & quyền
   Key,        // Đổi mật khẩu
-  Shield,     // Trạng thái / Quyền hạn
+  ShieldCheck,     // Quyền hạn
+  Zap,
   Edit3,      // Icon chỉnh sửa
   X,          // Icon Hủy
   Check,      // Icon Lưu / Đổi mật khẩu
@@ -211,7 +212,7 @@ export const ProfileView: React.FC<Props> = ({ profile, onUpdate }) => {
             <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="flex flex-col gap-1">
                 <p className="font-semibold flex items-center gap-1 text-indigo-600">
-                  <Shield className="w-4 h-4"/> Trạng thái tài khoản
+                  <Zap className="w-4 h-4"/> Trạng thái tài khoản
                 </p>
                 <div
                   className="inline-flex items-center gap-2 px-2 py-0.5 rounded-full 
@@ -243,7 +244,7 @@ export const ProfileView: React.FC<Props> = ({ profile, onUpdate }) => {
               {/* Quyền hạn */}
               <div className="flex flex-col gap-1">
                 <p className="font-semibold flex items-center gap-1 text-indigo-600">
-                  <Shield className="w-4 h-4"/> Quyền hạn
+                  <ShieldCheck className="w-4 h-4"/> Quyền hạn
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {profile.roles.length ? (
