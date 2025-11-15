@@ -26,10 +26,14 @@ export const useAdminNavbar = () => {
   }, [authUser, showToast]);
 
   useEffect(() => {
-    fetchUserInfo();
+    // Chỉ gọi API getme/refreshUser một lần khi component mount
     refreshUser();
-    // console.log("authUser:", authUser);
-    // console.log("extractUserDisplayInfo:", extractUserDisplayInfo(authUser));
+    // Sau đó, cập nhật userInfo bất cứ khi nào authUser thay đổi
+  }, []); // Rỗng, chỉ chạy 1 lần.
+
+  // Tách logic cập nhật userInfo ra một useEffect khác
+  useEffect(() => {
+    fetchUserInfo();
   }, [authUser, fetchUserInfo]);
 
   // ====== Xử lý click account ======
