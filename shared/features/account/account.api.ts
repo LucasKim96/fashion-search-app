@@ -1,6 +1,6 @@
 // shared/features/account/account.api.ts
-import { axiosInstance, ACCOUNT_ENDPOINTS } from "../../core";
-import { ApiResponse } from "../../types/common.types";
+import { axiosInstance, ACCOUNT_ENDPOINTS } from "@shared/core";
+import { ApiResponse } from "@shared/types/common.types";
 import {
   Account,
   UpdateAccountBasicInfoRequest,

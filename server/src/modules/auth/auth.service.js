@@ -10,8 +10,8 @@ dotenv.config();
 
 // Cấu hình JWT
 const JWT_SECRET = process.env.JWT_SECRET;
-const JWT_EXPIRES_IN = "1h";
-const REFRESH_TOKEN_EXPIRES_IN = "1d";
+const JWT_EXPIRES_IN = "1d";
+const REFRESH_TOKEN_EXPIRES_IN = "3d";
 
 // Đăng ký tài khoản mới
 export const register = async (data) => {

@@ -16,6 +16,7 @@ export * from "./utils/dateTime";
 export * from "./utils/getCroppedImg";
 export * from "./utils/profile.utils";
 export * from "./ui/NotificationProvider";
+export * from "./components/ui";
 // export * from "./utils/date.utils";
 
 // export * from "./hooks/useAxios";

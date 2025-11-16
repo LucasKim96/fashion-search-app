@@ -1,4 +1,3 @@
-import mongoose from "mongoose";
 import Attribute from "./attribute.model.js";
 import AttributeValue from "./attributeValue.model.js";
 import Shop from "../shop/shop.model.js";
@@ -127,121 +126,6 @@ export const getAttributesFlexible = async ({
   }
 };
 
-export const getAttributesUnified = async ({
-  accountId,        // có => là shop
-  isAdmin = false,  // true => chỉ lấy global
-  page = 1,
-  limit = 20,
-  sortBy = "createdAt",
-  sortOrder = "desc",
-}) => {
-  try {
-    let shopId = null;
-
-    // --- Nếu không phải admin thì xác định shop từ accountId ---
-    if (!isAdmin) {
-      if (!accountId) throw new Error("Thiếu accountId của shop");
-      const shop = await Shop.findOne({ accountId }).select("_id").lean();
-      if (!shop) throw new Error("Không tìm thấy shop tương ứng với tài khoản này");
-      shopId = shop._id;
-    }
-
-    // --- Cấu hình phân trang & sort an toàn ---
-    const maxLimit = 100;
-    const safePage = Math.max(1, parseInt(page) || 1);
-    const safeLimit = Math.min(Math.max(1, parseInt(limit) || 20), maxLimit);
-    const skip = (safePage - 1) * safeLimit;
-
-    const allowedSortFields = ["createdAt", "updatedAt", "label"];
-    const allowedSortOrders = ["asc", "desc"];
-    const validSortBy = allowedSortFields.includes(sortBy) ? sortBy : "createdAt";
-    const validSortOrder = allowedSortOrders.includes(sortOrder) ? sortOrder : "desc";
-    const sort = { [validSortBy]: validSortOrder === "desc" ? -1 : 1 };
-
-    // --- Xác định filter ---
-    let filter = { isActive: { $ne: false } };
-    if (isAdmin) {
-      // Admin → chỉ lấy global
-      filter.isGlobal = true;
-    } else {
-      // Shop → lấy global + local
-      filter = {
-        $and: [
-          { isActive: { $ne: false } },
-          { $or: [{ isGlobal: true }, { shopId }] },
-        ],
-      };
-    }
-
-    // --- Truy vấn thuộc tính ---
-    const [attributes, total] = await Promise.all([
-      Attribute.find(filter).sort(sort).skip(skip).limit(safeLimit).lean(),
-      Attribute.countDocuments(filter),
-    ]);
-
-    const attrIds = attributes.map((a) => a._id);
-
-    // --- Lấy AttributeValue chung + shop-specific ---
-    let allValuesFilter = {
-      attributeId: { $in: attrIds },
-      isActive: { $ne: false },
-    };
-
-    if (!isAdmin && shopId) {
-      // Shop: lấy global + value của shop mình
-      allValuesFilter.$or = [
-        { shopId: null },       // giá trị global
-        { shopId: shopId },             // giá trị shop riêng
-      ];
-    } else if (isAdmin) {
-      // Admin: chỉ lấy giá trị global
-      allValuesFilter.shopId = null;
-    }
-    const allValues = await AttributeValue.find(allValuesFilter).lean();
-
-    // // Nếu là shop, lấy shop overrides
-    // let overrides = [];
-    // if (!isAdmin && shopId) {
-    //   const valueIds = allValues.map((v) => v._id);
-    //   overrides = await ShopAttributeValue.find({
-    //     shopId,
-    //     attributeValueId: { $in: valueIds },
-    //     isActive: { $ne: false },
-    //   }).lean();
-    // }
-
-    // Gom value theo attributeId
-    const valuesByAttr = new Map();
-    for (const v of allValues) {
-      const arr = valuesByAttr.get(String(v.attributeId)) || [];
-      arr.push(v);
-      valuesByAttr.set(String(v.attributeId), arr);
-    }
-
-    const result = attributes.map((a) => {
-      const vals = valuesByAttr.get(String(a._id)) || [];
-      return { ...a, values: vals };
-    });
-
-    return {
-      success: true,
-      message: "Lấy danh sách thuộc tính thành công!",
-      data: {
-        attributes: result,
-        total,
-        page: safePage,
-        limit: safeLimit,
-        totalPages: Math.ceil(total / safeLimit),
-      },
-    };
-  } catch (error) {
-    console.error("getAttributesUnified error:", error);
-    return { success: false, message: error.message };
-  }
-};
-
-
-
 // Lấy chi tiết attribute
 export const getAttributeById = async (id) => {
   try {
@@ -254,7 +138,108 @@ export const getAttributeById = async (id) => {
   }
 };
 
+// export const getAttributesUnified = async ({
+//   accountId,        // có => là shop
+//   isAdmin = false,  // true => chỉ lấy global
+//   page = 1,
+//   limit = 20,
+//   sortBy = "createdAt",
+//   sortOrder = "desc",
+// }) => {
+//   try {
+//     let shopId = null;
+
+//     // --- Nếu không phải admin thì xác định shop từ accountId ---
+//     if (!isAdmin) {
+//       if (!accountId) throw new Error("Thiếu accountId của shop");
+//       const shop = await Shop.findOne({ accountId }).select("_id").lean();
+//       if (!shop) throw new Error("Không tìm thấy shop tương ứng với tài khoản này");
+//       shopId = shop._id;
+//     }
+
+//     // --- Cấu hình phân trang & sort an toàn ---
+//     const maxLimit = 100;
+//     const safePage = Math.max(1, parseInt(page) || 1);
+//     const safeLimit = Math.min(Math.max(1, parseInt(limit) || 20), maxLimit);
+//     const skip = (safePage - 1) * safeLimit;
+
+//     const allowedSortFields = ["createdAt", "updatedAt", "label"];
+//     const allowedSortOrders = ["asc", "desc"];
+//     const validSortBy = allowedSortFields.includes(sortBy) ? sortBy : "createdAt";
+//     const validSortOrder = allowedSortOrders.includes(sortOrder) ? sortOrder : "desc";
+//     const sort = { [validSortBy]: validSortOrder === "desc" ? -1 : 1 };
+
+//     // --- Xác định filter ---
+//     let filter = { isActive: { $ne: false } };
+//     if (isAdmin) {
+//       // Admin → chỉ lấy global
+//       filter.isGlobal = true;
+//     } else {
+//       // Shop → lấy global + local
+//       filter = {
+//         $and: [
+//           { isActive: { $ne: false } },
+//           { $or: [{ isGlobal: true }, { shopId }] },
+//         ],
+//       };
+//     }
+
+//     // --- Truy vấn thuộc tính ---
+//     const [attributes, total] = await Promise.all([
+//       Attribute.find(filter).sort(sort).skip(skip).limit(safeLimit).lean(),
+//       Attribute.countDocuments(filter),
+//     ]);
+
+//     const attrIds = attributes.map((a) => a._id);
+
+//     // --- Lấy AttributeValue chung + shop-specific ---
+//     let allValuesFilter = {
+//       attributeId: { $in: attrIds },
+//       isActive: { $ne: false },
+//     };
+
+//     if (!isAdmin && shopId) {
+//       // Shop: lấy global + value của shop mình
+//       allValuesFilter.$or = [
+//         { shopId: null },       // giá trị global
+//         { shopId: shopId },             // giá trị shop riêng
+//       ];
+//     } else if (isAdmin) {
+//       // Admin: chỉ lấy giá trị global
+//       allValuesFilter.shopId = null;
+//     }
+//     const allValues = await AttributeValue.find(allValuesFilter).lean();
+//     // Gom value theo attributeId
+//     const valuesByAttr = new Map();
+//     for (const v of allValues) {
+//       const arr = valuesByAttr.get(String(v.attributeId)) || [];
+//       arr.push(v);
+//       valuesByAttr.set(String(v.attributeId), arr);
+//     }
+
+//     const result = attributes.map((a) => {
+//       const vals = valuesByAttr.get(String(a._id)) || [];
+//       return { ...a, values: vals };
+//     });
+
+//     return {
+//       success: true,
+//       message: "Lấy danh sách thuộc tính thành công!",
+//       data: {
+//         attributes: result,
+//         total,
+//         page: safePage,
+//         limit: safeLimit,
+//         totalPages: Math.ceil(total / safeLimit),
+//       },
+//     };
+//   } catch (error) {
+//     console.error("getAttributesUnified error:", error);
+//     return { success: false, message: error.message };
+//   }
+// };
 // Tạo attribute + values
+
 export const createAttribute = async (payload, accountId = null, tempFiles = []) => {
   return withTransaction(async (session) => {
     const label = payload.label;
@@ -322,162 +307,162 @@ export const createAttribute = async (payload, accountId = null, tempFiles = [])
 
 
 // Cập nhật attribute + value (có kiểm tra quyền của shop)
-export const updateAttribute = async (id, body, accountId = null, tempFiles = []) => {
-  const backups = []; // ← lưu danh sách file backup để khôi phục nếu lỗi
+// export const updateAttribute = async (id, body, accountId = null, tempFiles = []) => {
+//   const backups = []; // ← lưu danh sách file backup để khôi phục nếu lỗi
 
-  return withTransaction(async (session) => {
-    if (!toObjectId(id)) throw new Error("Id không hợp lệ");
+//   return withTransaction(async (session) => {
+//     if (!toObjectId(id)) throw new Error("Id không hợp lệ");
 
-    const attribute = await Attribute.findById(id).session(session);
-    if (!attribute) throw new Error("Không tìm thấy attribute");
+//     const attribute = await Attribute.findById(id).session(session);
+//     if (!attribute) throw new Error("Không tìm thấy attribute");
 
-    const { label } = body;
-    let values = body.values || [];
+//     const { label } = body;
+//     let values = body.values || [];
 
-    // --- Xác định quyền ---
-    let isAdmin = false;
-    let currentShopId = null;
+//     // --- Xác định quyền ---
+//     let isAdmin = false;
+//     let currentShopId = null;
 
-    if (accountId) {
-      const shop = await Shop.findOne({
-        accountId: toObjectId(accountId),
-        isDeleted: false,
-      }).session(session);
-      if (!shop) throw new Error("Không tìm thấy cửa hàng cho tài khoản này");
-      currentShopId = shop._id;
+//     if (accountId) {
+//       const shop = await Shop.findOne({
+//         accountId: toObjectId(accountId),
+//         isDeleted: false,
+//       }).session(session);
+//       if (!shop) throw new Error("Không tìm thấy cửa hàng cho tài khoản này");
+//       currentShopId = shop._id;
 
-      if (attribute.isGlobal)
-        throw new Error("Shop không được phép chỉnh sửa thuộc tính toàn cục (global)");
+//       if (attribute.isGlobal)
+//         throw new Error("Shop không được phép chỉnh sửa thuộc tính toàn cục (global)");
 
-      if (attribute.shopId?.toString() !== currentShopId.toString())
-        throw new Error("Bạn không có quyền sửa thuộc tính của shop khác!");
-    } else {
-      isAdmin = true;
-      if (!attribute.isGlobal)
-        throw new Error("Admin chỉ được phép chỉnh sửa thuộc tính toàn cục (global)");
-    }
+//       if (attribute.shopId?.toString() !== currentShopId.toString())
+//         throw new Error("Bạn không có quyền sửa thuộc tính của shop khác!");
+//     } else {
+//       isAdmin = true;
+//       if (!attribute.isGlobal)
+//         throw new Error("Admin chỉ được phép chỉnh sửa thuộc tính toàn cục (global)");
+//     }
 
-    // --- Cập nhật label ---
-    if (label !== undefined) {
-      if (!label || label.trim() === "") throw new Error("Label không được để trống");
-      attribute.label = label.trim();
-    }
-    await attribute.save({ session });
+//     // --- Cập nhật label ---
+//     if (label !== undefined) {
+//       if (!label || label.trim() === "") throw new Error("Label không được để trống");
+//       attribute.label = label.trim();
+//     }
+//     await attribute.save({ session });
 
-    // --- Xử lý values ---
-    if (Array.isArray(values) && values.length) {
-      const ops = [];
+//     // --- Xử lý values ---
+//     if (Array.isArray(values) && values.length) {
+//       const ops = [];
 
-      for (const v of values) {
-        // Toggle status
-        if (v._action === "toggle-status" && v._id) {
-          const oldValue = await AttributeValue.findById(v._id).lean();
-          if (!oldValue) throw new Error(`Không tìm thấy value với id ${v._id}`);
+//       for (const v of values) {
+//         // Toggle status
+//         if (v._action === "toggle-status" && v._id) {
+//           const oldValue = await AttributeValue.findById(v._id).lean();
+//           if (!oldValue) throw new Error(`Không tìm thấy value với id ${v._id}`);
 
-          ops.push({
-            updateOne: {
-              filter: { _id: v._id, attributeId: attribute._id },
-              update: { $set: { isActive: !oldValue.isActive } },
-            },
-          });
-          continue;
-        }
+//           ops.push({
+//             updateOne: {
+//               filter: { _id: v._id, attributeId: attribute._id },
+//               update: { $set: { isActive: !oldValue.isActive } },
+//             },
+//           });
+//           continue;
+//         }
 
-        // Delete cứng
-        if (v._action === "delete" && v._id) {
-          const oldValue = await AttributeValue.findById(v._id).lean();
-          if (oldValue?.image) {
-            const imagePath = path.join(DEFAULT_FOLDER, path.basename(oldValue.image));
+//         // Delete cứng
+//         if (v._action === "delete" && v._id) {
+//           const oldValue = await AttributeValue.findById(v._id).lean();
+//           if (oldValue?.image) {
+//             const imagePath = path.join(DEFAULT_FOLDER, path.basename(oldValue.image));
 
-            if (fs.existsSync(imagePath)) {
-              const backupPath = backupFile(imagePath); // → backup trước khi xóa
-              backups.push({ backupPath, originalPath: imagePath });
+//             if (fs.existsSync(imagePath)) {
+//               const backupPath = backupFile(imagePath); // → backup trước khi xóa
+//               backups.push({ backupPath, originalPath: imagePath });
 
-              fs.unlinkSync(imagePath); // xóa thật
-            }
-          }
+//               fs.unlinkSync(imagePath); // xóa thật
+//             }
+//           }
 
-          ops.push({
-            deleteOne: { filter: { _id: v._id, attributeId: attribute._id } },
-          });
-          continue;
-        }
+//           ops.push({
+//             deleteOne: { filter: { _id: v._id, attributeId: attribute._id } },
+//           });
+//           continue;
+//         }
 
-        // Update
-        if (v._id) {
-          const oldValue = await AttributeValue.findById(v._id).lean();
-          if (!oldValue) throw new Error(`Không tìm thấy value với id ${v._id}`);
+//         // Update
+//         if (v._id) {
+//           const oldValue = await AttributeValue.findById(v._id).lean();
+//           if (!oldValue) throw new Error(`Không tìm thấy value với id ${v._id}`);
 
-          const removeImage = v.image === "" && oldValue.image;
-          const hasNewImage = v.image && v.image !== oldValue.image;
-          const hasValueChange = v.value && v.value.trim() !== oldValue.value;
+//           const removeImage = v.image === "" && oldValue.image;
+//           const hasNewImage = v.image && v.image !== oldValue.image;
+//           const hasValueChange = v.value && v.value.trim() !== oldValue.value;
 
-          if (hasValueChange) validateAttributeValue(v);
+//           if (hasValueChange) validateAttributeValue(v);
 
-          const oldPath = oldValue.image
-            ? path.join(DEFAULT_FOLDER, path.basename(oldValue.image))
-            : null;
+//           const oldPath = oldValue.image
+//             ? path.join(DEFAULT_FOLDER, path.basename(oldValue.image))
+//             : null;
 
-          // Nếu có ảnh mới hoặc xoá ảnh cũ → backup trước
-          if ((hasNewImage || removeImage) && oldPath && fs.existsSync(oldPath)) {
-            const backupPath = backupFile(oldPath);
-            backups.push({ backupPath, originalPath: oldPath });
-            fs.unlinkSync(oldPath);
-          }
+//           // Nếu có ảnh mới hoặc xoá ảnh cũ → backup trước
+//           if ((hasNewImage || removeImage) && oldPath && fs.existsSync(oldPath)) {
+//             const backupPath = backupFile(oldPath);
+//             backups.push({ backupPath, originalPath: oldPath });
+//             fs.unlinkSync(oldPath);
+//           }
 
-          const newImage = v.image ?? oldValue.image ?? "";
+//           const newImage = v.image ?? oldValue.image ?? "";
 
-          if (hasNewImage || hasValueChange || removeImage) {
-            ops.push({
-              updateOne: {
-                filter: { _id: v._id },
-                update: {
-                  $set: {
-                    value: v.value !== undefined ? v.value.trim() : oldValue.value,
-                    image: newImage,
-                    shopId: isAdmin ? null : currentShopId,
-                    isActive: true,
-                  },
-                },
-              },
-            });
-          }
-          continue;
-        }
+//           if (hasNewImage || hasValueChange || removeImage) {
+//             ops.push({
+//               updateOne: {
+//                 filter: { _id: v._id },
+//                 update: {
+//                   $set: {
+//                     value: v.value !== undefined ? v.value.trim() : oldValue.value,
+//                     image: newImage,
+//                     shopId: isAdmin ? null : currentShopId,
+//                     isActive: true,
+//                   },
+//                 },
+//               },
+//             });
+//           }
+//           continue;
+//         }
 
-        // Insert mới
-        validateAttributeValue(v);
-        ops.push({
-          insertOne: {
-            document: {
-              attributeId: attribute._id,
-              value: v.value.trim(),
-              image: v.image || "",
-              shopId: isAdmin ? null : currentShopId,
-              isActive: true,
-            },
-          },
-        });
-      }
+//         // Insert mới
+//         validateAttributeValue(v);
+//         ops.push({
+//           insertOne: {
+//             document: {
+//               attributeId: attribute._id,
+//               value: v.value.trim(),
+//               image: v.image || "",
+//               shopId: isAdmin ? null : currentShopId,
+//               isActive: true,
+//             },
+//           },
+//         });
+//       }
 
-      if (ops.length) await AttributeValue.bulkWrite(ops, { session });
-    }
+//       if (ops.length) await AttributeValue.bulkWrite(ops, { session });
+//     }
 
-    const updated = await fetchAttributeWithValues(id, session);
-    backups.forEach((b) => removeBackup(b.backupPath)); // xóa backup sau khi thành công
+//     const updated = await fetchAttributeWithValues(id, session);
+//     backups.forEach((b) => removeBackup(b.backupPath)); // xóa backup sau khi thành công
 
-    return {
-      success: true,
-      message: "Cập nhật thuộc tính thành công",
-      data: updated,
-    };
-  }).catch((error) => {
-    // Nếu transaction fail → rollback các file đã backup
-    backups.forEach((b) => restoreFile(b.backupPath, b.originalPath));
-    rollbackFiles(tempFiles);
-    return { success: false, message: error.message };
-  });
-};
+//     return {
+//       success: true,
+//       message: "Cập nhật thuộc tính thành công",
+//       data: updated,
+//     };
+//   }).catch((error) => {
+//     // Nếu transaction fail → rollback các file đã backup
+//     backups.forEach((b) => restoreFile(b.backupPath, b.originalPath));
+//     rollbackFiles(tempFiles);
+//     return { success: false, message: error.message };
+//   });
+// };
 
 // Cập nhật chỉ Attribute (không cập nhật value)
 export const updateAttributeOnly = async (id, body, accountId = null) => {
@@ -610,13 +595,11 @@ export const toggleActiveAttribute = async (id) => {
     return { success: false, message: error.message };
   }
 };
-
-// Tìm kiếm attributes theo tên
 export const searchAttributes = async ({ query, isGlobal, accountId, page = 1, limit = 20 }) => {
   try {
     const filter = {};
-        // Nếu có accountId → tìm shop tương ứng
     let shopId = null;
+
     if (accountId) {
       const shop = await Shop.findOne({
         accountId: toObjectId(accountId),
@@ -629,37 +612,97 @@ export const searchAttributes = async ({ query, isGlobal, accountId, page = 1, l
 
     if (typeof isGlobal === "boolean") filter.isGlobal = isGlobal;
     if (shopId) filter.shopId = shopId;
-    if (query && query.trim()) {
-      filter.label = { $regex: query.trim(), $options: 'i' };
-    }
+    if (query && query.trim()) filter.label = { $regex: query.trim(), $options: 'i' };
 
     const maxLimit = 100;
     const safePage = Math.max(1, parseInt(page) || 1);
     const safeLimit = Math.min(Math.max(1, parseInt(limit) || 20), maxLimit);
     const skip = (safePage - 1) * safeLimit;
 
-    const [items, total] = await Promise.all([
-      Attribute.find(filter)
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(safeLimit)
-        .lean(),
-      Attribute.countDocuments(filter),
+    // Aggregate với lookup để join AttributeValue
+    const attributes = await Attribute.aggregate([
+      { $match: filter },
+      { $sort: { createdAt: -1 } },
+      { $skip: skip },
+      { $limit: safeLimit },
+      {
+        $lookup: {
+          from: "attributevalues",   // lưu ý tên collection phải viết đúng trong MongoDB
+          localField: "_id",
+          foreignField: "attributeId",
+          as: "values",
+        },
+      },
     ]);
+
+    const total = await Attribute.countDocuments(filter);
 
     return {
       success: true,
       message: "Tìm kiếm thuộc tính thành công!",
       data: {
-        items,
+        attributes,
         total,
         page: safePage,
         limit: safeLimit,
         totalPages: Math.ceil(total / safeLimit),
-        query: query?.trim() || '',
+        query: query ? query.trim() : '',
       },
     };
   } catch (error) {
     return { success: false, message: error.message };
   }
 };
+
+
+// export const searchAttributes = async ({ query, isGlobal, accountId, page = 1, limit = 20 }) => {
+//   try {
+//     const filter = {};
+//         // Nếu có accountId → tìm shop tương ứng
+//     let shopId = null;
+//     if (accountId) {
+//       const shop = await Shop.findOne({
+//         accountId: toObjectId(accountId),
+//         isDeleted: false,
+//       }).lean();
+
+//       if (!shop) throw new Error("Không tìm thấy cửa hàng cho tài khoản này");
+//       shopId = shop._id;
+//     }
+
+//     if (typeof isGlobal === "boolean") filter.isGlobal = isGlobal;
+//     if (shopId) filter.shopId = shopId;
+//     if (query && query.trim()) {
+//       filter.label = { $regex: query.trim(), $options: 'i' };
+//     }
+
+//     const maxLimit = 100;
+//     const safePage = Math.max(1, parseInt(page) || 1);
+//     const safeLimit = Math.min(Math.max(1, parseInt(limit) || 20), maxLimit);
+//     const skip = (safePage - 1) * safeLimit;
+
+//     const [attributes, total] = await Promise.all([
+//       Attribute.find(filter)
+//         .sort({ createdAt: -1 })
+//         .skip(skip)
+//         .limit(safeLimit)
+//         .lean(),
+//       Attribute.countDocuments(filter),
+//     ]);
+
+//     return {
+//       success: true,
+//       message: "Tìm kiếm thuộc tính thành công!",
+//       data: {
+//         attributes,
+//         total,
+//         page: safePage,
+//         limit: safeLimit,
+//         totalPages: Math.ceil(total / safeLimit),
+//         query: query?.trim() || '',
+//       },
+//     };
+//   } catch (error) {
+//     return { success: false, message: error.message };
+//   }
+// };

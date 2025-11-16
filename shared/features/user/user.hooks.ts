@@ -20,8 +20,8 @@ import {
   UpdateUserBasicInfoRequest,
   UploadAvatarResponse,
 } from "./user.types";
-import { ApiResponse } from "../../types/common.types";
-import { useNotification, errorUtils } from "../../core";
+import { ApiResponse } from "@shared/types/common.types";
+import { useNotification, errorUtils } from "@shared/core";
 
 export const useUser = () => {
   const { showToast } = useNotification();

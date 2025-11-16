@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { ApiResponse } from "../../types/common.types";
-import { useNotification, errorUtils } from "../../core";
+import { ApiResponse } from "@shared/types/common.types";
+import { useNotification, errorUtils } from "@shared/core";
 import * as AccountApi from "./account.api";
 import {
     Account,
