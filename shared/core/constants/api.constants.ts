@@ -41,3 +41,68 @@ export const ACCOUNT_ENDPOINTS = {
   UPDATE_BASIC_INFO: (id: string) => `/accounts/update-basic/${id}`,
   BY_ID: (id: string) => `/accounts/${id}`,
 };
+
+export const ATTRIBUTE_ENDPOINTS = {
+  // ----- Public -----
+  PUBLIC_BY_ID: (id: string) => `/attributes/${id}`,
+  PUBLIC_DELETE: (id: string) => `/attributes/${id}`,
+  PUBLIC_TOGGLE: (id: string) => `/attributes/toggle/${id}`,
+
+  // ----- Admin -----
+  ADMIN_LIST: "/attributes/admin",
+  ADMIN_SEARCH: "/attributes/admin/search",
+  ADMIN_CREATE: "/attributes/admin",
+  ADMIN_UPDATE_LABEL: (id: string) => `/attributes/admin/label/${id}`,
+
+  // ----- Shop -----
+  SHOP_LIST: "/attributes/shop",
+  SHOP_SEARCH: "/attributes/shop/search",
+  SHOP_CREATE: "/attributes/shop",
+  SHOP_UPDATE_LABEL: (id: string) => `/attributes/shop/label/${id}`,
+};
+
+export const ATTRIBUTE_VALUE_ENDPOINTS = {
+  // ----- Admin -----
+  ADMIN_CREATE: (attributeId: string) => `/attribute-values/admin/${attributeId}`,
+  ADMIN_UPDATE: (valueId: string) => `/attribute-values/admin/${valueId}`,
+  ADMIN_TOGGLE: (valueId: string) => `/attribute-values/admin/toggle/${valueId}`,
+  ADMIN_DELETE: (valueId: string) => `/attribute-values/admin/${valueId}`,
+
+  // ----- Shop -----
+  SHOP_CREATE: (attributeId: string) => `/attribute-values/shop/${attributeId}`,
+  SHOP_UPDATE: (valueId: string) => `/attribute-values/shop/${valueId}`,
+  SHOP_TOGGLE: (valueId: string) => `/attribute-values/shop/toggle/${valueId}`,
+  SHOP_DELETE: (valueId: string) => `/attribute-values/shop/${valueId}`,
+};
+
+export const PRODUCT_ENDPOINTS = {
+  // ----- Public -----
+  PUBLIC_LIST: "/products",
+  PUBLIC_LIST_BY_SHOP: "/products/shop",
+  PUBLIC_DETAIL: (productId: string) => `/products/${productId}`,
+  PUBLIC_COUNT_SHOP: (shopId: string) => `/products/count/${shopId}`,
+
+  // ----- Admin -----
+  ADMIN_LIST: "/products/admin",
+  ADMIN_COUNT: "/products/admin/count",
+  ADMIN_DETAIL: (productId: string) => `/products/admin/${productId}`,
+  ADMIN_TOGGLE: (productId: string) => `/products/admin/toggle/${productId}`,
+  ADMIN_DELETE: (productId: string) => `/products/admin/${productId}`,
+
+  // ----- Shop -----
+  SHOP_LIST: "/products/shop",
+  SHOP_COUNT: "/products/shop/count",
+  SHOP_CREATE: "/products/shop/create",
+  SHOP_UPDATE_BASIC: (productId: string) => `/products/shop/basic/${productId}`,
+  SHOP_UPDATE_IMAGES: (productId: string) => `/products/shop/images/${productId}`,
+  SHOP_TOGGLE: (productId: string) => `/products/shop/toggle/${productId}`,
+  SHOP_DELETE: (productId: string) => `/products/shop/${productId}`,
+};
+
+export const PRODUCT_VARIANT_ENDPOINTS = {
+  GENERATE: "/product-variants/generate",
+  GENERATE_NEW: "/product-variants/generate-new",
+  GET_ATTRIBUTES: (productId: string) => `/product-variants/attributes/${productId}`,
+  BULK_CREATE: "/product-variants/bulk",
+  UPDATE: (variantId: string) => `/product-variants/${variantId}`,
+};

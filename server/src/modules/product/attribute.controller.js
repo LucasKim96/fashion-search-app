@@ -36,33 +36,6 @@ export const handleCreateAttribute = async (req, res, isAdmin = false) => {
   }
 };
 
-// --- Cập nhật Attribute ---
-export const handleUpdateAttribute = async (req, res, isAdmin = false) => {
-  const tempFiles = [];
-  try {
-    const validationError = handleValidation(req);
-    if (validationError) return res.status(400).json(validationError);
-
-    req.body.values = attachImagesByFileKey(req, "values", tempFiles, {
-      baseFolder: ATTRIBUTE_FOLDER,
-      publicPath: ATTRIBUTE_PUBLIC,
-    });
-
-    const { id } = req.params;
-    const accountId = isAdmin ? null : req.user?.id;
-
-    const result = await AttributeService.updateAttribute(id, req.body, accountId, tempFiles);
-
-    if (!result.success) rollbackFiles(tempFiles);
-    return res.status(result.success ? 200 : 400).json(result);
-
-  } catch (error) {
-    console.error("handleUpdateAttribute error:", error);
-    rollbackFiles(tempFiles);
-    return res.status(500).json({ success: false, message: error.message });
-  }
-};
-
 const handleUpdateAttributeLabel = async (req, res, isShop = false) => {
   try {
     // --- Validate ---
@@ -109,7 +82,8 @@ const handleSearchAttributesBase = async (req, res, { isGlobal }) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
-// ========================= PUBLIC CONTROLLER =========================
+
+
 export const getAttributesFlexible = async (req, res) => {
   try {
     const { page, limit, sortBy, sortOrder, includeInactive } = req.query;
@@ -150,35 +124,6 @@ export const getAttributesFlexible = async (req, res) => {
   }
 };
 
-export const getAttributes = async (req, res) => {
-  try {
-    const { page, limit, sortBy, sortOrder } = req.query;
-    // Lấy danh sách roleName từ token
-    const roleNames = req.user?.roleNames || [];
-    // Xác định có phải admin không
-    const isAdmin =
-      req.path.includes("/admin") ||
-      roleNames.some((name) => ["Quản trị viên", "Super Admin"].includes(name));
-
-    const accountId = isAdmin ? null : req.user?.id;
-
-    const result = await AttributeService.getAttributesUnified({
-      isAdmin,
-      accountId,
-      page,
-      limit,
-      sortBy,
-      sortOrder,
-    });
-
-    return res.status(result.success ? 200 : 400).json(result);
-  } catch (error) {
-    console.error("getAttributes error:", error);
-    return res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-// [GET] /attributes/:id
 export const getAttributeById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -189,6 +134,37 @@ export const getAttributeById = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// export const getAttributes = async (req, res) => {
+//   try {
+//     const { page, limit, sortBy, sortOrder } = req.query;
+//     // Lấy danh sách roleName từ token
+//     const roleNames = req.user?.roleNames || [];
+//     // Xác định có phải admin không
+//     const isAdmin =
+//       req.path.includes("/admin") ||
+//       roleNames.some((name) => ["Quản trị viên", "Super Admin"].includes(name));
+
+//     const accountId = isAdmin ? null : req.user?.id;
+
+//     const result = await AttributeService.getAttributesUnified({
+//       isAdmin,
+//       accountId,
+//       page,
+//       limit,
+//       sortBy,
+//       sortOrder,
+//     });
+
+//     return res.status(result.success ? 200 : 400).json(result);
+//   } catch (error) {
+//     console.error("getAttributes error:", error);
+//     return res.status(500).json({ success: false, message: error.message });
+//   }
+// };
+
+// [GET] /attributes/:id
+
 
 // [DELETE] /attributes/:id
 export const deleteGlobalAttribute = async (req, res) => {
@@ -211,11 +187,42 @@ export const toggleGlobalAttribute = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+
+// --- Cập nhật Attribute ---
+// export const handleUpdateAttribute = async (req, res, isAdmin = false) => {
+//   const tempFiles = [];
+//   try {
+//     const validationError = handleValidation(req);
+//     if (validationError) return res.status(400).json(validationError);
+
+//     req.body.values = attachImagesByFileKey(req, "values", tempFiles, {
+//       baseFolder: ATTRIBUTE_FOLDER,
+//       publicPath: ATTRIBUTE_PUBLIC,
+//     });
+
+//     const { id } = req.params;
+//     const accountId = isAdmin ? null : req.user?.id;
+
+//     const result = await AttributeService.updateAttribute(id, req.body, accountId, tempFiles);
+
+//     if (!result.success) rollbackFiles(tempFiles);
+//     return res.status(result.success ? 200 : 400).json(result);
+
+//   } catch (error) {
+//     console.error("handleUpdateAttribute error:", error);
+//     rollbackFiles(tempFiles);
+//     return res.status(500).json({ success: false, message: error.message });
+//   }
+// };
+
+// ========================= PUBLIC CONTROLLER =========================
+
 // ========================= ADMIN CONTROLLER =========================
 // Tạo thuộc tính + valus cho admin
 export const createGlobalAttribute = (req, res) => handleCreateAttribute(req, res, true);
 // Cập nhật thuộc tính + valus cho admin
-export const updateGlobalAttribute = (req, res) => handleUpdateAttribute(req, res, true);
+// export const updateGlobalAttribute = (req, res) => handleUpdateAttribute(req, res, true);
 // Cập nhật label cho admin
 export const updateGlobalAttributeLabel = (req, res) => handleUpdateAttributeLabel(req, res, false);
 //Tìm kiếm global
@@ -226,9 +233,9 @@ export const searchGlobalAttributes = (req, res) => handleSearchAttributesBase(r
 
 // Tạo thuộc tính + valus cho shop
 export const createShopAttribute = (req, res) => handleCreateAttribute(req, res, false);
-// Cập nhật thuộc tính + valus cho shop
-export const updateShopAttribute = (req, res) => handleUpdateAttribute(req, res, false);
 // Cập nhật label cho shop
 export const updateShopAttributeLabel = (req, res) => handleUpdateAttributeLabel(req, res, true);
 // Tìm kiếm các thuộc tính của shop
 export const searchShopAttributes = (req, res) => handleSearchAttributesBase(req, res, { isGlobal: false });
+// Cập nhật thuộc tính + valus cho shop
+// export const updateShopAttribute = (req, res) => handleUpdateAttribute(req, res, false);

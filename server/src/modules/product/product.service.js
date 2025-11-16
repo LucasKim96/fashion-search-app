@@ -322,8 +322,6 @@ export const updateProductImagesService = async (productId, newImages = []) => {
  * @param {String} productId
  * @param {Object} updates { pdName?, basePrice?, description? }
  */
-
-
 export const updateProductBasicInfoService = async (productId, updates) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(productId))

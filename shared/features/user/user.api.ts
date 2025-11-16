@@ -1,6 +1,6 @@
 // shared/features/user/user.api.ts
-import { axiosInstance, USER_ENDPOINTS } from "../../core";
-import { ApiResponse } from "../../types/common.types";
+import { axiosInstance, USER_ENDPOINTS } from "@shared/core";
+import { ApiResponse } from "@shared/types/common.types";
 import {
   UserInfo,
   UserStatsGender,

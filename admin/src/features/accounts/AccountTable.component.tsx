@@ -240,31 +240,31 @@ export const AccountTable: React.FC<AccountTableProps> = ({
                     </button>
                     <SidebarTooltip position="left" label={acc.isBanned ? "Mở khóa" : "Khóa tài khoản"} />
                 </div> */}
-{/* Nút khóa / mở khóa */}
-            <div className="relative inline-block">
-              <button
-                onClick={() =>
-                  showConfirm({
-                    message: acc.isBanned
-                      ? "Bạn có chắc muốn mở khóa tài khoản này không?"
-                      : "Bạn có chắc muốn khóa tài khoản này không?",
-                    onConfirm: () => toggleBanAccount(acc._id),
-                  })
-                }
-                className={clsx(
-                  "px-2 py-1 rounded-full shadow-sm transition transform duration-200 peer",
-                  acc.isBanned
-                    ? "bg-green-100 hover:bg-green-200 hover:text-green-800 text-green-700 hover:scale-105 active:scale-95"
-                    : "bg-red-100 hover:bg-red-200 hover:text-red-800 text-red-700 hover:scale-105 active:scale-95"
-                )}
-              >
-                {acc.isBanned ? <Key size={18} /> : <Lock size={18} />}
-              </button>
-              <SidebarTooltip
-                position="left"
-                label={acc.isBanned ? "Mở khóa" : "Khóa tài khoản"}
-              />
-            </div>
+                {/* Nút khóa / mở khóa */}
+                <div className="relative inline-block">
+                <button
+                    onClick={() =>
+                    showConfirm({
+                        message: acc.isBanned
+                        ? "Bạn có chắc muốn mở khóa tài khoản này không?"
+                        : "Bạn có chắc muốn khóa tài khoản này không?",
+                        onConfirm: () => toggleBanAccount(acc._id),
+                    })
+                    }
+                    className={clsx(
+                    "px-2 py-1 rounded-full shadow-sm transition transform duration-200 peer",
+                    acc.isBanned
+                        ? "bg-green-100 hover:bg-green-200 hover:text-green-800 text-green-700 hover:scale-105 active:scale-95"
+                        : "bg-red-100 hover:bg-red-200 hover:text-red-800 text-red-700 hover:scale-105 active:scale-95"
+                    )}
+                >
+                    {acc.isBanned ? <Key size={18} /> : <Lock size={18} />}
+                </button>
+                <SidebarTooltip
+                    position="left"
+                    label={acc.isBanned ? "Mở khóa" : "Khóa tài khoản"}
+                />
+                </div>
                 </div>
             ),
         },

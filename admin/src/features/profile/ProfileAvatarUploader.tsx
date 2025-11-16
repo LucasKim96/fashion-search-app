@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Camera, X, Check, ZoomIn, Crop} from "lucide-react";
 import { useUser } from "@shared/features/user/user.hooks";
-import { UserProfile, getCroppedImg } from "@shared/core";
+import { UserProfile, getCroppedImg, ImagePreviewModal } from "@shared/core";
 import Cropper from "react-easy-crop";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -154,167 +154,12 @@ export const ProfileAvatarUploader: React.FC<Props> = ({ profile, size = 120 }) 
             )}
 
             {/* Hiển thị ảnh */}
-            <AnimatePresence>
-                {showPreviewModal && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="pt-20 fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md"
-                    >
-                        {/* Nền mờ + hiệu ứng ánh sáng */}
-                        <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.1)_0%,transparent_70%)]" />
-
-                        <motion.div
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
-                            transition={{ duration: 0.25, ease: "easeOut" }}
-                            className="relative rounded-3xl shadow-[0_0_40px_rgba(255,255,255,0.2)] overflow-hidden border border-white/20 bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center"
-                        >
-                            {/* Ảnh */}
-                            {/* <img
-                            src={preview || "/default-avatar.png"}
-                            alt="Full avatar"
-                            className="rounded-2xl object-contain max-w-[90vw] max-h-[80vh] transition-transform duration-500 hover:scale-[1.02]"
-                            /> */}
-                            <div className="relative p-[3px] rounded-3xl bg-gradient-to-br from-slate-300 via-slate-100 to-slate-400 shadow-[0_0_30px_rgba(255,255,255,0.3)]">
-                                <div className="rounded-3xl bg-black/40 backdrop-blur-sm overflow-hidden border border-white/10">
-                                    <img
-                                    src={preview || "/default-avatar.png"}
-                                    alt="Full avatar"
-                                    className="object-contain max-w-[90vw] max-h-[80vh] rounded-2xl"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Hiệu ứng viền phát sáng */}
-                            <div className="absolute inset-0 rounded-3xl ring-1 ring-white/30 pointer-events-none"></div>
-
-                            {/* Nút đóng */}
-                            <button
-                            onClick={() => setShowPreviewModal(false)}
-                            className="absolute top-4 right-4 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white rounded-full p-3 shadow-lg hover:shadow-xl transition-all duration-300"
-                            >
-                            <X className="w-5 h-5" />
-                            </button>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-
-
+            <ImagePreviewModal
+                imageUrl={preview || "/default-avatar.png"} // dùng preview hoặc fallback
+                alt="Avatar"
+                open={showPreviewModal}
+                onClose={() => setShowPreviewModal(false)}
+            />
         </div>
     );
 };
-
-
-// "use client";
-
-// import React, { useState, useEffect, useCallback } from "react";
-// import { Camera, X, Check } from "lucide-react";
-// import { useUser } from "@shared/features/user/user.hooks";
-// import { UserProfile, getCroppedImg } from "@shared/core";
-// import Cropper from "react-easy-crop";
-
-// interface Props {
-//     profile: UserProfile;
-//     size?: number;
-// }
-
-// export const ProfileAvatarUploader: React.FC<Props> = ({ profile, size = 120 }) => {
-//     const { updateAvatar } = useUser();
-//     const [preview, setPreview] = useState<string>(profile.avatarUrl || "");
-//     const [showCrop, setShowCrop] = useState(false);
-//     const [imageSrc, setImageSrc] = useState<string | null>(null);
-
-//     // crop state
-//     const [crop, setCrop] = useState({ x: 0, y: 0 });
-//     const [zoom, setZoom] = useState(1);
-//     const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
-
-//     useEffect(() => {
-//         setPreview(profile.avatarUrl || "");
-//     }, [profile.avatarUrl]);
-
-//     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-//         const file = e.target.files?.[0];
-//         if (file) {
-//         const objectUrl = URL.createObjectURL(file);
-//         setImageSrc(objectUrl);
-//         setShowCrop(true);
-//         }
-//     };
-
-//     const onCropComplete = useCallback((croppedArea: any, croppedPixels: any) => {
-//         setCroppedAreaPixels(croppedPixels);
-//     }, []);
-
-//     const handleCropSave = async () => {
-//     if (imageSrc && profile.userId && croppedAreaPixels) {
-//         const croppedBlob = await getCroppedImg(imageSrc, croppedAreaPixels);
-//         const file = new File([croppedBlob], "avatar.jpg", { type: "image/jpeg", lastModified: Date.now() });
-
-//         const croppedUrl = URL.createObjectURL(file);
-//         setPreview(croppedUrl);
-//         setShowCrop(false);
-
-//         // gửi ảnh đã crop lên server
-//         await updateAvatar(profile.userId, file);
-//     }
-//     };
-
-
-//     const handleCropCancel = () => {
-//         setShowCrop(false);
-//         setImageSrc(null);
-//     };
-
-//     return (
-//         <div className="relative w-fit">
-//         {/* Avatar hình tròn */}
-//         <img
-//             src={preview || "/default-avatar.png"}
-//             alt="Avatar"
-//             className="rounded-full object-cover border border-gray-300"
-//             style={{ width: size, height: size }}
-//         />
-
-//         {/* Icon chỉnh sửa */}
-//         <label className="absolute bottom-0 right-0 bg-black/60 hover:bg-black text-white p-2 rounded-full cursor-pointer transition">
-//             <Camera className="w-4 h-4" />
-//             <input type="file" accept="image/*" className="hidden" onChange={handleChange} />
-//         </label>
-
-//         {/* Crop Modal */}
-//         {showCrop && imageSrc && (
-//             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-//             <div className="bg-white p-4 rounded-lg relative w-[400px] h-[400px]">
-//                 <Cropper
-//                 image={imageSrc}
-//                 crop={crop}
-//                 zoom={zoom}
-//                 aspect={1}
-//                 cropShape="round"
-//                 showGrid={false}
-//                 onCropChange={setCrop}
-//                 onZoomChange={setZoom}
-//                 onCropComplete={onCropComplete}
-//                 />
-//                 {/* Controls */}
-//                 <div className="absolute bottom-4 left-0 right-0 flex justify-between px-4">
-//                 <button onClick={handleCropCancel} className="flex items-center gap-1 px-3 py-1 bg-gray-200 rounded">
-//                     <X className="w-4 h-4" /> Cancel
-//                 </button>
-//                 <button onClick={handleCropSave} className="flex items-center gap-1 px-3 py-1 bg-blue-600 text-white rounded">
-//                     <Check className="w-4 h-4" /> Save
-//                 </button>
-//                 </div>
-//             </div>
-//             </div>
-//         )}
-//         </div>
-//     );
-// };
-

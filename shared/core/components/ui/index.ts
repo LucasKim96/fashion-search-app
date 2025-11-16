@@ -8,3 +8,6 @@ export * from "./Dialog";
 export * from "./Badge";
 export * from  "./Select";
 export * from "./PasswordInput";
+export * from "./SearchHeader";
+export * from "../layouts/SidebarLayout";
+export * from "./ImagePreviewModal";
