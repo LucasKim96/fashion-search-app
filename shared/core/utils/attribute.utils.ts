@@ -1,4 +1,4 @@
-import { CreateAttributeRequest, CreateAttributeValueItem } from "@shared/features/attribute/attribute.types";
+import { CreateAttributeValueItem } from "@shared/features/attribute/attribute.types";
 
 /**
  * Sinh fileKey duy nhất cho 1 value
@@ -33,19 +33,19 @@ export const buildFormDataForAttributeValues = (
     formValues: { value: string; file?: File | null }[],
     opts?: { label?: string }
 ): FormData => {
-    const payloadValues: CreateAttributeValueItem[] = formValues.map(v => ({ value: v.value }));
+    // Chỉ giữ row có value
+    const filteredValues = formValues.filter(v => v.value.trim() !== "");
+    const payloadValues: CreateAttributeValueItem[] = filteredValues.map(v => ({ value: v.value }));
     const valuesWithKeys = assignFileKeys(payloadValues);
 
     const formData = new FormData();
 
-    // Nếu có label (tạo Attribute)
-    if (opts?.label)
-        formData.append("label", opts.label);
-    
+    if (opts?.label) formData.append("label", opts.label);
+
     formData.append("values", JSON.stringify(valuesWithKeys));
 
-    // Append images theo fileKey
-    formValues.forEach((v, idx) => {
+    // Append file tương ứng
+    filteredValues.forEach((v, idx) => {
         if (v.file) {
             const key = valuesWithKeys[idx].fileKey;
             if (key) formData.append(key, v.file);

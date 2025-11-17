@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useAdminNavbar } from "@/features/auth/useAdminNavbar.hook";
+import { useAdminNavbar } from "@shared/features/auth";
 import clsx from "clsx";
 
 export const AdminNavbar: React.FC = () => {

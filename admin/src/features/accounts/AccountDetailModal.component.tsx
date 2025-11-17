@@ -4,7 +4,7 @@ import { Account } from "@shared/features/account/account.types";
 import { useAuth } from "@shared/features/auth";
 import { useAccount } from "@shared/features/account";
 import { Role } from "@shared/features/role/role.types";
-import { RoleKey, mapBackendRoles } from "@shared/core";
+import { ImagePreviewModal, RoleKey, mapBackendRoles } from "@shared/core";
 import { buildImageUrl } from "@shared/core";
 import { formatVNDate } from "@shared/core/utils/dateTime";
 import {
@@ -110,30 +110,48 @@ export const AccountDetailModal: React.FC<AccountDetailModalProps> = ({ account,
         }
     };
 
+    const [previewOpen, setPreviewOpen] = useState(false);
     return (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 animate-fadeIn">
             <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl p-10 relative border border-gray-200 transform translate-y-6 transition-all duration-300">
                 {/* Header */}
                 <div className="flex items-center gap-5 mb-5">
-                    <img
-                        src={userInfo ? buildImageUrl(userInfo.avatar) : "/default-avatar.png"}
-                        alt="avatar"
-                        className="w-24 h-24 rounded-full object-cover border-2 border-gray-200 shadow-md"
-                    />
+                    <div 
+                        onClick={() => userInfo?.avatar && setPreviewOpen(true)}
+                        className="w-24 h-24 rounded-full border-2 border-gray-200 shadow-md overflow-hidden flex items-center justify-center bg-gray-100 cursor-pointer"
+                        >
+                        {userInfo && userInfo.avatar ? (
+                            <img
+                                src={buildImageUrl(userInfo.avatar)}
+                                alt="avatar"
+                                className="w-full h-full object-cover"
+                            />
+                        ) : (
+                            <User className="w-12 h-12 text-gray-400" />
+                        )}
+                    </div>
                     <div className="flex-1">
-                        <h2 className="text-2xl font-bold text-gray-800">{userInfo?.name || account.username}</h2>
+                        <h2 className="text-2xl font-bold text-indigo-700 uppercase">{userInfo?.name || account.username}</h2>
                         {account.username && (
-                            <p className="text-sm text-gray-500 flex items-center gap-1">
+                            <p className="text-sm text-indigo-600 flex items-center gap-1">
                                 <User size={16} /> {account.username}
                             </p>
                         )}
                         {account.phoneNumber && (
-                            <p className="text-sm text-gray-500 flex items-center gap-1">
+                            <p className="text-sm text-indigo-600 flex items-center gap-1">
                                 <Phone size={16} /> {account.phoneNumber}
                             </p>
                         )}
                     </div>
                 </div>
+                        
+                {/* Image preview modal */}
+                <ImagePreviewModal
+                    imageUrl={userInfo?.avatar ? buildImageUrl(userInfo.avatar) : undefined}
+                    alt={userInfo?.name || account.username}
+                    open={previewOpen}
+                    onClose={() => setPreviewOpen(false)}
+                />
 
                 {/* Info Grid */}
                 <div className="grid grid-cols-2 gap-4 text-sm text-gray-700">

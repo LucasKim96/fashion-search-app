@@ -4,4 +4,5 @@ export * from "./useAuth.hook";
 export * from "./LoginForm.component";
 export * from "./LoginPage";
 export * from "./ProtectedRoute";
-export * from "./LoginCustom.module.css"
+export * from "./LoginCustom.module.css";
+export * from "./useAdminNavbar.hook";
