@@ -1,10 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@shared/core/components/ui";
+import { Card, CardContent, CardHeader, CardTitle, parseUserProfile, UserProfile} from "@shared/core";
 import { useAuth } from "@shared/features/auth";
-import { parseUserProfile, UserProfile } from "@shared/core/utils/profile.utils";
-import { ProfileView } from "@/features/profile/ProfileView";
+import { ProfileView } from "@shared/features/profile";
 
 export default function ProfilePage() {
   const { user, loading, refreshUser } = useAuth();

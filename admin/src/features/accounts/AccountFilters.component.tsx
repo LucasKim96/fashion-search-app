@@ -28,10 +28,10 @@ export const AccountFilters: React.FC<AccountFiltersProps> = ({
     statsByRole
     }) => {
     const roleButtons = [
-        { label: "Khách hàng", value: "CUSTOMER", color: "from-blue-500 to-indigo-400", icon: <User size={18} /> },
-        { label: "Chủ shop", value: "SHOP_OWNER", color: "from-indigo-400 to-indigo-500", icon: <ShoppingCart size={18} /> },
+        { label: "Khách hàng", value: "CUSTOMER", color: "from-blue-500 to-indigo-500", icon: <User size={18} /> },
+        { label: "Chủ shop", value: "SHOP_OWNER", color: "from-indigo-500 to-indigo-600", icon: <ShoppingCart size={18} /> },
         // { label: "Khách/Shop", value: "CUSTOMER_SHOP", color: "from-indigo-400 to-indigo-500", icon: <ShoppingBag size={18} /> },
-        { label: "Admins", value: "ADMIN_SUPER", color: "from-purple-400 to-purple-500", icon: <ShieldCheck size={18} /> },
+        { label: "Admins", value: "ADMIN_SUPER", color: "from-indigo-600 to-purple-600", icon: <ShieldCheck size={18} /> },
     ];
 
     const bannedButtons = [

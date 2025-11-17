@@ -20,7 +20,7 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
     className
 }) => {
     return (
-        <div className={clsx("flex items-center justify-between gap-4 mb-4", className)}>
+        <div className={clsx("flex items-center justify-between gap-4 mb-0", className)}>
             {/* Title */}
             <h2 className="text-3xl font-semibold text-gray-700 tracking-tight">
                 {title}
@@ -34,7 +34,7 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
                     placeholder={searchPlaceholder}
                     value={searchValue}
                     onChange={(e) => onSearchChange(e.target.value)}
-                    className="w-full pl-12 pr-4 py-3 rounded-3xl border border-gray-300 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-200 shadow-lg transition-all duration-300 placeholder-gray-400 text-sm font-medium"
+                    className="w-full pl-12 pr-4 py-3 rounded-3xl border text-blue-950 border-gray-300 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-200 shadow-lg focus:text-blue-950 transition-all duration-300 placeholder-gray-400 text-sm font-medium"
                 />
             </div>
         </div>

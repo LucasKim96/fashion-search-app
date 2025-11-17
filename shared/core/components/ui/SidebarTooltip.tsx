@@ -29,8 +29,8 @@ export const SidebarTooltip: React.FC<SidebarTooltipProps> = ({
     const positionClasses: Record<string, string> = {
         right: "left-full top-1/2 -translate-y-1/2 ml-3",
         left: "right-full top-1/2 -translate-y-1/2 mr-3",
-        top: "bottom-full left-1/2 translate-x-[calc(-50%+var(--parent-width)/2)] mb-3",
-        bottom: "top-full left-1/2 translate-x-[calc(-50%+var(--parent-width)/2)] mt-3",
+        top: "bottom-full left-1/2 -translate-x-1/2 mb-2",
+        bottom: "top-full left-1/2 -translate-x-1/2 mt-2",
     };
 
     const arrowClasses: Record<string, string> = {
@@ -39,6 +39,7 @@ export const SidebarTooltip: React.FC<SidebarTooltipProps> = ({
         top: "bottom-0 left-1/2 -translate-x-1/2 translate-y-1",
         bottom: "top-0 left-1/2 -translate-x-1/2 -translate-y-1",
     };
+
 
     return (
         <div

@@ -2,7 +2,7 @@
 
 import React, {useState} from "react";
 import { UserProfile, toInputDate, ROLES } from "@shared/core";
-import { GradientButton, Input, Badge, Select, SelectItem, PasswordInput } from "@shared/core/components/ui";
+import { GradientButton, Input, Select, SelectItem, PasswordInput } from "@shared/core";
 import { 
   User,       // Họ và tên
   Mail,       // Email
@@ -54,7 +54,7 @@ export const ProfileView: React.FC<Props> = ({ profile, onUpdate }) => {
       <div className="flex flex-col md:flex-row items-center md:items-start gap-6 w-full max-w-4xl">
         {/* Avatar */}
         <div className="flex-shrink-0">
-          <ProfileAvatarUploader profile={profile} size={140} />
+          <ProfileAvatarUploader profile={profile} size={160} />
         </div>
 
         {/* Card thông tin */}
@@ -77,8 +77,8 @@ export const ProfileView: React.FC<Props> = ({ profile, onUpdate }) => {
                       icon={Edit3}
                       iconColor="text-white"
                       labelColor="text-white"
-                      gradient="bg-gradient-to-r from-blue-300 to-indigo-400"
-                      hoverGradient="hover:from-blue-500 hover:to-indigo-800"
+                      gradient="bg-gradient-to-r from-blue-500 to-indigo-600"
+                      hoverGradient="hover:from-blue-600 hover:to-indigo-800"
                       onClick={() => setEditSection("account")}
                       className="flex items-center gap-2 px-3 py-1 text-sm shadow-md"
                       roundedFull
@@ -89,8 +89,8 @@ export const ProfileView: React.FC<Props> = ({ profile, onUpdate }) => {
                       icon={Key}
                       iconColor="text-white"
                       labelColor="text-white"
-                      gradient="bg-gradient-to-r from-yellow-300 to-orange-400"
-                      hoverGradient="hover:from-yellow-500 hover:to-orange-700"
+                      gradient="bg-gradient-to-r from-yellow-400 to-orange-500"
+                      hoverGradient="hover:from-yellow-500 hover:to-orange-600"
                       onClick={() => setShowPasswordDialog(true)}
                       className="flex items-center gap-2 px-3 py-1 text-sm shadow-md"
                       roundedFull
@@ -105,10 +105,10 @@ export const ProfileView: React.FC<Props> = ({ profile, onUpdate }) => {
                     <GradientButton
                       label="Hủy"
                       icon={X}
-                      iconColor="text-gray-500"
-                      labelColor="text-gray-500"
-                      gradient="bg-gray-100"
-                      hoverGradient="hover:bg-gray-200"
+                      iconColor="text-white"
+                      labelColor="text-white"
+                      gradient="bg-gradient-to-r from-gray-400 to-gray-500"
+                      hoverGradient="hover:from-gray-300 hover:to-gray-400"
                       onClick={handleCancel}
                       className="flex items-center gap-2 px-3 py-1 text-sm shadow-sm"
                       roundedFull
@@ -132,10 +132,10 @@ export const ProfileView: React.FC<Props> = ({ profile, onUpdate }) => {
                     <GradientButton
                       label="Hủy"
                       icon={X}
-                      iconColor="text-gray-500"
-                      labelColor="text-gray-500"
-                      gradient="bg-gray-100"
-                      hoverGradient="hover:bg-gray-200"
+                      iconColor="text-white"
+                      labelColor="text-white"
+                      gradient="bg-gradient-to-r from-gray-400 to-gray-500"
+                      hoverGradient="hover:from-gray-300 hover:to-gray-400"
                       onClick={() => setShowPasswordDialog(false)}
                       className="flex items-center gap-2 px-3 py-1 text-sm shadow-sm"
                       roundedFull
@@ -264,7 +264,6 @@ export const ProfileView: React.FC<Props> = ({ profile, onUpdate }) => {
                 </div>
               </div>
             </div>
-            {/* Phần đổi mật khẩu hiển thị ngay bên dưới */}
             {/* Phần đổi mật khẩu – hiển thị liền mạch với thông tin tài khoản */}
             {showPasswordDialog && (
               <>
@@ -275,7 +274,7 @@ export const ProfileView: React.FC<Props> = ({ profile, onUpdate }) => {
                   Đổi mật khẩu
                 </h2>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-5">
+                <div className="grid grid-cols-2 gap-4 mt-5">
                   <PasswordInput
                     label={
                       <span className="font-semibold flex items-center gap-1 text-indigo-600">
@@ -284,7 +283,11 @@ export const ProfileView: React.FC<Props> = ({ profile, onUpdate }) => {
                     }
                     value={passwordForm.oldPassword}
                     onChange={(val) => setPasswordForm({ ...passwordForm, oldPassword: val })}
-                  />
+                  />    
+
+                  {/* Hàng 1, cột phải để trống */}
+                  <div />    
+                  
                   <PasswordInput
                     label={
                       <span className="font-semibold flex items-center gap-1 text-indigo-600">
@@ -322,8 +325,8 @@ export const ProfileView: React.FC<Props> = ({ profile, onUpdate }) => {
                   icon={Edit3}
                   iconColor="text-white"
                   labelColor="text-white"
-                  gradient="bg-gradient-to-r from-green-400 to-green-500"
-                  hoverGradient="hover:from-green-500 hover:to-green-700"
+                  gradient="bg-gradient-to-r from-green-500 via-emerald-500 to-emerald-600"
+                  hoverGradient="hover:from-green-600 hover:to-emerald-700"
                   onClick={() => setEditSection("user")}
                   className="flex items-center gap-2 px-3 py-1 text-sm shadow-md"
                   roundedFull
@@ -334,10 +337,10 @@ export const ProfileView: React.FC<Props> = ({ profile, onUpdate }) => {
                   <GradientButton
                     label="Hủy"
                     icon={X}
-                    iconColor="text-gray-500"
-                    labelColor="text-gray-500"
-                    gradient="bg-gray-100"
-                    hoverGradient="hover:bg-gray-200"
+                    iconColor="text-white"
+                    labelColor="text-white"
+                    gradient="bg-gradient-to-r from-gray-400 to-gray-500"
+                    hoverGradient="hover:from-gray-300 hover:to-gray-400"
                     onClick={handleCancel}
                     className="flex items-center gap-2 px-3 py-1 text-sm shadow-sm"
                     roundedFull={true}

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { Camera, X, Check, ZoomIn, Crop} from "lucide-react";
-import { useUser } from "@shared/features/user/user.hooks";
+import { useUser } from "@shared/features/user";
 import { UserProfile, getCroppedImg, ImagePreviewModal } from "@shared/core";
 import Cropper from "react-easy-crop";
 import { motion, AnimatePresence } from "framer-motion";
@@ -90,28 +90,28 @@ export const ProfileAvatarUploader: React.FC<Props> = ({ profile, size = 120 }) 
 
             {/* Icon chỉnh sửa - tách biệt click */}
             <label className="absolute bottom-1 right-1 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white p-2 rounded-full cursor-pointer transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-110">
-                <Camera className="w-4 h-4" />
+                <Camera className="w-5 h-5" />
                 <input type="file" accept="image/*" className="hidden" onChange={handleChange} />
             </label>
 
 
             {/* Crop Modal */}
             {showCrop && imageSrc && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 pt-10">
+                <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-50 pt-20">
                     {/* Wrapper ngoài cho modal + title + cropper + buttons */}
-                    <div className="bg-white p-4 rounded-lg relative w-[500px] h-[550px] flex flex-col">
+                    <div className="bg-white p-4 rounded-lg relative w-[600px] h-[600px] flex flex-col">
                     
                         {/* Title */}
                         <div className="flex items-center justify-center mb-4">
-                        {/* Optional Icon */}
-                        <div className="mr-2">
-                            <Crop className="w-6 h-6 text-blue-500 animate-bounce" />
-                        </div>
+                            {/* Optional Icon */}
+                            <div className="mr-2">
+                                <Crop className="w-7 h-7 text-blue-500 animate-bounce" />
+                            </div>
 
-                        {/* Title */}
-                        <h2 className="text-2xl md:text-3xl font-bold text-gray-800 bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-600 drop-shadow-lg">
-                            Crop Your Image
-                        </h2>
+                            {/* Title */}
+                            <h2 className="text-2xl md:text-3xl font-bold text-gray-800 bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-600 drop-shadow-lg">
+                                Crop Your Image
+                            </h2>
                         </div>
 
                         {/* Cropper Container - Must be flex-1 to take up remaining space. */}

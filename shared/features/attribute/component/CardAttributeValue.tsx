@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
-import { AttributeValue } from "../attributeValue.types";
-import { Edit, EyeOff, Trash2, X  } from "lucide-react";
-// import { buildImageUrl } from "@shared/core/utils/image.utils";
-import { buildImageUrl, SidebarTooltip, ImagePreviewModal } from "@shared/core";
-import { AnimatePresence, motion } from "framer-motion";
+import React, { useState, useEffect } from "react";
+import { AttributeValue, useAttributeValue, UpdateAttributeValueRequest, Attribute } from "../index";
+import { Edit, EyeOff, Eye, Trash2, X , Check, Camera } from "lucide-react";
+import { buildImageUrl, SidebarTooltip, ImagePreviewModal, Input, useNotification } from "@shared/core";
+import clsx from "clsx";
 
 interface CardAttributeValueProps {
+    attribute: Attribute;
     value: AttributeValue;
     onEdit?: () => void;
     onHide?: () => void;
@@ -20,6 +20,7 @@ interface CardAttributeValueProps {
 }
 
 export const CardAttributeValue: React.FC<CardAttributeValueProps> = ({
+    attribute,
     value,
     onEdit,
     onHide,
@@ -30,138 +31,278 @@ export const CardAttributeValue: React.FC<CardAttributeValueProps> = ({
     compact = false,
     mini = false,
 }) => {
+    const { updateAdminAttributeValue, toggleAdminAttributeValue, deleteAdminAttributeValue } = useAttributeValue();
+    const { showConfirm } = useNotification();
+
     const [showPreviewModal, setShowPreviewModal] = useState(false);
     const imageUrl = buildImageUrl(value.image);
 
-    return (
-        <div className={`flex ${compact ? "flex-col p-2 max-w-[120px]" : mini ? "p-1 flex-row max-w-[150px]" : `flex-row p-4 ${maxWidth}`} items-center bg-white border border-gray-200 rounded-xl shadow-md hover:shadow-xl transition-shadow duration-300 gap-2 w-full group`}>
+    const [editing, setEditing] = useState(false);
+    const [editValue, setEditValue] = useState(value.value);
+    const [editFile, setEditFile] = useState<File | null>(null);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(
+    (value.image ? buildImageUrl(value.image) : null) ?? null
+    );
 
-        {/* Ảnh */}
-        {imageUrl && (
-            <div 
-            onClick={() => setShowPreviewModal(true)}
-            className={`cursor-pointer ${
-                compact ? "w-full aspect-square" 
-                : mini ? "flex-shrink-0 w-1/3 aspect-square" 
-                : "flex-shrink-0 w-2/5 aspect-square"
-            } rounded-lg overflow-hidden border border-gray-200`}
-            >
-            <img src={imageUrl} alt={value.value} className="w-full h-full object-cover" />
-            </div>
-        )}
 
-        {/* Nội dung */}
-        <div className={`${compact ? "w-full text-center mt-1" : "flex-1 flex flex-col justify-between gap-1"}`}>
-        {/* Label + trạng thái */}
-        <div
-        className={
-            mini
-            ? "p-2 flex items-center justify-start gap-1"
-            : compact
-            ? "flex flex-col items-center justify-center gap-1 w-full"
-            : "flex items-center justify-start gap-2"
+    useEffect(() => {
+        return () => {
+            if (previewUrl && editFile) URL.revokeObjectURL(previewUrl);
+        };
+    }, [previewUrl, editFile]);
+
+    const handleFileChange = (file: File | null) => {
+        if (previewUrl && editFile) URL.revokeObjectURL(previewUrl);
+        setEditFile(file);
+        setPreviewUrl(
+            file
+                ? URL.createObjectURL(file)
+                : (value.image ? buildImageUrl(value.image) : null) ?? null
+        );
+    };
+
+    const handleSaveEdit = async () => {
+        let payload: UpdateAttributeValueRequest | FormData;
+
+        if (editFile) {
+            payload = new FormData();
+            payload.append("value", editValue);
+            payload.append("image", editFile);
+        } else if (editValue !== value.value) {
+            payload = { value: editValue };
+        } else {
+            setEditing(false);
+            return;
         }
-        >
-        <span
-            className={`${
-            mini
-                ? "text-xs font-medium"
-                : compact
-                ? "text-sm font-medium text-center"
-                : "font-semibold text-gray-900 text-sm break-words"
-            } cursor-default`}
-        >
-            {value.value}
-        </span>
 
-        {!compact && !mini && showStatus && (
-            <div className="relative flex-shrink-0 ml-2">
-            {/* Dot trạng thái */}
-            <span
-                className={`block w-2 h-2 rounded-full transition-all duration-300
-                ${value.isActive
-                    ? "bg-green-500 ring-1 ring-green-300 hover:ring-green-500"
-                    : "bg-red-500 ring-1 ring-red-300 hover:ring-red-500"
-                }
-                `}
-            />
-            {/* Tooltip */}
-            <SidebarTooltip
-                label={value.isActive ? "Hoạt động" : "Không hoạt động"}
-                position="right"
-            />
-            </div>
-        )}
-        </div>
+        const res = await updateAdminAttributeValue(value._id, payload);
+        if (res.success) {
+            setEditing(false);
+            if (onEdit) onEdit(); // callback layout
+        }
+    };
+
+    const handleCancelEdit = () => {
+        setEditing(false);
+        setEditValue(value.value);
+        setEditFile(null);
+        setPreviewUrl((value.image ? buildImageUrl(value.image) : null) ?? null);
+    };
+
+    const handleHide = () => {
+        showConfirm({
+            message: `Bạn có chắc chắn muốn ${value.isActive ? "ẩn" : "hiện"} giá trị này?`,
+            onConfirm: async () => {
+                const res = await toggleAdminAttributeValue(value._id);
+                if (res.success && onHide) onHide();
+            }
+        });
+    };
+
+    const handleDelete = () => {
+        showConfirm({
+            message: "Bạn có chắc chắn muốn xóa giá trị thuộc tính này?",
+            onConfirm: async () => {
+                const res = await deleteAdminAttributeValue(value._id);
+                if (res.success && onDelete) onDelete();
+            }
+        });
+    };
 
 
-            {/* Nút action chỉ hiển thị chế độ bình thường */}
-            {!compact && !mini && showActions && (
-            <div className="grid grid-cols-3 gap-1 mt-2">
-                {onEdit && (
-                <div className="relative">
-                    <button
-                    onClick={onEdit}
-                    className="flex-1 flex justify-center items-center p-1 
-                                rounded-md 
-                                bg-gradient-to-r from-blue-200 via-blue-400 to-blue-200 
-                                text-blue-800 shadow-sm 
-                                transition transform duration-200 
-                                hover:from-blue-100 hover:via-blue-200 hover:to-blue-100
-                                hover:scale-105 active:scale-95 peer w-full"
-                    >
-                    <Edit size={16} />
-                    </button>
-                    <SidebarTooltip position="left" label="Chỉnh sửa" />
-                </div>
-                )}
-
-                {onHide && (
-                <div className="relative">
-                    <button
-                    onClick={onHide}
-                    className="flex-1 flex justify-center items-center p-1 
-                                rounded-md 
-                                bg-gradient-to-r from-gray-300 via-gray-400 to-gray-300 
-                                text-gray-800 shadow-sm 
-                                transition transform duration-200 
-                                hover:from-gray-100 hover:via-gray-300 hover:to-gray-100
-                                hover:scale-105 active:scale-95 peer w-full"
-                    >
-                    <EyeOff size={16} />
-                    </button>
-                    <SidebarTooltip position="left" label="Ẩn giá trị" />
-                </div>
-                )}
-
-                {onDelete && (
-                <div className="relative">
-                    <button
-                    onClick={onDelete}
-                    className="flex-1 flex justify-center items-center p-1 
-                                rounded-md 
-                                bg-gradient-to-r from-red-300 via-red-400 to-red-300 
-                                text-red-800 shadow-sm 
-                                transition transform duration-200 
-                                hover:from-red-100 hover:via-red-300 hover:to-red-100 
-                                hover:scale-105 active:scale-95 peer w-full"
-                    >
-                    <Trash2 size={16} />
-                    </button>
-                    <SidebarTooltip position="left" label="Xóa giá trị" />
-                </div>
+    return (
+        <div className={`relative flex ${compact ? "flex-col p-2 max-w-[120px]" : mini ? "p-1 flex-row max-w-[150px]" : `flex-row p-4 ${maxWidth}`} items-center bg-white border border-gray-200 rounded-xl shadow-md hover:shadow-xl transition-shadow duration-300 gap-2 w-full group`}>
+            {previewUrl || !mini ? (
+            <div
+                onClick={() => !editing && previewUrl && setShowPreviewModal(true)}
+                className={`relative ${compact ? "w-full aspect-square" : mini ? "flex-shrink-0 w-1/3 aspect-square" : "flex-shrink-0 w-2/5 aspect-square"} rounded-lg overflow-hidden border border-gray-200 flex items-center justify-center bg-gray-100 text-gray-400 cursor-pointer`}
+            >
+                {previewUrl ? (
+                <img src={previewUrl} alt={editValue} className="w-full h-full object-cover" />
+                ) : (
+                <span className="text-sm font-medium select-none">No Image</span>
                 )}
             </div>
-            )}
-        </div>
+            ) : null}
 
-        {/* Modal hiển thị ảnh */}
-        <ImagePreviewModal
-            imageUrl={imageUrl}
-            alt={value.value}
-            open={showPreviewModal}
-            onClose={() => setShowPreviewModal(false)}
-        />
+            {/* Nội dung */}
+            <div className={`${compact ? "w-full text-center mt-1" : "flex-1 flex flex-col justify-between gap-1"}`}>
+                {/* Label + trạng thái */}
+                <div
+                className={clsx(
+                    "flex items-center gap-2 w-full",
+                    mini && "p-2 justify-start",
+                    compact && "flex-col items-center justify-center w-full gap-1",
+                    !mini && !compact && "justify-start"
+                )}
+                >
+                {editing ? (
+                    <Input
+                    value={editValue}
+                    onChange={(e) => setEditValue(e.target.value)}
+                    className="flex-1 min-w-0 w-full"
+                    />
+                ) : (
+                    <span
+                    className={clsx(
+                        "cursor-default flex-1 min-w-0",
+                        mini
+                        ? "text-xs font-medium"
+                        : compact
+                        ? "text-sm font-medium text-center"
+                        : "font-semibold text-gray-900 text-sm break-words"
+                    )}
+                    >
+                    {value.value}
+                    </span>
+                )}
+
+                {!compact && !mini && showStatus && !editing && (
+                    <div className="relative flex-shrink-0 ml-auto">
+                    <span
+                        className={clsx(
+                        "block w-2 h-2 rounded-full transition-all duration-300",
+                        value.isActive
+                            ? "bg-green-600 ring-1 ring-green-300 hover:ring-green-500"
+                            : "bg-red-600 ring-1 ring-red-300 hover:ring-red-500"
+                        )}
+                    />
+                    <SidebarTooltip
+                        label={value.isActive ? "Hoạt động" : "Không hoạt động"}
+                        position="right"
+                    />
+                    </div>
+                )}
+                </div>
+                {/* Nút action */}
+                {!compact && !mini && showActions && (
+                <div className="grid grid-cols-3 gap-1 mt-2">
+                    {editing ? (
+                    <>  
+
+                        <div className="relative col-start-1">
+                            <label className="flex-1 flex justify-center items-center p-1 
+                                rounded-full bg-gradient-to-r from-blue-500 to-purple-600
+                                text-white shadow-sm transition transform duration-200
+                                hover:from-blue-600 hover:to-purple-700 hover:scale-105 active:scale-95 peer w-full cursor-pointer">
+                                <Camera size={16} />
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={e => handleFileChange(e.target.files?.[0] ?? null)}
+                                />
+                            </label>
+                            <SidebarTooltip position="bottom" label="Tải ảnh" />
+                        </div>
+                        <div className="relative col-start-2">
+                            <button
+                                onClick={handleCancelEdit}
+                                className="flex-1 flex justify-center items-center p-1 
+                                        rounded-full 
+                                        bg-gradient-to-r from-gray-400 to-gray-500 
+                                        text-white shadow-sm 
+                                        transition transform duration-200 
+                                        hover:from-gray-500 hover:to-gray-600 
+                                        hover:scale-105 active:scale-95 peer w-full"
+                            >
+                                <X size={16} />
+                            </button>
+                            <SidebarTooltip position="bottom" label="Hủy" />
+                        </div>
+
+                        <div className="relative ">
+                            <button
+                                onClick={handleSaveEdit}
+                                className="flex-1 flex justify-center items-center p-1
+                                    rounded-full
+                                    bg-gradient-to-r from-green-400 to-green-600
+                                    text-white shadow-sm
+                                    transition transform duration-200
+                                    hover:from-green-500 hover:to-green-700
+                                    hover:scale-105 active:scale-95 peer w-full"
+                            >
+                                <Check size={16} />
+                            </button>
+                            <SidebarTooltip position="bottom" label="Lưu" />
+                        </div>
+
+
+
+                        {/* Nếu cần nút xóa khi editing, có thể thêm ở đây */}
+                    </>
+                    ) : (
+                    <>
+                        {onEdit && (
+                        <div className={clsx(
+                            "relative",
+                            attribute.isActive ? "col-start-1" : "col-start-2"
+                        )}>
+                            <button
+                            onClick={() => setEditing(true)}
+                            className="flex-1 flex justify-center items-center p-1 
+                                        rounded-full 
+                                        bg-gradient-to-r from-blue-500 to-indigo-600 
+                                        text-white shadow-sm 
+                                        transition transform duration-200 
+                                        hover:from-blue-600 hover:to-indigo-800 
+                                        hover:scale-105 active:scale-95 peer w-full"
+                                        
+                            >
+                            <Edit size={16} />
+                            </button>
+                            <SidebarTooltip position="bottom" label="Chỉnh sửa" />
+                        </div>
+                        )}
+
+                        {/* Nút ẩn/hiện value chỉ hiện nếu attribute.active */}
+                        {onHide && attribute.isActive &&(
+                            <div className="relative">
+                            <button
+                                onClick={handleHide}
+                                className={clsx(
+                                "flex-1 flex justify-center items-center p-1 rounded-full shadow-sm transition transform duration-200 hover:scale-105 active:scale-95 peer w-full",
+                                value.isActive
+                                    ? "bg-gradient-to-r from-gray-400 to-gray-500 text-white hover:from-gray-600 hover:to-gray-700"
+                                    : "bg-gradient-to-r from-gray-400 to-gray-500 text-white hover:from-gray-600 hover:to-gray-700"
+                                )}
+                            >
+                                {value.isActive ? <EyeOff size={16} /> : <Eye size={16} />}
+                            </button>
+                            <SidebarTooltip
+                                position="bottom"
+                                label={value.isActive ? "Ẩn giá trị" : "Hiện giá trị"}
+                            />
+                            </div>
+                        )}
+
+                        {onDelete && (
+                        <div className="relative">
+                            <button
+                            onClick={handleDelete}
+                            className="flex-1 flex justify-center items-center p-1 
+                                        rounded-full
+                                        bg-gradient-to-r from-red-500 to-pink-600
+                                        text-white shadow-sm 
+                                        transition transform duration-200 
+                                        hover:from-red-600 hover:to-pink-700 
+                                        hover:scale-105 active:scale-95 peer w-full"
+                            >
+                            <Trash2 size={16} />
+                            </button>
+                            <SidebarTooltip position="bottom" label="Xóa giá trị" />
+                        </div>
+                        )}
+                    </>
+                    )}
+                </div>
+                )}
+
+            </div>
+
+            {/* Modal hiển thị ảnh */}
+            <ImagePreviewModal imageUrl={imageUrl} alt={value.value} open={showPreviewModal} onClose={() => setShowPreviewModal(false)} />
         </div>
     );
 };
+

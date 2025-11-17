@@ -5,9 +5,7 @@ import { Table, SidebarTooltip } from "@shared/core/components/ui";
 import { useNotification } from "@shared/core";
 import { Account } from "@shared/features/account/account.types";
 import {
-    Eye,
-    Ban,
-    CheckCircle,
+    User,
     UserCircle2,
     Phone,
     Activity,
@@ -17,10 +15,8 @@ import {
     Settings2,
     Zap,
     Lock,
-    Unlock,
     Key,
     FileText,
-    Info,
     ShieldCheck,
 } from "lucide-react";
 import { buildImageUrl } from "@shared/core";
@@ -48,28 +44,31 @@ export const AccountTable: React.FC<AccountTableProps> = ({
             align: "left" as const,
             width: 200,
             render: (acc: any) => {
-            const userInfo = acc.userInfoId;
-            const avatarUrl =
-                typeof userInfo === "object"
-                ? buildImageUrl(userInfo.avatar)
-                : undefined;
-            return (
-                <div className="flex items-center gap-3">
-                <img
-                    src={avatarUrl}
-                    alt="avatar"
-                    className="w-10 h-10 rounded-full object-cover border border-gray-300 shadow-sm"
-                />
-                <div className="flex flex-col items-start"> {/* ← đây */}
-                    <span className="font-semibold text-gray-800">
-                    {acc.username}
-                    </span>
-                    {userInfo && (
-                    <span className="text-gray-500 text-sm">{userInfo.name}</span>
-                    )}
-                </div>
-                </div>
-            );
+                const userInfo = acc.userInfoId;
+                const avatarUrl =
+                    typeof userInfo === "object"
+                    ? buildImageUrl(userInfo.avatar)
+                    : undefined;
+
+                return (
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full border border-gray-300 shadow-sm overflow-hidden flex items-center justify-center bg-gray-100">
+                            {avatarUrl ? (
+                                <img
+                                    src={avatarUrl}
+                                    alt="avatar"
+                                    className="w-full h-full object-cover"
+                                />
+                            ) : (
+                                <User className="w-7 h-7 text-gray-500" />
+                            )}
+                        </div>
+                        <div className="flex flex-col items-start">
+                            <span className="font-semibold text-gray-800">{acc.username}</span>
+                            {userInfo && <span className="text-gray-500 text-sm">{userInfo.name}</span>}
+                        </div>
+                    </div>
+                );
             },
         },
         {
