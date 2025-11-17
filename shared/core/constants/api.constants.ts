@@ -42,6 +42,7 @@ export const ACCOUNT_ENDPOINTS = {
   BY_ID: (id: string) => `/accounts/${id}`,
 };
 
+
 export const ATTRIBUTE_ENDPOINTS = {
   // ----- Public -----
   PUBLIC_BY_ID: (id: string) => `/attributes/${id}`,

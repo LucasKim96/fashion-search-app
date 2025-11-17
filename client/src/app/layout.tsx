@@ -18,9 +18,7 @@ export default function RootLayout({
       <body className="bg-gray-100 min-h-screen">
         {/* Container toast luôn ở ngoài NotificationProvider */}
         <div id="toast-root" />
-        <NotificationProvider>
-          {children}
-        </NotificationProvider>
+        <NotificationProvider>{children}</NotificationProvider>
       </body>
     </html>
   );
