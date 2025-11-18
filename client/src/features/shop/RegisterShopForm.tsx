@@ -1,12 +1,11 @@
 "use client";
-import { useState } from "react";
+import { useState, ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Store, Image, FileText } from "lucide-react";
 import styles from "./RegisterShopForm.module.css";
 import { useAuth } from "@shared/features/auth";
 import { createShopApi } from "./shop.api";
 import { useNotification } from "@shared/core/ui/NotificationProvider";
-import type { CreateShopRequest } from "./shop.types";
 
 interface RegisterShopFormProps {
 	onSuccess?: () => void;
@@ -18,27 +17,57 @@ export default function RegisterShopForm({ onSuccess }: RegisterShopFormProps) {
 	const { showToast } = useNotification();
 
 	const [shopName, setShopName] = useState("");
-	const [logoUrl, setLogoUrl] = useState("");
-	const [coverUrl, setCoverUrl] = useState("");
 	const [description, setDescription] = useState("");
+	const [logoFile, setLogoFile] = useState<File | null>(null);
+	const [coverFile, setCoverFile] = useState<File | null>(null);
+
+	// State để xem trước ảnh
+	const [logoPreview, setLogoPreview] = useState<string | null>(null);
+	const [coverPreview, setCoverPreview] = useState<string | null>(null);
+
 	const [loading, setLoading] = useState(false);
+
+	const handleFileChange = (
+		e: ChangeEvent<HTMLInputElement>,
+		fileType: "logo" | "cover"
+	) => {
+		const file = e.target.files?.[0];
+		if (!file) return;
+
+		if (fileType === "logo") {
+			setLogoFile(file);
+			setLogoPreview(URL.createObjectURL(file));
+		} else {
+			setCoverFile(file);
+			setCoverPreview(URL.createObjectURL(file));
+		}
+	};
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
-		if (!shopName.trim()) return showToast("Vui lòng nhập tên shop", "error");
-		if (!user?._id) return showToast("Không lấy được thông tin user", "error");
 
-		const payload: CreateShopRequest = {
-			shopName: shopName.trim(),
-			logoUrl: logoUrl.trim(),
-			coverUrl: coverUrl.trim(),
-			description: description.trim(),
-			accountId: user._id,
-		};
+		// Kiểm tra rỗng
+		if (!shopName.trim()) return showToast("Vui lòng nhập tên shop", "error");
+		if (!description.trim())
+			return showToast("Vui lòng nhập mô tả shop", "error");
+		if (!logoFile) return showToast("Vui lòng chọn ảnh logo", "error");
+		if (!coverFile) return showToast("Vui lòng chọn ảnh bìa", "error");
+		if (!user?._id)
+			return showToast("Không lấy được thông tin người dùng", "error");
+
+		// Tạo FormData
+		const formData = new FormData();
+		formData.append("shopName", shopName.trim());
+		formData.append("description", description.trim());
+		formData.append("logo", logoFile);
+		formData.append("cover", coverFile);
+		// accountId sẽ được lấy từ token ở phía server thông qua authMiddleware
+		// nên không cần gửi từ client nữa, nhưng nếu middleware của bạn cần thì vẫn gửi
+		// formData.append("accountId", user._id);
 
 		try {
 			setLoading(true);
-			await createShopApi(payload);
+			await createShopApi(formData);
 			showToast("Tạo shop thành công!", "success");
 			if (onSuccess) onSuccess();
 			router.push("/seller/dashboard");
@@ -68,25 +97,45 @@ export default function RegisterShopForm({ onSuccess }: RegisterShopFormProps) {
 				<Store size={20} />
 			</div>
 
-			<div className={styles["input-field"]}>
+			{/* Input cho Logo */}
+			<div className={styles["input-field-file"]}>
+				{" "}
+				{/* Có thể tạo style riêng */}
+				<label htmlFor="logo-upload">Chọn ảnh logo</label>
 				<input
-					type="text"
-					placeholder="Link ảnh logo"
-					value={logoUrl}
-					onChange={(e) => setLogoUrl(e.target.value)}
+					id="logo-upload"
+					type="file"
+					accept="image/*"
+					onChange={(e) => handleFileChange(e, "logo")}
 				/>
 				<Image size={20} />
 			</div>
+			{logoPreview && (
+				<img
+					src={logoPreview}
+					alt="Xem trước logo"
+					className="w-24 h-24 mt-2 object-cover rounded-full"
+				/>
+			)}
 
-			<div className={styles["input-field"]}>
+			{/* Input cho Ảnh bìa */}
+			<div className={styles["input-field-file"]}>
+				<label htmlFor="cover-upload">Chọn ảnh bìa</label>
 				<input
-					type="text"
-					placeholder="Link ảnh bìa"
-					value={coverUrl}
-					onChange={(e) => setCoverUrl(e.target.value)}
+					id="cover-upload"
+					type="file"
+					accept="image/*"
+					onChange={(e) => handleFileChange(e, "cover")}
 				/>
 				<Image size={20} />
 			</div>
+			{coverPreview && (
+				<img
+					src={coverPreview}
+					alt="Xem trước ảnh bìa"
+					className="w-full h-40 mt-2 object-cover"
+				/>
+			)}
 
 			<div className={styles["input-field"]}>
 				<textarea
