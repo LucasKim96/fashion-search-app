@@ -22,7 +22,11 @@ ownerRouter.use(authMiddleware);
 ownerRouter.get("/mine", ShopController.getMyShopDetails);
 ownerRouter.post(
 	"/",
-	validateShop,
+	(req, res, next) => {
+		console.log("ĐÃ ĐI QUA ROUTE POST /shops");
+		next();
+	},
+	// validateShop,
 	uploadShopImage.fields([
 		{ name: "logo", maxCount: 1 },
 		{ name: "cover", maxCount: 1 },
