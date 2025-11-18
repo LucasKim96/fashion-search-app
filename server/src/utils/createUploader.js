@@ -39,8 +39,7 @@ export const createUploader = ({
 	customFileFilter,
 	customLimits,
 }) => {
-	// ⚙️ Tạo storage config
-	console.log("Hàm createUploader ĐÃ ĐƯỢC GỌI");
+	// Tạo storage config
 	const storage = multer.diskStorage({
 		destination: (req, file, cb) => {
 			let baseDir; // 1. XÁC ĐỊNH THƯ MỤC GỐC DỰA TRÊN useAssets
