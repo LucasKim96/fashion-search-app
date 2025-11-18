@@ -50,8 +50,8 @@ export default function RegisterShopForm({ onSuccess }: RegisterShopFormProps) {
 		if (!shopName.trim()) return showToast("Vui lòng nhập tên shop", "error");
 		if (!description.trim())
 			return showToast("Vui lòng nhập mô tả shop", "error");
-		if (!logoFile) return showToast("Vui lòng chọn ảnh logo", "error");
-		if (!coverFile) return showToast("Vui lòng chọn ảnh bìa", "error");
+		// if (!logoFile) return showToast("Vui lòng chọn ảnh logo", "error");
+		// if (!coverFile) return showToast("Vui lòng chọn ảnh bìa", "error");
 		if (!user?._id)
 			return showToast("Không lấy được thông tin người dùng", "error");
 
@@ -59,11 +59,12 @@ export default function RegisterShopForm({ onSuccess }: RegisterShopFormProps) {
 		const formData = new FormData();
 		formData.append("shopName", shopName.trim());
 		formData.append("description", description.trim());
-		formData.append("logo", logoFile);
-		formData.append("cover", coverFile);
-		// accountId sẽ được lấy từ token ở phía server thông qua authMiddleware
-		// nên không cần gửi từ client nữa, nhưng nếu middleware của bạn cần thì vẫn gửi
-		// formData.append("accountId", user._id);
+		if (logoFile) {
+			formData.append("logo", logoFile);
+		}
+		if (coverFile) {
+			formData.append("cover", coverFile);
+		}
 
 		try {
 			setLoading(true);
