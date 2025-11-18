@@ -15,6 +15,11 @@ export const getShopByIdApi = (id: string) =>
 		.get<ApiResponse<ShopResponse>>(SHOP_ENDPOINTS.BY_ID(id))
 		.then((res) => res.data);
 
+export const getMyShopApi = () =>
+	axiosInstance
+		.get<ApiResponse<ShopResponse>>(SHOP_ENDPOINTS.GET_MINE) // Giả sử GET_MINE = '/shops/mine'
+		.then((res) => res.data);
+
 // Tạo shop mới
 export const createShopApi = (formData: FormData) =>
 	axiosInstance

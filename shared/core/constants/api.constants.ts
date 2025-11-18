@@ -42,7 +42,8 @@ export const ACCOUNT_ENDPOINTS = {
 };
 
 export const SHOP_ENDPOINTS = {
-	GET_ALL: "/shops",
+  GET_ALL: "/shops",
+  GET_MINE: "/shops/owner/mine",
 	BY_ID: (id: string) => `/shops/${id}`,
 	CREATE: "/shops/owner",
 	UPDATE: (id: string) => `/shops/owner/${id}`,
