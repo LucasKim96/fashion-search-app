@@ -57,11 +57,9 @@ export const useProfileLogic = (profile: UserProfile, options?: UseProfileLogicO
 
         if (!res?.success) return; // Dừng, không đóng modal
 
-
+        refreshUser?.();
         // refresh profile
         if (options?.onUpdate) options.onUpdate();
-        else refreshUser?.();
-
         // Chỉ đóng edit khi thành công
         setEditSection("none");
         } catch (error) {
@@ -85,9 +83,9 @@ export const useProfileLogic = (profile: UserProfile, options?: UseProfileLogicO
         });
         if (!res?.success) return;
 
+        // refreshUser luôn được gọi khi thành công
+        refreshUser?.();
         if (options?.onUpdate) options.onUpdate();
-        else refreshUser?.();
-
         setEditSection("none"); // Chỉ đóng khi thành công
         } catch (error) {
         //   console.error("Lỗi khi lưu thông tin cá nhân:", error);
@@ -101,18 +99,20 @@ export const useProfileLogic = (profile: UserProfile, options?: UseProfileLogicO
     const handleChangePassword = useCallback(async (onSuccess?: () => void) => {
         setSaving(true);
         try {
-        const res = await changePassword(passwordForm);
-        if (!res?.success) return;
-        setPasswordForm({ oldPassword: "", newPassword: "", confirmPassword: "" });
-        setEditSection("none");
-        if (onSuccess) onSuccess();
-        } catch (error) {
-        //   console.error("Lỗi đổi mật khẩu:", error);
-        // Giữ modal mở để người dùng sửa
+            const res = await changePassword(passwordForm);
+            if (!res?.success) return;
+
+            setPasswordForm({ oldPassword: "", newPassword: "", confirmPassword: "" });
+            setEditSection("none");
+
+            // refreshUser sau khi đổi mật khẩu
+            refreshUser?.();
+
+            if (onSuccess) onSuccess();
         } finally {
-        setSaving(false);
+            setSaving(false);
         }
-    }, [passwordForm, changePassword]);
+    }, [passwordForm, changePassword, refreshUser]);
 
     return {
         form,

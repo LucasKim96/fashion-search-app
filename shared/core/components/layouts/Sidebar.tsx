@@ -179,28 +179,29 @@
 import React, { useState } from "react";
 import clsx from "clsx";
 import { useRouter, usePathname } from "next/navigation";
-import { adminMenuItems } from "@/constants/adminMenu";
+// import { adminMenuItems } from "@/constants/adminMenu";
 import { ChevronLeft, ChevronRight, SquareDot, LogOut } from "lucide-react";
-import { SidebarTooltip } from "@shared/core/components/ui";
-import { useAdminNavbar } from "@/features/auth/useAdminNavbar.hook";
+import { SidebarTooltip } from "@shared/core";
+import { useAdminNavbar } from "@shared/features/auth";
 
-export const AdminSidebar: React.FC = () => {
+export interface MenuItem {
+  label: string;
+  icon: React.ComponentType<any>;
+  path: string;
+  color?: string;
+}
+
+interface AdminSidebarProps {
+  menuItems: MenuItem[];
+}
+
+export const AdminSidebar: React.FC<AdminSidebarProps> = ({ menuItems }) => {
   const router = useRouter();
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const { handleLogout } = useAdminNavbar();
 
   return (
-    // <aside
-    //   className={clsx(
-    //     // Glass blur + ánh sáng nhẹ, tone trung tính
-    //     "relative flex flex-col border-r border-white/30 shadow-2xl backdrop-blur-2xl transition-all duration-500",
-    //     // Gradient tinh chỉnh: sáng trên, đậm dưới
-    //     "bg-gradient-to-t from-[#cfc9c3]/95 via-[#e4e0dc]/95 to-[#faf9f8]/95 text-gray-800",
-    //     collapsed ? "w-20" : "w-64"
-    //   )}
-    // >
-
       <aside
         className={clsx(
           "sticky top-0 h-screen flex flex-col border-r border-white/30 shadow-2xl backdrop-blur-2xl transition-all duration-500",
@@ -248,7 +249,7 @@ export const AdminSidebar: React.FC = () => {
 
       {/* Navigation */}
       <nav className="flex-1 p-3 space-y-1 overflow-visible mt-4">
-        {adminMenuItems.map((item) => {
+        {menuItems.map((item) => {
           // const itemRef = React.createRef<HTMLDivElement>();
           const isActive = pathname?.startsWith(item.path);
           return (

@@ -132,22 +132,43 @@ export const useUser = () => {
 
   // ====== Actions cập nhật ======
   const updateBasicInfo = useCallback(
-    (id: string, payload: UpdateUserBasicInfoRequest) =>
-      basicInfoState.run(
-        () => runAndRefreshAllUsers(() => updateUserBasicInfoApi(id, payload)),
+    async (id: string, payload: UpdateUserBasicInfoRequest) => {
+      // 1. Thực hiện update, vẫn hiện toast khi success
+      const res = await basicInfoState.run(
+        () => updateUserBasicInfoApi(id, payload),
         { showToastOnSuccess: true }
-      ),
-    [basicInfoState, runAndRefreshAllUsers]
+      );
+
+      // 2. Nếu update thành công → reload user vừa sửa
+      if (res?.success) {
+        await userByIdState.run(
+          () => getUserByIdApi(id)          
+        );
+      }
+
+      return res; // trả về kết quả update
+    },
+    [basicInfoState, userByIdState]
   );
 
   const updateAvatar = useCallback(
-    (id: string, file: File) =>
-      avatarState.run(
-        () => runAndRefreshAllUsers(() => updateUserAvatarApi(id, file)),
+    async (id: string, file: File) => {
+      // 1. Thực hiện upload, toast khi success
+      const res = await avatarState.run(
+        () => updateUserAvatarApi(id, file),
         { showToastOnSuccess: true }
-      ),
-    [avatarState, runAndRefreshAllUsers]
+      );
+
+      // 2. Nếu upload thành công → reload user vừa sửa
+      if (res?.success)
+        await userByIdState.run(
+          () => getUserByIdApi(id))
+
+      return res; // trả về kết quả upload
+    },
+    [avatarState, userByIdState]
   );
+
 
   const updateDefaultAvatar = useCallback(
     (file: File) =>

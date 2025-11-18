@@ -6,6 +6,11 @@ import {
     CreateProductWithVariantsRequest,
     UpdateProductBasicInfoRequest,
     UpdateProductImagesRequest,
+    ProductSearchRequest,
+    ProductSearchResponseDataAdmin,
+    ProductSearchResponseDataShop,
+    ProductCountResponse,
+
 } from "./product.types";
 
 /** ========================= PUBLIC API ========================= */
@@ -44,9 +49,20 @@ export const getAllProductsAdmin = async (): Promise<ApiResponse<Product[]>> => 
     return res.data;
 };
 
+// Lấy danh sách sản phẩm admin (search + filter)
+export const searchProductsAdmin = async (
+    params?: ProductSearchRequest
+    ): Promise<ApiResponse<ProductSearchResponseDataAdmin>> => {
+    const res = await axiosInstance.get<ApiResponse<ProductSearchResponseDataAdmin>>(
+        PRODUCT_ENDPOINTS.ADMIN_LIST + "/search",
+        { params }
+    );
+    return res.data;
+};
+
 // Đếm tổng số sản phẩm admin
-export const countAllProductsAdmin = async (): Promise<ApiResponse<number>> => {
-    const res = await axiosInstance.get<ApiResponse<number>>(PRODUCT_ENDPOINTS.ADMIN_COUNT);
+export const countAllProductsAdmin = async (includeInactive = true): Promise<ApiResponse<ProductCountResponse>> => {
+    const res = await axiosInstance.get<ApiResponse<ProductCountResponse>>(`${PRODUCT_ENDPOINTS.ADMIN_COUNT}?includeInactive=${includeInactive}`);
     return res.data;
 };
 
@@ -76,9 +92,20 @@ export const getShopProducts = async (): Promise<ApiResponse<Product[]>> => {
     return res.data;
 };
 
+// Lấy danh sách sản phẩm của shop (search + filter)
+export const searchProductsShop = async (
+    params?: ProductSearchRequest
+    ): Promise<ApiResponse<ProductSearchResponseDataShop>> => {
+    const res = await axiosInstance.get<ApiResponse<ProductSearchResponseDataShop>>(
+        PRODUCT_ENDPOINTS.SHOP_LIST + "/search",
+        { params }
+    );
+    return res.data;
+};
+
 // Đếm số lượng sản phẩm của shop
-export const countShopProducts = async (): Promise<ApiResponse<number>> => {
-    const res = await axiosInstance.get<ApiResponse<number>>(PRODUCT_ENDPOINTS.SHOP_COUNT);
+export const countShopProducts = async (includeInactive = true): Promise<ApiResponse<ProductCountResponse>> => {
+    const res = await axiosInstance.get<ApiResponse<ProductCountResponse>>(`${PRODUCT_ENDPOINTS.SHOP_COUNT}?includeInactive=${includeInactive}`);
     return res.data;
 };
 

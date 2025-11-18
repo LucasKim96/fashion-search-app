@@ -1041,6 +1041,9 @@ export const useAttribute = () => {
     const [errorAdmin, setErrorAdmin] = useState<string | null>(null);
 
     // ====== SHOP STATE ======
+    const [shopAvailableAttributes, setShopAvailableAttributes] = useState<FlexibleAttributesData | null>(null);
+    const [loadingShopAvailable, setLoadingShopAvailable] = useState(false);
+    const [errorShopAvailable, setErrorShopAvailable] = useState<string | null>(null);
     const [shopAttributes, setShopAttributes] = useState<FlexibleAttributesData | null>(null);
     const [loadingShop, setLoadingShop] = useState(false);
     const [errorShop, setErrorShop] = useState<string | null>(null);
@@ -1152,7 +1155,7 @@ export const useAttribute = () => {
 
     const hideAdminAttribute = useCallback(async (id: string) => {
         try {
-        const res = await AttributeApi.toggleAttributeStatus(id);
+        const res = await AttributeApi.toggleAdminAttributeStatus(id);
         if (res.success) {
             await reloadAdminAttributes();
             showToast(res.message || "Ẩn/hiện attribute thành công", "success");
@@ -1169,7 +1172,7 @@ export const useAttribute = () => {
 
     const deleteAdminAttribute = useCallback(async (id: string) => {
         try {
-        const res = await AttributeApi.deleteAttribute(id);
+        const res = await AttributeApi.deleteAdminAttribute(id);
         if (res.success) {
             await reloadAdminAttributes();
             showToast(res.message || "Xóa attribute thành công", "success");
@@ -1185,6 +1188,56 @@ export const useAttribute = () => {
     }, [reloadAdminAttributes, showToast]);
 
     // ================= SHOP ACTIONS =================
+
+    const getShopAvailableAttributes = useCallback(
+        async (params?: { page?: number; limit?: number; sortBy?: string; sortOrder?: "asc" | "desc" }) => {
+            setLoadingShopAvailable(true);
+            setErrorShopAvailable(null);
+            try {
+            const res = await AttributeApi.getShopAvailableAttributes(params);
+            if (res.success) setShopAvailableAttributes(res.data);
+            else {
+                setErrorShopAvailable(res.message || "Lỗi API");
+                showToast(res.message || "Lỗi API", "error");
+            }
+            return res;
+            } catch (err) {
+            const msg = errorUtils.parseApiError(err);
+            setErrorShopAvailable(msg);
+            showToast(msg, "error");
+            return { success: false, message: msg, data: null };
+            } finally {
+            setLoadingShopAvailable(false);
+            }
+        },
+        [showToast]
+    );
+
+    const getShopAvailableAttributeById = useCallback(
+    async (id: string) => {
+            setLoadingShopAvailable(true);
+            setErrorShopAvailable(null);
+            try {
+            const res = await AttributeApi.getShopAvailableAttributeById(id);
+            if (res.success) {
+                // Khi lấy chi tiết attribute, có thể set state nếu muốn
+                // setShopAvailableAttributes({ attributes: [res.data], total: 1, page: 1, limit: 1, totalPages: 1 });
+            } else {
+                setErrorShopAvailable(res.message || "Lỗi API");
+                showToast(res.message || "Lỗi API", "error");
+            }
+            return res;
+            } catch (err) {
+            const msg = errorUtils.parseApiError(err);
+            setErrorShopAvailable(msg);
+            showToast(msg, "error");
+            return { success: false, message: msg, data: null };
+            } finally {
+            setLoadingShopAvailable(false);
+            }
+        },
+        [showToast]
+    );
     const getShopAttributes = useCallback(async (params?: GetAttributesFlexibleParams) => {
         setLoadingShop(true);
         setErrorShop(null);
@@ -1264,7 +1317,7 @@ export const useAttribute = () => {
 
     const hideShopAttribute = useCallback(async (id: string) => {
         try {
-        const res = await AttributeApi.toggleAttributeStatus(id);
+        const res = await AttributeApi.toggleShopAttributeStatus(id);
         if (res.success) {
             await reloadShopAttributes();
             showToast(res.message || "Ẩn/hiện attribute thành công", "success");
@@ -1279,7 +1332,7 @@ export const useAttribute = () => {
 
     const deleteShopAttribute = useCallback(async (id: string) => {
         try {
-        const res = await AttributeApi.deleteAttribute(id);
+        const res = await AttributeApi.deleteShopAttribute(id);
         if (res.success) {
             await reloadShopAttributes();
             showToast(res.message || "Xóa attribute thành công", "success");
@@ -1302,6 +1355,9 @@ export const useAttribute = () => {
         loadingAdmin,
         errorAdmin,
 
+        shopAvailableAttributes,
+        loadingShopAvailable,
+        errorShopAvailable,
         shopAttributes,
         loadingShop,
         errorShop,
@@ -1314,6 +1370,9 @@ export const useAttribute = () => {
         updateAdminAttributeLabel,
         hideAdminAttribute,
         deleteAdminAttribute,
+
+        getShopAvailableAttributes,
+        getShopAvailableAttributeById,
         getShopAttributes,
         searchShopAttributes,
         createShopAttribute,

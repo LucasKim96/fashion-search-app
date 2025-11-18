@@ -66,6 +66,7 @@ export const useAuth = ({
     }
   }, [requiredRole, showToast]);
 
+
   // ====== Helper: chạy API và tự động fetch lại user ======
   const runAndRefreshUser = useCallback(
     async <T,>(apiCall: () => Promise<{ success: boolean; message?: string; data?: T }>) => {

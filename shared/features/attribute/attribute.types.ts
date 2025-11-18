@@ -78,3 +78,4 @@ export interface FlexibleAttributesData {
     limit: number;
     totalPages: number;
 }
+
