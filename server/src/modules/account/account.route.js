@@ -2,9 +2,10 @@ import express from "express";
 import * as AccountController from "./account.controller.js";
 import { validateUpdateBasicInfo } from "./account.validate.js";
 import { authMiddleware } from "../../middlewares/auth.middleware.js";
-import { isAdminOrSuperAdmin, isSuperAdmin, isSelfOrAdmin } from "../../middlewares/role.middleware.js";
+import { isAdminOrSuperAdmin, isSuperAdmin, isSelf, isSelfOrAdmin } from "../../middlewares/role.middleware.js";
 
 const router = express.Router();
+
 
 router.get("/roles", authMiddleware, isAdminOrSuperAdmin, AccountController.getAllRoles);
 // Lấy danh sách tài khoản
@@ -33,6 +34,7 @@ router.get("/stats/role", authMiddleware, isAdminOrSuperAdmin, AccountController
 router.get("/search", authMiddleware, isAdminOrSuperAdmin, AccountController.searchAccounts);
 // Người dùng tự cập nhật thông tin cơ bản của mình (username, phoneNumber)
 router.put("/update-basic/:id", authMiddleware, isSelfOrAdmin, validateUpdateBasicInfo, AccountController.updateBasicInfo);
+
 // Lấy tài khoản theo ID
 router.get("/:id", authMiddleware, isSelfOrAdmin, AccountController.getAccountById);
 

@@ -43,7 +43,7 @@ export default function SellerProductsPage() {
             <div className="p-4 flex flex-col gap-2">
               <p className="font-semibold">{p.name}</p>
               <p className="text-sm text-text/70">
-                Giá: {p.price.toLocaleString()}₫
+                Giá: {p.price.toLocaleString("vi-VN")}₫
               </p>
               <p className="text-sm text-text/70">Tồn kho: {p.stock}</p>
 

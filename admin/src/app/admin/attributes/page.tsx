@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { AttributeSidebarLayout } from "@shared/features/attribute";
+import { AttributeSidebarLayout } from "@shared/features/attribute/component";
 import { SearchHeader, GradientButton } from "@shared/core";
 import { useAttribute } from "@shared/features/attribute/attribute.hook";
 import { Plus } from "lucide-react";

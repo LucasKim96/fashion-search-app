@@ -32,7 +32,7 @@ export const ATTRIBUTES_PUBLIC = "/uploads/attributes";
 export const getAttributesFlexible = async ({
   accountId,
   isAdmin = false,
-  includeInactive = false, 
+  // includeInactive = false, 
   page = 1,
   limit = 20,
   sortBy = "createdAt",
@@ -62,15 +62,29 @@ export const getAttributesFlexible = async ({
     const sort = { [validSortBy]: validSortOrder === "desc" ? -1 : 1 };
 
     // --- Filter Attribute ---
+    // let attrFilter = {};
+    // if (!includeInactive) attrFilter.isActive = { $ne: false }; // Chỉ lấy đang hoạt động
+    // if (isAdmin) {
+    //   attrFilter.isGlobal = true;
+    // } else {
+    //   attrFilter = {
+    //     $and: [
+    //       ...(includeInactive ? [] : [{ isActive: { $ne: false } }]),
+    //       { $or: [{ isGlobal: true }, { shopId }] },
+    //     ],
+    //   };
+    // }
+    // --- Filter Attribute ---
     let attrFilter = {};
-    if (!includeInactive) attrFilter.isActive = { $ne: false }; // Chỉ lấy đang hoạt động
     if (isAdmin) {
-      attrFilter.isGlobal = true;
+      // Admin: lấy tất cả global, kể cả ẩn
+      attrFilter = { isGlobal: true };
     } else {
+      // Shop: lấy tất cả global đang hoạt động + toàn bộ thuộc tính shop (cả ẩn)
       attrFilter = {
-        $and: [
-          ...(includeInactive ? [] : [{ isActive: { $ne: false } }]),
-          { $or: [{ isGlobal: true }, { shopId }] },
+        $or: [
+          { isGlobal: true, isActive: true }, // global khả dụng
+          { shopId }, // tất cả thuộc tính cục bộ shop
         ],
       };
     }
@@ -84,14 +98,25 @@ export const getAttributesFlexible = async ({
     const attrIds = attributes.map((a) => a._id);
 
     // --- Filter AttributeValue ---
+    // let valueFilter = { attributeId: { $in: attrIds } };
+    // if (!includeInactive) valueFilter.isActive = { $ne: false };
+
+    // if (isAdmin) {
+    //   valueFilter.shopId = null;
+    // } else if (shopId) {
+    //   valueFilter.$or = [{ shopId: null }, { shopId }];
+    // }
+
     let valueFilter = { attributeId: { $in: attrIds } };
-    if (!includeInactive) valueFilter.isActive = { $ne: false };
 
     if (isAdmin) {
+      // Admin: chỉ lấy các value global
       valueFilter.shopId = null;
-    } else if (shopId) {
-      valueFilter.$or = [{ shopId: null }, { shopId }];
+    } else {
+      // Shop: lấy value global (shopId=null) + value shop
+      valueFilter.$or = [{ shopId: null, isActive: true }, { shopId }];
     }
+
 
     const allValues = await AttributeValue.find(valueFilter).lean();
 
@@ -126,6 +151,80 @@ export const getAttributesFlexible = async ({
   }
 };
 
+/**
+ * Lấy danh sách Attribute khả dụng cho shop
+ * @param {String} accountId - accountId của shop
+ * @param {Number} [page=1]
+ * @param {Number} [limit=20]
+ * @param {String} [sortBy="createdAt"]
+ * @param {String} [sortOrder="desc"]
+ */
+export const getShopAvailableAttributes = async ({
+  accountId,
+  page = 1,
+  limit = 20,
+  sortBy = "createdAt",
+  sortOrder = "desc",
+}) => {
+  try {
+    if (!accountId) throw new Error("Thiếu accountId của shop");
+
+    // --- Lấy shop ---
+    const shop = await Shop.findOne({ accountId }).select("_id").lean();
+    if (!shop) throw new Error("Không tìm thấy shop tương ứng với tài khoản này");
+    const shopId = shop._id;
+
+    // --- Phân trang & sort ---
+    const maxLimit = 100;
+    const safePage = Math.max(1, parseInt(page) || 1);
+    const safeLimit = Math.min(Math.max(1, parseInt(limit) || 20), maxLimit);
+    const skip = (safePage - 1) * safeLimit;
+
+    const allowedSortFields = ["createdAt", "updatedAt", "label"];
+    const allowedSortOrders = ["asc", "desc"];
+    const validSortBy = allowedSortFields.includes(sortBy) ? sortBy : "createdAt";
+    const validSortOrder = allowedSortOrders.includes(sortOrder) ? sortOrder : "desc";
+    const sort = { [validSortBy]: validSortOrder === "desc" ? -1 : 1 };
+
+    // --- Filter Attribute ---
+    // Chỉ lấy các attribute khả dụng:
+    // 1. Global (isGlobal=true) và đang hoạt động (isActive=true)
+    // 2. Thuộc tính shop (shopId = shop._id) và đang hoạt động (isActive=true)
+    const attrFilter = {
+      $or: [
+        { isGlobal: true, isActive: true },
+        { shopId, isActive: true },
+      ],
+    };
+
+    // --- Query ---
+    const [attributes, total] = await Promise.all([
+      Attribute.find(attrFilter)
+        .sort(sort)
+        .skip(skip)
+        .limit(safeLimit)
+        .lean(),
+      Attribute.countDocuments(attrFilter),
+    ]);
+
+    return {
+      success: true,
+      message: "Lấy danh sách thuộc tính khả dụng của shop thành công",
+      data: {
+        attributes,
+        total,
+        page: safePage,
+        limit: safeLimit,
+        totalPages: Math.ceil(total / safeLimit),
+      },
+    };
+  } catch (error) {
+    console.error("getShopAvailableAttributes error:", error);
+    return { success: false, message: error.message, data: [] };
+  }
+};
+
+
 // Lấy chi tiết attribute
 export const getAttributeById = async (id) => {
   try {
@@ -137,6 +236,87 @@ export const getAttributeById = async (id) => {
     return { success: false, message: error.message };
   }
 };
+
+/**
+ * Lấy attribute chi tiết + các value khả dụng cho shop
+ * @param {String} attributeId - Id của attribute
+ * @param {String} accountId - Id tài khoản shop
+ */
+export const getShopAvailableAttributeWithValues = async (attributeId, accountId) => {
+  try {
+    if (!toObjectId(attributeId)) throw new Error("Id không hợp lệ");
+
+    const attribute = await Attribute.findById(attributeId).lean();
+    if (!attribute) throw new Error("Không tìm thấy thuộc tính");
+
+    // --- Xác định shop ---
+    const shop = await Shop.findOne({ accountId }).select("_id").lean();
+    const shopId = shop?._id || null;
+
+    // --- Lọc value khả dụng ---
+    const values = await AttributeValue.find({
+      attributeId,
+      isActive: true ,
+      $or: [
+        { shopId: null }, // value global
+        { shopId },       // value shop hiện tại
+      ],
+    }).lean();
+
+    return { success: true, message: "Lấy attribute thành công", data: { ...attribute, values } };
+  } catch (error) {
+    return { success: false, message: error.message };
+  }
+};
+
+
+// Lấy chi tiết attribute cùng các value khả dụng cho shop
+// export const getShopAttributeDetail = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     const accountId = req.user?.id;
+
+//     if (!toObjectId(id)) {
+//       return res.status(400).json({ success: false, message: "Id không hợp lệ" });
+//     }
+
+//     // Lấy thông tin shop từ accountId
+//     const shop = await Shop.findOne({ accountId }).select("_id").lean();
+//     if (!shop) {
+//       return res.status(404).json({ success: false, message: "Không tìm thấy shop" });
+//     }
+
+//     // Lấy attribute
+//     const attribute = await Attribute.findById(id).lean();
+//     if (!attribute) {
+//       return res.status(404).json({ success: false, message: "Không tìm thấy thuộc tính" });
+//     }
+
+//     // Lấy các value khả dụng
+//     const values = await AttributeValue.find({
+//       attributeId: attribute._id,
+//       isActive: true,
+//       $or: [
+//         { shopId: null },      // global
+//         { shopId: shop._id },  // của shop
+//       ],
+//     }).lean();
+
+//     return res.status(200).json({
+//       success: true,
+//       message: "Lấy chi tiết thuộc tính thành công",
+//       data: {
+//         ...attribute,
+//         values,
+//       },
+//     });
+
+//   } catch (error) {
+//     console.error("getShopAttributeDetail error:", error);
+//     return res.status(500).json({ success: false, message: error.message });
+//   }
+// };
+
 
 // export const getAttributesUnified = async ({
 //   accountId,        // có => là shop
@@ -489,7 +669,7 @@ export const updateAttributeOnly = async (id, body, accountId = null) => {
       currentShopId = shop._id;
 
       if (attribute.isGlobal)
-        throw new Error("Shop không được phép chỉnh sửa thuộc tính toàn cục (global)");
+        throw new Error("Shop không được phép chỉnh sửa thuộc tính toàn cục");
 
       if (attribute.shopId?.toString() !== currentShopId.toString())
         throw new Error("Bạn không có quyền sửa thuộc tính của shop khác!");
@@ -497,7 +677,7 @@ export const updateAttributeOnly = async (id, body, accountId = null) => {
       // --- Admin ---
       isAdmin = true;
       if (!attribute.isGlobal)
-        throw new Error("Admin chỉ được phép chỉnh sửa thuộc tính toàn cục (global)");
+        throw new Error("Admin chỉ được phép chỉnh sửa thuộc tính toàn cục");
     }
 
     // --- Cập nhật label nếu khác giá trị cũ ---
@@ -525,16 +705,32 @@ export const updateAttributeOnly = async (id, body, accountId = null) => {
 
 
 // Xóa attribute + value
-export const deleteAttribute = async (id) => {
+export const deleteAttribute = async (id, accountId = null) => {
   return withTransaction(async (session) => {
     if (!toObjectId(id)) throw new Error("Id không hợp lệ");
 
     const attribute = await Attribute.findById(id).session(session);
     if (!attribute) throw new Error("Không tìm thấy attribute");
 
+    // ======= Phân quyền =======
+    if (accountId) {
+      // Shop
+      const shop = await Shop.findOne({ accountId: toObjectId(accountId), isDeleted: false }).session(session);
+      if (!shop) throw new Error("Không tìm thấy cửa hàng cho tài khoản này");
+
+      if (attribute.isGlobal)
+        throw new Error("Shop không được phép xóa thuộc tính toàn cục");
+      if (attribute.shopId?.toString() !== shop._id.toString())
+        throw new Error("Bạn không có quyền xóa thuộc tính của shop khác!");
+    } else {
+      // Admin
+      if (!attribute.isGlobal)
+        throw new Error("Admin chỉ được phép xóa thuộc tính toàn cục");
+    }
+
     const values = await AttributeValue.find({ attributeId: attribute._id }).session(session);
 
-    // === Giai đoạn backup trước khi xóa ===
+    // === Backup ảnh trước khi xóa ===
     const backupPaths = [];
     try {
       for (const val of values) {
@@ -563,7 +759,7 @@ export const deleteAttribute = async (id) => {
       await AttributeValue.deleteMany({ attributeId: attribute._id }).session(session);
       await Attribute.findByIdAndDelete(attribute._id).session(session);
 
-      // === Nếu thành công → xóa file backup ===
+      // === Nếu thành công → xóa backup ===
       backupPaths.forEach(({ backupPath }) => removeBackup(backupPath));
 
       return { success: true, message: "Đã xóa thuộc tính và ảnh của các giá trị liên quan" };
@@ -575,26 +771,116 @@ export const deleteAttribute = async (id) => {
   }).catch((error) => ({ success: false, message: error.message }));
 };
 
+// export const deleteAttribute = async (id) => {
+//   return withTransaction(async (session) => {
+//     if (!toObjectId(id)) throw new Error("Id không hợp lệ");
+
+//     const attribute = await Attribute.findById(id).session(session);
+//     if (!attribute) throw new Error("Không tìm thấy attribute");
+
+//     const values = await AttributeValue.find({ attributeId: attribute._id }).session(session);
+
+//     // === Giai đoạn backup trước khi xóa ===
+//     const backupPaths = [];
+//     try {
+//       for (const val of values) {
+//         if (val.image) {
+//           const imagePath = path.join(DEFAULT_FOLDER, path.basename(val.image));
+//           if (fs.existsSync(imagePath)) {
+//             const backupPath = backupFile(imagePath);
+//             if (backupPath) backupPaths.push({ imagePath, backupPath });
+//           }
+//         }
+//       }
+//     } catch (err) {
+//       throw new Error("Không thể backup ảnh trước khi xóa");
+//     }
+
+//     try {
+//       // === Xóa file ảnh ===
+//       for (const val of values) {
+//         if (val.image) {
+//           const imagePath = path.join(DEFAULT_FOLDER, path.basename(val.image));
+//           if (fs.existsSync(imagePath)) fs.unlinkSync(imagePath);
+//         }
+//       }
+
+//       // === Xóa dữ liệu DB ===
+//       await AttributeValue.deleteMany({ attributeId: attribute._id }).session(session);
+//       await Attribute.findByIdAndDelete(attribute._id).session(session);
+
+//       // === Nếu thành công → xóa file backup ===
+//       backupPaths.forEach(({ backupPath }) => removeBackup(backupPath));
+
+//       return { success: true, message: "Đã xóa thuộc tính và ảnh của các giá trị liên quan" };
+//     } catch (error) {
+//       // === Nếu lỗi → khôi phục ảnh từ backup ===
+//       backupPaths.forEach(({ backupPath, imagePath }) => restoreFile(backupPath, imagePath));
+//       throw error;
+//     }
+//   }).catch((error) => ({ success: false, message: error.message }));
+// };
+
 // Xóa mềm attribute + values 
-export const toggleActiveAttribute = async (id) => {
+export const toggleActiveAttribute = async (attributeId, accountId = null, session) => {
   try {
-    const attr = await Attribute.findById(id);
+    const attr = await Attribute.findById(attributeId).session(session);
     if (!attr) throw new Error("Không tìm thấy thuộc tính");
 
+    // ======= Phân quyền =======
+    if (accountId) {
+      // Shop
+      const shop = await Shop.findOne({ accountId: toObjectId(accountId), isDeleted: false }).session(session);
+      if (!shop) throw new Error("Không tìm thấy cửa hàng cho tài khoản này");
+
+      if (attr.isGlobal)
+        throw new Error("Shop không được phép chỉnh sửa thuộc tính toàn cục");
+      if (attr.shopId?.toString() !== shop._id.toString())
+        throw new Error("Bạn không có quyền chỉnh sửa thuộc tính của shop khác!");
+    } else {
+      // Admin
+      if (!attr.isGlobal)
+        throw new Error("Admin chỉ được phép chỉnh sửa thuộc tính toàn cục");
+    }
+
+    // ======= Toggle trạng thái =======
     const newStatus = !attr.isActive;
     attr.isActive = newStatus;
-    await attr.save();
+    await attr.save({ session });
 
-    await AttributeValue.updateMany({ attributeId: id }, { isActive: newStatus });
+    // Cập nhật tất cả giá trị liên quan
+    await AttributeValue.updateMany({ attributeId }, { isActive: newStatus }).session(session);
 
     return {
       success: true,
       message: `Đã ${newStatus ? "kích hoạt" : "ẩn"} thuộc tính và toàn bộ giá trị liên quan`,
+      data: attr,
     };
   } catch (error) {
-    return { success: false, message: error.message };
+    return { success: false, message: error.message, data: null };
   }
 };
+// export const toggleActiveAttribute = async (id) => {
+//   try {
+//     const attr = await Attribute.findById(id);
+//     if (!attr) throw new Error("Không tìm thấy thuộc tính");
+
+//     const newStatus = !attr.isActive;
+//     attr.isActive = newStatus;
+//     await attr.save();
+
+//     await AttributeValue.updateMany({ attributeId: id }, { isActive: newStatus });
+
+//     return {
+//       success: true,
+//       message: `Đã ${newStatus ? "kích hoạt" : "ẩn"} thuộc tính và toàn bộ giá trị liên quan`,
+//     };
+//   } catch (error) {
+//     return { success: false, message: error.message };
+//   }
+// };
+
+
 export const searchAttributes = async ({ query, isGlobal, accountId, page = 1, limit = 20 }) => {
   try {
     const filter = {};

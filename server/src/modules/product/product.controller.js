@@ -278,6 +278,49 @@ export const handleCountProducts = async (req, res, { isAdmin = false } = {}) =>
   }
 };
 
+export const handleSearchProducts = async (req, res, isAdmin = false) => {
+  try {
+    let accountId = undefined;
+    if (!isAdmin) {
+      accountId = req.user?.id?.toString();
+      if (!accountId) {
+        return res.status(401).json({
+          success: false,
+          message: "Token không hợp lệ hoặc hết hạn",
+        });
+      }
+    }
+
+    const {
+      query, // chỉ 1 ô search duy nhất
+      status = "all",
+      priceRange,
+      page = 1,
+      limit = 20,
+    } = req.query;
+
+    // --- Gọi service ---
+    const result = await ProductService.searchProducts({
+      isAdmin,
+      accountId,
+      query,
+      status,
+      priceRange,
+      page,
+      limit,
+    });
+
+    return res.status(result.success ? 200 : 400).json(result);
+  } catch (error) {
+    console.error("handleSearchProducts error:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Lỗi khi tìm kiếm sản phẩm",
+    });
+  }
+};
+
+
 //Khách hàng xem toàn bộ sản phẩm đang hiển thị
 export const getAllPublicProducts = (req, res) => {
   return handleGetAllProductsBase(req, res, { forCustomer: true });
@@ -298,6 +341,7 @@ export const getAllProductsAdmin = (req, res) => {
   return handleGetAllProductsBase(req, res, { forAdmin: true });
 };
 
+export const searchProductsAdmin = (req, res) => handleSearchProducts(req, res, true);
 
 /**
  * Khách hàng xem số lượng sản phẩm của 1 shop
@@ -316,3 +360,5 @@ export const countMyProducts = (req, res) => {
 export const countAllProducts = (req, res) => {
   return handleCountProducts(req, res, { isAdmin: true });
 };
+
+export const searchProductsShop = (req, res) => handleSearchProducts(req, res, false);

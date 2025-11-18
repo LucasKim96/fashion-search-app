@@ -9,8 +9,6 @@ export interface ProductShopInfo {
     logoUrl?: string;
 }
 
-
-
 /**
  * Chi tiết từng biến thể trong ProductDetail
  * hỗ trợ lấy chi tiết
@@ -49,6 +47,21 @@ export interface Product {
     updatedAt: string;
     variants?: ProductVariantDetail[]; // kèm biến thể nếu chi tiết
 }
+
+export interface ShopFullInfo {
+    _id: string;
+    shopName: string;
+    logoUrl?: string;
+    coverUrl?: string;
+    description?: string;
+    status: "active" | "inactive";
+    accountId: string;
+    isDeleted: boolean;
+    deletedAt: string | null;
+    createdAt: string;
+    updatedAt: string;
+}
+
 
 //-------Tạo sản phẩm và các biến thể------
 
@@ -97,4 +110,42 @@ export interface UpdateProductBasicInfoRequest {
     pdName?: string;
     basePrice?: number;
     description?: string;
+}
+
+//----------Search---------------
+// Search Request Type
+export type ProductSearchRequest = {
+    query?: string;     // tìm theo tên sản phẩm hoặc shopName (admin)
+    status?: "all" | "active" | "inactive"; // chế độ lọc theo active
+    priceRange?: "<100" | "100-300" | "300-500" | "500-1000" | "1000<"; //chế độ lọc theo giá
+    page?: number;
+    limit?: number;
+};
+// Search Response Type
+export interface ProductAdmin extends Product {
+    shopId: ShopFullInfo;
+}
+
+//search cho admin
+export interface ProductSearchResponseDataAdmin {
+    products: ProductAdmin[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+}
+
+
+//search cho shop
+export interface ProductSearchResponseDataShop {
+    products: Product[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+}
+
+//------Count-----------
+export interface ProductCountResponse {
+    total: number;
 }

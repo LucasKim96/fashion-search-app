@@ -108,7 +108,7 @@ export const useAccount = () => {
         [searchState, allAccountsState]
     );
 
-        const countByStatus = useCallback(
+    const countByStatus = useCallback(
         () => statsByStatusState.run(() => AccountApi.countAccountsByStatus()),
         [statsByStatusState]
     );
@@ -143,13 +143,23 @@ export const useAccount = () => {
     );
 
     const updateBasicInfo = useCallback(
-    (id: string, payload: UpdateAccountBasicInfoRequest) =>
-        basicInfoState.run(
-        () => runAndRefreshAll(() => AccountApi.updateBasicInfo(id, payload)),
-        { showToastOnSuccess: true}
-        ),
-    [basicInfoState, runAndRefreshAll]
+        async (id: string, payload: UpdateAccountBasicInfoRequest) => {
+            // 1. Thực hiện cập nhật
+            const res = await basicInfoState.run(
+                () => AccountApi.updateBasicInfo(id, payload),
+                { showToastOnSuccess: true } // sẽ hiện toast nếu success = true
+            );
+
+            // 2. Nếu thành công → refresh lại account đó
+            if (res?.success) {
+            await fetchAccountById(id);
+            }
+
+            return res;
+        },
+        [basicInfoState, fetchAccountById]
     );
+
 
     const updateRoles = useCallback(
     (id: string, payload: UpdateRolesRequest) =>
