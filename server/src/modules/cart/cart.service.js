@@ -10,7 +10,7 @@ const getOrCreateCart = async (accountId, session = null) => {
 	if (!cart) {
 		console.log(`Không tìm thấy giỏ hàng cho ${accountId}, đang tạo mới...`);
 		// Dùng create với mảng và lấy phần tử đầu tiên để hoạt động tốt với transaction
-		const created = await Cart.create([{ accountId, cartItems: [] }], {
+		const created = await Cart.create([{ accountId, items: [] }], {
 			session,
 		});
 		cart = created[0];
@@ -48,18 +48,18 @@ export const addToCart = async (accountId, productVariantId, quantity = 1) => {
 		// let cart = await Cart.findOne({ accountId }).session(session);
 		const cart = await getOrCreateCart(accountId, session);
 		if (!cart)
-			cart = await Cart.create([{ accountId, cartItems: [] }], {
+			cart = await Cart.create([{ accountId, items: [] }], {
 				session,
 			}).then(([c]) => c);
 
-		const existingItem = cart.cartItems.find(
+		const existingItem = cart.items.find(
 			(item) => item.productVariantId.toString() === String(productVariantId)
 		);
 
 		if (existingItem) {
 			existingItem.quantity += quantity;
 		} else {
-			cart.cartItems.push({
+			cart.items.push({
 				productId: product._id,
 				productVariantId: variant._id,
 				quantity,
@@ -68,7 +68,7 @@ export const addToCart = async (accountId, productVariantId, quantity = 1) => {
 		}
 
 		await cart.save({ session });
-		return await cart.populate("cartItems.productVariantId");
+		return await cart.populate("items.productVariantId");
 	});
 };
 
@@ -85,13 +85,13 @@ export const updateItemQuantity = async (
 	const cart = await getOrCreateCart(accountId);
 	if (!cart) throw ApiError.notFound("Không tìm thấy giỏ hàng");
 
-	const item = cart.cartItems.find(
+	const item = cart.items.find(
 		(i) => i.productVariantId.toString() === String(productVariantId)
 	);
 	if (!item) throw ApiError.notFound("Sản phẩm không có trong giỏ hàng");
 
 	if (quantity <= 0) {
-		cart.cartItems = cart.cartItems.filter(
+		cart.items = cart.items.filter(
 			(i) => i.productVariantId.toString() !== String(productVariantId)
 		);
 	} else {
@@ -99,7 +99,7 @@ export const updateItemQuantity = async (
 	}
 
 	await cart.save();
-	return await cart.populate("cartItems.productVariantId");
+	return await cart.populate("items.productVariantId");
 };
 
 /**
@@ -111,15 +111,15 @@ export const removeFromCart = async (accountId, productVariantId) => {
 	const cart = await getOrCreateCart(accountId);
 	if (!cart) throw ApiError.notFound("Không tìm thấy giỏ hàng");
 
-	const before = cart.cartItems.length;
-	cart.cartItems = cart.cartItems.filter(
+	const before = cart.items.length;
+	cart.items = cart.items.filter(
 		(i) => i.productVariantId.toString() !== String(productVariantId)
 	);
-	if (cart.cartItems.length === before)
+	if (cart.items.length === before)
 		throw ApiError.notFound("Sản phẩm không tồn tại trong giỏ hàng");
 
 	await cart.save();
-	return await cart.populate("cartItems.productVariantId");
+	return await cart.populate("items.productVariantId");
 };
 
 /**
@@ -129,24 +129,24 @@ export const getCartWithDetails = async (accountId) => {
 	if (!accountId) throw ApiError.badRequest("Thiếu accountId");
 	let cart = await getOrCreateCart(accountId);
 	cart = await Cart.findOne({ accountId }).populate({
-		path: "cartItems.productVariantId",
+		path: "items.productVariantId",
 		populate: {
 			path: "productId",
 			populate: { path: "shopId", select: "shopName status" },
 		},
 	});
 
-	if (!cart) return await Cart.create({ accountId, cartItems: [] });
+	if (!cart) return await Cart.create({ accountId, items: [] });
 
-	const validItems = cart.cartItems.filter((item) => {
+	const validItems = cart.items.filter((item) => {
 		const variant = item.productVariantId;
 		const product = variant?.productId;
 		const shop = product?.shopId;
 		return variant && product && shop && shop.status === "active";
 	});
 
-	if (validItems.length !== cart.cartItems.length) {
-		cart.cartItems = validItems;
+	if (validItems.length !== cart.items.length) {
+		cart.items = validItems;
 		await cart.save();
 	}
 
@@ -159,7 +159,7 @@ export const getCartWithDetails = async (accountId) => {
 export const calculateCartTotal = async (accountId) => {
 	const cart = await getCartWithDetails(accountId);
 
-	const itemsWithFinalPrice = cart.cartItems.map((item) => {
+	const itemsWithFinalPrice = cart.items.map((item) => {
 		const variant = item.productVariantId;
 		const product = variant?.productId;
 
@@ -201,7 +201,7 @@ export const bulkAdd = async (accountId, items) => {
 	return await withTransaction(async (session) => {
 		let cart = await Cart.findOne({ accountId }).session(session);
 		if (!cart)
-			cart = await Cart.create([{ accountId, cartItems: [] }], {
+			cart = await Cart.create([{ accountId, items: [] }], {
 				session,
 			}).then(([c]) => c);
 
@@ -214,13 +214,13 @@ export const bulkAdd = async (accountId, items) => {
 				.session(session);
 			if (!variant || !variant.productId) continue;
 
-			const existingItem = cart.cartItems.find(
+			const existingItem = cart.items.find(
 				(item) => item.productVariantId.toString() === String(productVariantId)
 			);
 
 			if (existingItem) existingItem.quantity += quantity;
 			else {
-				cart.cartItems.push({
+				cart.items.push({
 					productId: variant.productId._id,
 					productVariantId: variant._id,
 					quantity,
@@ -230,7 +230,7 @@ export const bulkAdd = async (accountId, items) => {
 		}
 
 		await cart.save({ session });
-		return await cart.populate("cartItems.productVariantId");
+		return await cart.populate("items.productVariantId");
 	});
 };
 
@@ -242,7 +242,7 @@ export const refreshCart = async (accountId) => {
 	if (!cart) throw ApiError.notFound("Không tìm thấy giỏ hàng");
 
 	// Lấy toàn bộ variant đang nằm trong cart
-	const variantIds = cart.cartItems.map((i) => i.productVariantId);
+	const variantIds = cart.items.map((i) => i.productVariantId);
 	const variants = await ProductVariant.find({
 		_id: { $in: variantIds },
 	}).populate({
@@ -252,7 +252,7 @@ export const refreshCart = async (accountId) => {
 
 	// Lọc ra các item hợp lệ
 	const validItems = [];
-	for (const item of cart.cartItems) {
+	for (const item of cart.items) {
 		const variant = variants.find((v) => v._id.equals(item.productVariantId));
 		const product = variant?.productId;
 		const shop = product?.shopId;
@@ -269,12 +269,12 @@ export const refreshCart = async (accountId) => {
 		validItems.push(item);
 	}
 
-	cart.cartItems = validItems;
+	cart.items = validItems;
 	await cart.save();
 
 	// Populate lại thông tin sau khi làm mới
 	return await cart.populate({
-		path: "cartItems.productVariantId",
+		path: "items.productVariantId",
 		populate: {
 			path: "productId",
 			populate: { path: "shopId", select: "shopName status" },
@@ -286,7 +286,7 @@ export const clearCart = async (accountId) => {
 	const cart = await getOrCreateCart(accountId);
 	if (!cart) throw ApiError.notFound("Không tìm thấy giỏ hàng");
 
-	cart.cartItems = [];
+	cart.items = [];
 	await cart.save();
 
 	return cart; // Giỏ hàng rỗng, vẫn giữ accountId
@@ -308,10 +308,10 @@ export const removeProductsFromAllCarts = async (productIds) => {
 	const variantIds = variants.map((v) => v._id);
 	if (variantIds.length === 0) return;
 
-	// Gỡ bỏ tất cả cartItems có chứa variantId thuộc danh sách này
+	// Gỡ bỏ tất cả items có chứa variantId thuộc danh sách này
 	const result = await Cart.updateMany(
 		{},
-		{ $pull: { cartItems: { productVariantId: { $in: variantIds } } } }
+		{ $pull: { items: { productVariantId: { $in: variantIds } } } }
 	);
 
 	console.log(

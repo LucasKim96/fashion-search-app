@@ -1,11 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@shared/features/cart/useCart.hook"; // Giả định bạn có hook này
 import { buildImageUrl, formatCurrency } from "@shared/core";
 import { Loader2, Trash2, ShoppingBag, Plus, Minus } from "lucide-react";
-import clsx from "clsx";
 
 // ===================================================================
 // COMPONENT CON: Hiển thị khi giỏ hàng trống

@@ -19,25 +19,6 @@ export const ProfileAvatarUploader: React.FC<Props> = ({
 	size = 120,
 	onUpdate,
 }) => {
-	// --- BẮT ĐẦU DEBUG ---
-	const location =
-		typeof window !== "undefined" ? window.location.pathname : "server";
-	console.log(
-		`AVATAR UPLOADER (${
-			location.includes("/admin") ? "ADMIN" : "CLIENT"
-		}) - Props received:`,
-		{ profile }
-	);
-
-	const authContext = useAuthContext();
-	console.log(
-		`AVATAR UPLOADER (${
-			location.includes("/admin") ? "ADMIN" : "CLIENT"
-		}) - Auth context user ID:`,
-		authContext.user?._id
-	);
-	// --- KẾT THÚC DEBUG ---
-
 	const { updateAvatar } = useUser();
 	const [preview, setPreview] = useState<string>(profile.avatarUrl || "");
 	const [showCrop, setShowCrop] = useState(false);
