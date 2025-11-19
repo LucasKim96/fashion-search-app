@@ -8,7 +8,8 @@ import { useAttribute, Attribute } from "@shared/features/attribute";
 import { CardAttributeValue } from "./CardAttributeValue";
 import { Calendar, Activity, Eye, Edit2, Trash2, Plus, Zap, Shapes, Tags} from "lucide-react";
 import { AttributeHeader } from "./AttributeHeader";
-import { CreateAttributePanel, CreateAttributeValue } from "./index";
+import { CreateAttributePanel, CreateAttributeValue} from "./index";
+import {AttributeValue } from "../attributeValue.types"
 
 interface AttributeSidebarLayoutProps {
     searchQuery?: string;
@@ -100,7 +101,37 @@ export const AttributeSidebarLayout: React.FC<AttributeSidebarLayoutProps> = ({
         }
     }, [createClicked]);
 
+    //========Test select value-==================
+    // Lưu cả object của value
+    const [selectedValues, setSelectedValues] = useState<AttributeValue[]>([]);
 
+    const toggleSelectedValue = (value: AttributeValue, isSelected: boolean) => {
+        console.log("▶ CLICK VALUE:", value);  
+        console.log("▶ isSelected:", isSelected);
+
+        setSelectedValues(prev => {
+            const next = isSelected
+                ? [...prev, value]
+                : prev.filter(v => v._id !== value._id);
+
+            console.log("▶ selectedValues sau khi cập nhật:", next);
+            return next;
+        });
+    };
+
+    // Lưu ID đã chọn cho mỗi attribute
+    const [selectedValueByAttribute, setSelectedValueByAttribute] = useState<Record<string, AttributeValue | null>>({});
+    const toggleSingleSelect = (attributeId: string, value: AttributeValue) => {
+        setSelectedValueByAttribute(prev => {
+            const newSelected = {
+                ...prev,
+                [attributeId]: prev[attributeId]?._id === value._id ? null : value
+            };
+
+            console.log(`Attribute ${attributeId} selected value:`, newSelected[attributeId]);
+            return newSelected;
+        });
+    };
     // ================= Debug state =================
     const renderContent = () => {
         if (loadingAdmin)
@@ -220,8 +251,20 @@ export const AttributeSidebarLayout: React.FC<AttributeSidebarLayoutProps> = ({
                                 key={value._id}
                                 attribute={selectedAttribute}
                                 value={value}
+                                
+                                // selectable={!editMode}
+                                // selected={selectedValues.some(v => v._id === value._id)}
+                                // onSelectChange={(isSelected) =>
+                                //     toggleSelectedValue(value, isSelected)
+                                // }
+
+                                // selected={selectedValueByAttribute[selectedAttribute._id]?._id === value._id}
+                                // singleSelect={true}
+                                // onSelectChange={(isSelected) =>
+                                //     toggleSingleSelect(selectedAttribute._id, value)
+                                // }
+                                
                                 mini={!editMode}
-                                compact={false}
                                 showActions={editMode}
                                 showStatus={editMode}
                                 onEdit={async () => await reloadAdminAttributes()}

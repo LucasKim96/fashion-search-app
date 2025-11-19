@@ -27,6 +27,6 @@ router.get("/:id", authMiddleware, isSelfOrAdmin, UserInfoController.getUserById
 // Cập nhật ảnh đại diện (self hoặc admin)
 router.put("/avatar/:id", authMiddleware, isSelf, uploadUserAvatar.single("avatar"), UserInfoController.updateAvatar);
 // Cập nhật thông tin cơ bản (name, dayOfBirth, gender, email)
-router.put("/basic-info/:id", authMiddleware, isSelf, validateUpdateBasicUserInfo, UserInfoController.updateBasicUserInfo);
+router.put("/basic-info/:id", authMiddleware, isSelf, UserInfoController.updateBasicUserInfo);
 
 export default router;

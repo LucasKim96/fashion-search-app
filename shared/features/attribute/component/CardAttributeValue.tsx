@@ -17,6 +17,10 @@ interface CardAttributeValueProps {
     maxWidth?: string;
     compact?: boolean;
     mini?: boolean;
+    selectable?: boolean; // bật chế độ chọn
+    selected?: boolean;   // trạng thái đã chọn
+    singleSelect?: boolean; // bật chế độ chỉ chọn 1
+    onSelectChange?: (selected: boolean) => void; // callback khi chọn/unselect
 }
 
 export const CardAttributeValue: React.FC<CardAttributeValueProps> = ({
@@ -30,6 +34,10 @@ export const CardAttributeValue: React.FC<CardAttributeValueProps> = ({
     maxWidth = "max-w-sm",
     compact = false,
     mini = false,
+    selectable = false,
+    selected = false,
+    singleSelect = false,
+    onSelectChange,
 }) => {
     const { updateAdminAttributeValue, toggleAdminAttributeValue, deleteAdminAttributeValue } = useAttributeValue();
     const { showConfirm } = useNotification();
@@ -109,13 +117,38 @@ export const CardAttributeValue: React.FC<CardAttributeValueProps> = ({
         });
     };
 
+    // ===== HANDLE SELECT =====
+    const handleSelect = (e: React.MouseEvent) => {
+        if (!selectable) return;
+
+        // Không cho click vào các nút Edit/Hide/Delete/Preview kích hoạt select
+        if ((e.target as HTMLElement).closest("button")) return;
+
+        onSelectChange?.(!selected);
+    };
+
+
 
     return (
-        <div className={`relative flex ${compact ? "flex-col p-2 max-w-[120px]" : mini ? "p-1 flex-row max-w-[150px]" : `flex-row p-4 ${maxWidth}`} items-center bg-white border border-gray-200 rounded-xl shadow-md hover:shadow-xl transition-shadow duration-300 gap-2 w-full group`}>
+        // <div className={`relative flex ${compact ? "flex-col p-2 max-w-[120px]" : mini ? "p-1 flex-row max-w-[150px]" : `flex-row p-4 ${maxWidth}`} items-center bg-white border border-gray-200 rounded-xl shadow-md hover:shadow-xl transition-shadow duration-300 gap-2 w-full group`}>
+        <div
+            onClick={handleSelect}
+            className={clsx(
+                "relative flex items-center rounded-xl border transition-shadow duration-300 gap-2 w-full",
+                compact ? "flex-col p-2 max-w-[120px]" : mini || selectable ? "p-1 flex-row max-w-[150px]" : `flex-row p-4 ${maxWidth}`,
+                "bg-white shadow-md hover:shadow-xl",
+                selectable && selected && "bg-indigo-100 border border-indigo-400 shadow-xl scale-105"
+            )}
+        >
             {previewUrl || !mini ? (
             <div
                 onClick={() => !editing && previewUrl && setShowPreviewModal(true)}
-                className={`relative ${compact ? "w-full aspect-square" : mini ? "flex-shrink-0 w-1/3 aspect-square" : "flex-shrink-0 w-2/5 aspect-square"} rounded-lg overflow-hidden border border-gray-200 flex items-center justify-center bg-gray-100 text-gray-400 cursor-pointer`}
+                // className={`relative ${compact ? "w-full aspect-square" : mini ? "flex-shrink-0 w-1/3 aspect-square" : "flex-shrink-0 w-2/5 aspect-square"} rounded-lg overflow-hidden border border-gray-200 flex items-center justify-center bg-gray-100 text-gray-400 cursor-pointer`}
+                className={clsx(
+            "relative rounded-lg overflow-hidden border flex items-center justify-center bg-gray-100 text-gray-400 cursor-pointer",
+            compact ? "w-full aspect-square" : mini || selectable ? "flex-shrink-0 w-1/3 aspect-square" : "flex-shrink-0 w-2/5 aspect-square"
+            // Bỏ ring-2 và border khi selected
+        )}
             >
                 {previewUrl ? (
                 <img src={previewUrl} alt={editValue} className="w-full h-full object-cover" />
