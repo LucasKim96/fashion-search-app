@@ -20,16 +20,17 @@ router.use("/", publicRouter);
 
 // ========================= ADMIN ROUTES =========================
 const adminRouter = express.Router();
-adminRouter.get("/", ProductController.getAllProductsAdmin);
+adminRouter.get("/search", ProductController.searchProductsAdmin);
 adminRouter.get("/count", ProductController.countAllProducts);
 adminRouter.get("/:productId", ProductController.getProductDetail);
 adminRouter.patch("/toggle/:productId", ProductController.toggleProductActiveAuto);
 adminRouter.delete("/:productId", ProductController.deleteProductWithVariants);
-
+adminRouter.get("/", ProductController.getAllProductsAdmin);
 router.use("/admin", authMiddleware, isAdminOrSuperAdmin, adminRouter);
 
 // ========================= SHOP ROUTES =========================
 const shopRouter = express.Router();
+shopRouter.get("/search", ProductController.searchProductsShop);
 // Lấy toàn bộ sản phẩm của shop (kể cả ẩn)
 shopRouter.get("/", ProductController.getShopProducts);
 // Xem số lượng sản phẩm của shop
@@ -38,14 +39,12 @@ shopRouter.get("/count", ProductController.countMyProducts);
 shopRouter.post( "/create", uploadProduct, createProductValidator, ProductController.createProductWithVariants );
 // Cập nhật thông tin cơ bản
 shopRouter.put( "/basic/:productId", updateProductValidator, ProductController.updateProductBasicInfo );
-
 // Cập nhật ảnh sản phẩm
 shopRouter.put( "/images/:productId", uploadProductImages, ProductController.updateProductImages );
 // Bật/tắt trạng thái sản phẩm
 shopRouter.patch("/toggle/:productId", ProductController.toggleProductActiveAuto);
 // Xóa sản phẩm (kèm biến thể)
 shopRouter.delete("/:productId", ProductController.deleteProductWithVariants);
-
 router.use("/shop", authMiddleware, isShopOwner, shopRouter);
 
 

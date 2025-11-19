@@ -110,7 +110,7 @@ export const createProductVariantsBulk = async (req, res) => {
  * @param {Object} options
  * @param {Boolean} [options.isAdmin=false] - true nếu admin, không cần check shop
  */
-export const handleUpdateProductVariant = async (req, res, { isAdmin = false } = {}) => {
+export const UpdateProductVariant = async (req, res, { isAdmin = false } = {}) => {
   const tempFiles = []; // ảnh mới upload để rollback
   let backupPath = null;
   let oldPath = null;

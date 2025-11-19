@@ -53,58 +53,85 @@ export const updateBasicUserInfo = async (id, updateData) => {
     const allowedFields = ["name", "dayOfBirth", "gender", "email"];
 
     for (const key of allowedFields) {
-      if (
-        Object.prototype.hasOwnProperty.call(updateData, key) &&
-        updateData[key] !== undefined &&
-        updateData[key] !== user[key]
-      ) {
-        // Kiểm tra email unique
-        if (key === "email") {
-          const existEmail = await UserInfo.findOne({ email: updateData.email, _id: { $ne: id } });
-          if (existEmail) throw new Error("Email đã tồn tại!");
+      if (!Object.prototype.hasOwnProperty.call(updateData, key)) continue;
+
+      const value = updateData[key];
+
+      // Nếu field rỗng hoặc null thì bỏ qua (không update)
+      if (value === undefined || value === null || (typeof value === "string" && value.trim() === "")) continue;
+
+      // Validate từng field
+      if (key === "name" && value.trim().length < 2) {
+        throw new Error("Tên phải có ít nhất 2 ký tự");
+      }
+      if (key === "dayOfBirth") {
+        const dob = new Date(value);
+        if (isNaN(dob.getTime())) throw new Error("Ngày sinh không hợp lệ");
+        const year = dob.getFullYear();
+        const currentYear = new Date().getFullYear();
+        if (year < currentYear - 75 || year > currentYear - 14) {
+          throw new Error(`Năm sinh phải từ ${currentYear - 75} đến ${currentYear - 14}`);
         }
-        user[key] = updateData[key];
+      }
+      if (key === "email") {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(value)) throw new Error("Email không hợp lệ");
+        const existEmail = await UserInfo.findOne({ email: value, _id: { $ne: id } });
+        if (existEmail) throw new Error("Email đã tồn tại!");
+      }
+      if (key === "gender" && !["male", "female", "other"].includes(value)) {
+        throw new Error("Giới tính không hợp lệ");
+      }
+
+      // Nếu khác giá trị hiện tại thì update
+      if (user[key] !== value) {
+        user[key] = value;
         hasChange = true;
       }
     }
 
-    if (hasChange) {
-      await user.save();
-      return { success: true, message: "Cập nhật thông tin thành công!", data: user };
-    }
+    if (hasChange) await user.save();
 
-    return { success: true, message: "Không có thay đổi nào được thực hiện!", data: user };
+    return {
+      success: true,
+      message: hasChange ? "Cập nhật thông tin thành công!" : "Không có thay đổi nào được thực hiện!",
+      data: user,
+    };
   } catch (error) {
-    // Sửa đổi: Bắt lỗi và trả về object { success: false, message: ... }
     return { success: false, message: error.message };
   }
 };
-// Cập nhật ảnh đại diện
-// export const updateAvatar = async (id, file, imageUrl) => {
+
+// export const updateBasicUserInfo = async (id, updateData) => {
 //   try {
 //     const user = await UserInfo.findById(id);
 //     if (!user) throw new Error("Không tìm thấy người dùng!");
 
-//     let newAvatar = user.avatar;
-//     if (file) {
-//       const filename = `${Date.now()}_${file.originalname}`;
-//       const filePath = path.join(uploadDir, filename);
-//       fs.writeFileSync(filePath, file.buffer);
-//       newAvatar = `/uploads/avatars/${filename}`;
+//     let hasChange = false;
+//     const allowedFields = ["name", "dayOfBirth", "gender", "email"];
 
-//       // Xóa ảnh cũ nếu không phải mặc định
-//       if (user.avatar && !user.avatar.includes("default-avatar.jpg")) {
-//         const oldPath = path.join(uploadDir, path.basename(user.avatar));
-//         if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+//     for (const key of allowedFields) {
+//       if (
+//         Object.prototype.hasOwnProperty.call(updateData, key) &&
+//         updateData[key] !== undefined &&
+//         updateData[key] !== user[key]
+//       ) {
+//         // Kiểm tra email unique
+//         if (key === "email") {
+//           const existEmail = await UserInfo.findOne({ email: updateData.email, _id: { $ne: id } });
+//           if (existEmail) throw new Error("Email đã tồn tại!");
+//         }
+//         user[key] = updateData[key];
+//         hasChange = true;
 //       }
-//     } else if (imageUrl) {
-//       newAvatar = imageUrl;
 //     }
 
-//     user.avatar = newAvatar;
-//     await user.save();
+//     if (hasChange) {
+//       await user.save();
+//       return { success: true, message: "Cập nhật thông tin thành công!", data: user };
+//     }
 
-//     return { success: true, message: "Cập nhật ảnh đại diện thành công!", data: user };
+//     return { success: true, message: "Không có thay đổi nào được thực hiện!", data: user };
 //   } catch (error) {
 //     // Sửa đổi: Bắt lỗi và trả về object { success: false, message: ... }
 //     return { success: false, message: error.message };
@@ -162,9 +189,6 @@ export const updateAvatar = async (id, file) => {
   }
 };
 
-
-
-
 /**
  * Cập nhật ảnh đại diện mặc định
  * @param {Object|null} file - file từ multer (req.file)
@@ -210,40 +234,7 @@ export const updateDefaultAvatar = async (file) => {
   }
 };
 
-// export const updateDefaultAvatar = async (file, imageUrl) => {
-//   try {
-//     const defaultAvatarPath = path.join(assetsDir, "default-avatar.jpg");
-
-//     // Xóa ảnh cũ nếu tồn tại
-//     if (fs.existsSync(defaultAvatarPath)) {
-//       fs.unlinkSync(defaultAvatarPath);
-//     }
-
-//     // Lưu ảnh mới
-//     if (file) {
-//       fs.writeFileSync(defaultAvatarPath, file.buffer);
-//     } else if (imageUrl) {
-//       const response = await fetch(imageUrl);
-//       if (!response.ok) throw new Error("Không tải được ảnh từ URL!");
-//       const buffer = Buffer.from(await response.arrayBuffer());
-//       fs.writeFileSync(defaultAvatarPath, buffer);
-//     } else {
-//       throw new Error("Chưa có ảnh mới để cập nhật!");
-//     }
-
-//     return { 
-//       success: true, 
-//       message: "Cập nhật ảnh đại diện mặc định thành công cho tất cả người dùng!" 
-//     };
-//   } catch (error) {
-//     return { success: false, message: error.message };
-//   }
-// };
-
-
 // Tìm kiếm người dùng theo tên hoặc email
-
-
 export const search = async (query) => {
   try {
     if (!query || query.trim() === "") throw new Error("Vui lòng nhập từ khóa tìm kiếm!");

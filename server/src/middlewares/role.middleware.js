@@ -21,35 +21,42 @@ export const allowRoles = (...roles) => {
 export const checkSelfOrRoles = (...allowedRoles) => {
   return (req, res, next) => {
     try {
-      const userIdFromToken = req.user?.id?.toString();       // id Account
-      const userInfoIdFromToken = req.user?.userInfoId?.toString(); // userInfoId nếu có
-      const idFromRequest =
-        req.params.id?.toString() ||
-        req.body.id?.toString() ||
-        req.query.id?.toString();
+      const userId = req.user?.id?.toString();
+      const userInfoId = req.user?.userInfoId?.toString();
 
-      if (!idFromRequest) {
+      // Nếu route có params.id → ưu tiên tuyệt đối
+      let targetId = null;
+
+      if (req.params?.id) {
+        targetId = req.params.id.toString();
+      } else if (req.query?.id) {
+        targetId = req.query.id.toString();
+      } else if (req.body?.id) {
+        targetId = req.body.id.toString();
+      }
+
+      if (!targetId) {
         return res.status(400).json({
           success: false,
           message: "Không xác định được người dùng!",
         });
       }
 
-      // Kiểm tra có phải chính bản thân: id Account hoặc id UserInfo
-      const isSelf =
-        userIdFromToken === idFromRequest ||
-        userInfoIdFromToken === idFromRequest;
+      // SELF CHECK
+      const isSelf = userId === targetId || userInfoId === targetId;
+      if (isSelf) return next();
 
-      const hasAllowedRole = req.user?.roleNames?.some((r) =>
-        allowedRoles.includes(r)
-      );
+      // ROLE CHECK
+      const userRoles = req.user?.roleNames || [];
+      const isAllowedRole = userRoles.some((r) => allowedRoles.includes(r));
 
-      if (isSelf || hasAllowedRole) return next();
+      if (isAllowedRole) return next();
 
       return res.status(403).json({
         success: false,
-        message: `Bạn không có quyền truy cập tài nguyên này!`,
+        message: "Bạn không có quyền truy cập tài nguyên này!",
       });
+
     } catch (err) {
       return res.status(500).json({
         success: false,
@@ -58,6 +65,63 @@ export const checkSelfOrRoles = (...allowedRoles) => {
     }
   };
 };
+
+// Middleware kiểm tra chính chủ
+export const isSelf = (req, res, next) => {
+  try {
+    const userId = req.user?.id?.toString();
+    const userInfoId = req.user?.userInfoId?.toString();
+
+    let targetId = null;
+
+    // Ưu tiên theo thứ tự: params → query → body
+    if (req.params?.id) targetId = req.params.id.toString();
+    else if (req.query?.id) targetId = req.query.id.toString();
+    else if (req.body?.id) targetId = req.body.id.toString();
+
+    if (!targetId) {
+      return res.status(400).json({
+        success: false,
+        message: "Không xác định được người dùng!",
+      });
+    }
+
+    const isSelf =
+      userId === targetId ||
+      userInfoId === targetId;
+
+    if (!isSelf) {
+      return res.status(403).json({
+        success: false,
+        message: "Bạn không có quyền truy cập tài nguyên này!",
+      });
+    }
+
+    return next();
+
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: "Lỗi kiểm tra quyền người dùng!",
+    });
+  }
+};
+
+
+
+export const isSelfOrAdmin = checkSelfOrRoles("Quản trị viên", "Super Admin");
+export const isSelfOrShop = checkSelfOrRoles("Chủ shop", "Super Admin");
+
+// Các middleware nhanh gọn
+export const isCustomer = allowRoles("Khách hàng");
+export const isShopOwner = allowRoles("Chủ shop");
+export const isAdmin = allowRoles("Quản trị viên");
+export const isSuperAdmin = allowRoles("Super Admin");
+
+// Kết hợp quyền
+export const isAdminOrSuperAdmin = allowRoles("Quản trị viên", "Super Admin");
+export const isShopOrAdmin = allowRoles("Chủ shop", "Quản trị viên", "Super Admin");
+export const isCustomerOrShop = allowRoles("Khách hàng", "Chủ shop");
 
 // // Middleware: chỉ cho phép chủ shop (hoặc super admin) thao tác trong phạm vi của mình
 // export const isSelfAndShopOwner = (req, res, next) => {
@@ -113,21 +177,3 @@ export const checkSelfOrRoles = (...allowedRoles) => {
 //     });
 //   }
 // };
-
-
-
-// Các middleware chính chủ or nhóm người dùng
-export const isSelf = checkSelfOrRoles();
-export const isSelfOrAdmin = checkSelfOrRoles("Quản trị viên", "Super Admin");
-export const isSelfOrShop = checkSelfOrRoles("Chủ shop", "Super Admin");
-
-// Các middleware nhanh gọn
-export const isCustomer = allowRoles("Khách hàng");
-export const isShopOwner = allowRoles("Chủ shop");
-export const isAdmin = allowRoles("Quản trị viên");
-export const isSuperAdmin = allowRoles("Super Admin");
-
-// Kết hợp quyền
-export const isAdminOrSuperAdmin = allowRoles("Quản trị viên", "Super Admin");
-export const isShopOrAdmin = allowRoles("Chủ shop", "Quản trị viên", "Super Admin");
-export const isCustomerOrShop = allowRoles("Khách hàng", "Chủ shop");
