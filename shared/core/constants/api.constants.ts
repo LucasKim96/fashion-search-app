@@ -124,3 +124,17 @@ export const PRODUCT_VARIANT_ENDPOINTS = {
 	BULK_CREATE: "/product-variants/bulk",
 	UPDATE: (variantId: string) => `/product-variants/${variantId}`,
 };
+
+export const CART_ENDPOINTS = {
+	// Lấy giỏ hàng của user hiện tại
+	GET_MY_CART: "/carts/mine",
+	// Thêm sản phẩm vào giỏ hàng
+	ADD_ITEM: "/carts/items",
+	// Cập nhật số lượng của một sản phẩm
+	UPDATE_ITEM_QUANTITY: (productVariantId: string) =>
+		`/carts/items/${productVariantId}`,
+	// Xóa một sản phẩm khỏi giỏ hàng
+	REMOVE_ITEM: (productVariantId: string) => `/carts/items/${productVariantId}`,
+	// Xóa toàn bộ giỏ hàng
+	CLEAR_CART: "/carts/mine",
+};
