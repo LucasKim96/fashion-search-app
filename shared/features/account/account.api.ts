@@ -1,6 +1,6 @@
 // shared/features/account/account.api.ts
-import { axiosInstance, ACCOUNT_ENDPOINTS } from "../../core";
-import { ApiResponse } from "../../types/common.types";
+import { axiosInstance, ACCOUNT_ENDPOINTS } from "@shared/core";
+import { ApiResponse } from "@shared/types/common.types";
 import {
   Account,
   UpdateAccountBasicInfoRequest,
@@ -10,8 +10,13 @@ import {
   AccountStatsBanned,
   AccountStatsByRole,
 } from "./account.types";
+import { Role } from "../role";
 
 // --- GET ---
+export const getAllRoles = (): Promise<ApiResponse<Role[]>> => {
+  return axiosInstance.get(ACCOUNT_ENDPOINTS.GET_ROLES).then(res => res.data);
+};
+
 export const getAllAccounts = (): Promise<ApiResponse<Account[]>> => {
   return axiosInstance.get(ACCOUNT_ENDPOINTS.GET_ALL).then(res => res.data);
 };

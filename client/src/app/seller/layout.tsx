@@ -1,21 +1,35 @@
 "use client";
 
-import SellerSidebar from "@/components/layouts/SellerSidebar";
+import React from "react";
+import { AdminSidebar, AdminNavbar, AdminMain, NotificationProvider} from "@shared/core";
+import { ProtectedRoute } from "@shared/features/auth";
+import { shopMenuItems } from "@/constants/shopMenu";
 
-export default function SellerLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      {/* Sidebar */}
-      <aside className="w-64 bg-white shadow-md p-4">
-        <SellerSidebar />
-      </aside>
+    <NotificationProvider>
+      <ProtectedRoute requiredRole={["SHOP_OWNER"]} redirectTo="/">
+        {/* Bố cục chia 2 cột: sidebar + phần nội dung */}
+        <div className="grid grid-cols-[auto,1fr] h-screen overflow-hidden bg-gray-100">
+          {/* Sidebar cố định */}
+          <div className="sticky top-0 h-screen z-30">
+            <AdminSidebar menuItems={shopMenuItems} />
+          </div>
 
-      {/* Nội dung chính */}
-      <main className="flex-1 p-6 overflow-y-auto">{children}</main>
-    </div>
+          {/* Phần bên phải: Navbar cố định, Main cuộn */}
+          <div className="flex flex-col h-screen relative z-10">
+            {/* Navbar cố định */}
+            <div className="sticky top-0 z-20">
+              <AdminNavbar profilePath="/seller/profile"/>
+            </div>
+
+            {/* Main: phần duy nhất có thể cuộn */}
+            <div className="flex-1 overflow-y-auto">
+              <AdminMain>{children}</AdminMain>
+            </div>
+          </div>
+        </div>
+      </ProtectedRoute>
+    </NotificationProvider>
   );
 }

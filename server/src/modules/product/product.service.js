@@ -74,7 +74,6 @@ export const getAllProducts = async ({ shopId, accountId, includeInactive = fals
       data: products,
     };
   } catch (error) {
-    console.error("getAllProducts error:", error);
     return {
       success: false,
       message: error.message || "Lỗi khi lấy danh sách sản phẩm",
@@ -322,8 +321,6 @@ export const updateProductImagesService = async (productId, newImages = []) => {
  * @param {String} productId
  * @param {Object} updates { pdName?, basePrice?, description? }
  */
-
-
 export const updateProductBasicInfoService = async (productId, updates) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(productId))
@@ -458,3 +455,166 @@ export const countProductsService = async ({ shopId, accountId, includeInactive 
     return { success: false, message: error.message, total: 0 };
   }
 }
+
+/**
+ * Search products cho admin hoặc shop
+ * @param {Object} options
+ * @param {Boolean} options.isAdmin - true nếu admin, false nếu shop
+ * @param {String} [options.accountId] - cần nếu isAdmin=false
+ * @param {String} [options.query] - tìm theo tên sản phẩm
+ * @param {String} [options.shopName] - chỉ admin: tìm theo tên shop
+ * @param {String} [options.status] - "active" | "inactive" | "all"
+ * @param {String} [options.priceRange] - "<100", "100-300", "300-500", "500-1000", "1000<"
+ * @param {Number} [options.page=1]
+ * @param {Number} [options.limit=20]
+ */
+export const searchProducts = async ({
+  isAdmin,
+  accountId,
+  query,
+  status = "all",
+  priceRange,
+  page = 1,
+  limit = 20,
+}) => {
+  try {
+    // --- Phân trang ---
+    const safePage = Math.max(1, parseInt(page) || 1);
+    const safeLimit = Math.min(Math.max(1, parseInt(limit) || 20), 100);
+    const skip = (safePage - 1) * safeLimit;
+
+    if (isAdmin) {
+      // --- Admin: dùng aggregate để join shop ---
+      const match = {};
+
+      if (status === "active") match.isActive = true;
+      else if (status === "inactive") match.isActive = false;
+
+      if (priceRange) {
+        const priceFilter = {};
+        switch (priceRange) {
+          case "<100": priceFilter.$lt = 100000; break;
+          case "100-300": priceFilter.$gte = 100000; priceFilter.$lte = 300000; break;
+          case "300-500": priceFilter.$gte = 300000; priceFilter.$lte = 500000; break;
+          case "500-1000": priceFilter.$gte = 500000; priceFilter.$lte = 1000000; break;
+          case "1000<": priceFilter.$gte = 1000000; break;
+        }
+        match.basePrice = priceFilter;
+      }
+
+      const pipeline = [
+        { $match: match },
+        {
+          $lookup: {
+            from: "shops",
+            localField: "shopId",
+            foreignField: "_id",
+            as: "shop",
+          },
+        },
+        { $unwind: "$shop" },
+      ];
+
+      const q = query?.trim();
+      if (q) {
+        // chỉ push $match nếu q không rỗng
+        pipeline.push({
+          $match: {
+            $or: [
+              { pdName: { $regex: q, $options: "i" } },
+              { description: { $regex: q, $options: "i" } },
+              { "shop.shopName": { $regex: q, $options: "i" } },
+            ],
+          },
+        });
+      }
+
+
+      pipeline.push({ $sort: { createdAt: -1 } });
+      pipeline.push({ $skip: skip }, { $limit: safeLimit });
+
+      const products = await Product.aggregate(pipeline);
+
+      // Tính total
+      const totalAgg = await Product.aggregate([
+        { $match: match },
+        { $lookup: { from: "shops", localField: "shopId", foreignField: "_id", as: "shop" } },
+        { $unwind: "$shop" },
+        ...(q
+            ? [{ $match: { $or: [
+                { pdName: { $regex: q, $options: "i" } },
+                { description: { $regex: q, $options: "i" } },
+                { "shop.shopName": { $regex: q, $options: "i" } },
+              ] } }]
+            : []),
+        { $count: "total" },
+      ]);
+      const totalCount = totalAgg[0]?.total || 0;
+
+      return {
+        success: true,
+        message: "Lấy danh sách sản phẩm thành công",
+        data: {
+          products,
+          total: totalCount,
+          page: safePage,
+          limit: safeLimit,
+          totalPages: Math.ceil(totalCount / safeLimit),
+        },
+      };
+    } else {
+      // --- Shop mode: filter theo shopId ---
+      if (!accountId || !mongoose.Types.ObjectId.isValid(accountId)) {
+        throw new Error("accountId không hợp lệ cho chế độ shop");
+      }
+
+      // Lấy shopId từ accountId
+      const shop = await Shop.findOne({ accountId }).select("_id").lean();
+      if (!shop) throw new Error("Không tìm thấy shop của tài khoản này");
+      const shopId = shop._id;
+
+      const filter = { shopId: new mongoose.Types.ObjectId(shopId) };
+
+      const q = query?.trim();
+      if (q) filter.pdName = { $regex: q, $options: "i" };
+
+      if (status === "active") filter.isActive = true;
+      else if (status === "inactive") filter.isActive = false;
+
+      if (priceRange) {
+        const priceFilter = {};
+        switch (priceRange) {
+          case "<100": priceFilter.$lt = 100000; break;
+          case "100-300": priceFilter.$gte = 100000; priceFilter.$lte = 300000; break;
+          case "300-500": priceFilter.$gte = 300000; priceFilter.$lte = 500000; break;
+          case "500-1000": priceFilter.$gte = 500000; priceFilter.$lte = 1000000; break;
+          case "1000<": priceFilter.$gte = 1000000; break;
+        }
+        filter.basePrice = priceFilter;
+      }
+      const [products, total] = await Promise.all([
+        Product.find(filter).sort({ createdAt: -1 }).skip(skip).limit(safeLimit).lean(),
+        Product.countDocuments(filter),
+      ]);
+
+      return {
+        success: true,
+        message: "Lấy danh sách sản phẩm thành công",
+        data: {
+          products,
+          total,
+          page: safePage,
+          limit: safeLimit,
+          totalPages: Math.ceil(total / safeLimit),
+        },
+      };
+    }
+  } catch (error) {
+    console.error("searchProducts error:", error);
+    return {
+      success: false,
+      message: error.message || "Lỗi khi tìm kiếm sản phẩm",
+      data: { products: [], total: 0, page: 1, limit: 20, totalPages: 1 },
+    };
+  }
+};

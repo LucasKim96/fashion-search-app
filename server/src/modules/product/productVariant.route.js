@@ -26,7 +26,7 @@ shopRouter.post(
 shopRouter.put(
   "/:variantId",
   uploadVariant.single("image"), // chỉ 1 file duy nhất
-  ProductVariantController.handleUpdateProductVariant
+  ProductVariantController.UpdateProductVariant
 );
 router.use("/", authMiddleware, isShopOwner, shopRouter);
 

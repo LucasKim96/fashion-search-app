@@ -50,8 +50,6 @@ export const generateVariantCombinations = async (attributes) => {
   }
 };
 
-
-
 // Sinh tổ hợp biến thể mới (chưa có trong DB dùng cho việc thêm sp biến thể)
 export const generateNewVariantCombinations = async (productId, attributes) => {
   try {
@@ -91,7 +89,7 @@ export const generateNewVariantCombinations = async (productId, attributes) => {
 
 //Lấy danh sách attribute + value (có đánh dấu isUsed) cho 1 sản phẩm (dùng cho việc thêm sp biến thể)
 export const getProductAttributesWithValues = async (productId, accountId) => {
-   try {
+  try {
     if (!productId) throw new Error("Thiếu productId");
     if (!accountId) throw new Error("Thiếu accountId của shop");
     

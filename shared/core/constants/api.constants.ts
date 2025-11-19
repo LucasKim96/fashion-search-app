@@ -25,6 +25,7 @@ export const USER_ENDPOINTS = {
 };
 
 export const ACCOUNT_ENDPOINTS = {
+  GET_ROLES: "/accounts/roles",
   GET_ALL: "/accounts",
   BY_STATUS: (status: string) => `/accounts/status/${status}`,      // active / inactive
   BY_ROLE: (roleId: string) => `/accounts/role/${roleId}`,

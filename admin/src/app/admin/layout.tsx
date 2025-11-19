@@ -1,28 +1,26 @@
 "use client";
 
 import React from "react";
-import { AdminSidebar } from "@/components/layouts/Sidebar";
-import { AdminNavbar } from "@/components/layouts/Navbar";
-import { AdminMain } from "@/components/layouts/Main";
-import { NotificationProvider } from "@shared/core/ui/NotificationProvider";
-import { ProtectedRoute } from "@shared/features/auth/ProtectedRoute";
+import { AdminSidebar, AdminNavbar, AdminMain, NotificationProvider} from "@shared/core";
+import { ProtectedRoute } from "@shared/features/auth";
+import { adminMenuItems } from "@/constants/adminMenu";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
     <NotificationProvider>
-      <ProtectedRoute requiredRole={["ADMIN", "SUPER_ADMIN"]} redirectTo="/admin/login">
+      <ProtectedRoute requiredRole={["ADMIN", "SUPER_ADMIN"]} redirectTo="/login">
         {/* Bố cục chia 2 cột: sidebar + phần nội dung */}
         <div className="grid grid-cols-[auto,1fr] h-screen overflow-hidden bg-gray-100">
           {/* Sidebar cố định */}
           <div className="sticky top-0 h-screen z-30">
-            <AdminSidebar />
+            <AdminSidebar menuItems={adminMenuItems} />
           </div>
 
           {/* Phần bên phải: Navbar cố định, Main cuộn */}
           <div className="flex flex-col h-screen relative z-10">
             {/* Navbar cố định */}
             <div className="sticky top-0 z-20">
-              <AdminNavbar />
+              <AdminNavbar profilePath="/admin/profile"/>
             </div>
 
             {/* Main: phần duy nhất có thể cuộn */}

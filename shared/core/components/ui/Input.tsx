@@ -1,30 +1,40 @@
 "use client";
+
 import React from "react";
 import clsx from "clsx";
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
-  label?: string;
+  label?: React.ReactNode; // sửa từ string -> ReactNode
   error?: string;
+  fullWidth?: boolean;
 }
 
-export const Input: React.FC<InputProps> = ({ label, error, className, ...props }) => {
+export const Input: React.FC<InputProps> = ({
+  label,
+  error,
+  fullWidth = true,
+  className,
+  ...props
+}) => {
   return (
-    <div className="w-full mb-3">
+    <div className={clsx("flex flex-col gap-1", fullWidth && "w-full")}>
       {label && (
-        <label className="block mb-1 text-sm font-medium text-gray-700">
-          {label}
+        <label className="font-medium text-gray-700 select-none">
+          {label} {/* giờ có thể truyền JSX */}
         </label>
       )}
+
       <input
         {...props}
         className={clsx(
-          "w-full border rounded-md px-3 py-2 text-sm bg-white text-gray-800 placeholder-gray-400",
-          "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all",
-          { "border-red-500": error },
+          "px-3 py-2 border rounded-lg text-sm shadow-sm outline-none transition-all",
+          "focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
+          error ? "border-red-500" : "border-gray-300",
           className
         )}
       />
-      {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+
+      {error && <p className="text-xs text-red-500 mt-0.5">{error}</p>}
     </div>
   );
 };
