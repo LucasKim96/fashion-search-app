@@ -1,28 +1,28 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
+	useNotification,
 	tokenUtils,
+	errorUtils,
 	mapBackendRoles,
 	RoleKey,
-	errorUtils,
-	useNotification,
 } from "@shared/core";
+import { useAuthCore } from "./useAuthCore.hook"; // Hook cốt lõi để quản lý state
 import {
-	MeResponse,
-	RegisterRequest,
-	ChangePasswordRequest,
-} from "./auth.types";
-import {
-	getMeApi,
-	refreshTokenApi,
-	logoutApi,
 	loginApi,
+	logoutApi,
 	registerApi,
 	changePasswordApi,
+	refreshTokenApi,
 	verifyTokenApi,
 } from "./auth.api";
+import {
+	RegisterRequest,
+	ChangePasswordRequest,
+	MeResponse,
+} from "./auth.types";
 
 interface UseAuthManagerOptions {
 	requiredRole?: RoleKey | RoleKey[];
@@ -31,238 +31,140 @@ interface UseAuthManagerOptions {
 	redirectAfterRegister?: string;
 }
 
+/**
+ * Hook công khai, cung cấp các hành động (login, logout, register,...)
+ * và trạng thái xác thực cho các component.
+ */
 export const useAuth = ({
 	requiredRole,
-	redirectAfterLogin = "/dashboard",
+	redirectAfterLogin = "/", // Mặc định về trang chủ sau khi đăng nhập
 	redirectAfterLogout = "/login",
 	redirectAfterRegister = "/login",
 }: UseAuthManagerOptions = {}) => {
-	const [user, setUser] = useState<MeResponse | null>(null);
-	const [loading, setLoading] = useState(true);
-	const [isAuthorized, setIsAuthorized] = useState(true);
+	// 1. Lấy state và các hàm quản lý state từ hook cốt lõi
+	const { user, setUser, loading, setLoading, fetchUser } = useAuthCore();
 	const router = useRouter();
 	const { showToast } = useNotification();
 
-	// ====== Lấy thông tin user ======
-	const fetchUser = useCallback(async () => {
-		// KHÔNG SET LOADING Ở ĐÂY NỮA
-		try {
-			const res = await getMeApi();
-			if (res.success && res.data) {
-				// console.log("FETCH_USER: Đang set user state với dữ liệu:", res.data);
-				setUser(res.data);
-				// ... logic isAuthorized
-			} else {
-				tokenUtils.clearTokens();
-				setUser(null);
-				setIsAuthorized(false);
-			}
-		} catch (error) {
-			// ...
-			tokenUtils.clearTokens();
-			setUser(null);
-			setIsAuthorized(false);
-		}
-		// --- XÓA HOÀN TOÀN KHỐI `finally` Ở ĐÂY ---
-	}, [requiredRole, showToast]);
+	// 2. Tính toán các giá trị dẫn xuất từ state `user`
+	const isAuthenticated = !!user;
+	const userRoles = user ? mapBackendRoles(user.roles || []) : [];
 
-	// ====== Helper: chạy API và tự động fetch lại user ======
-	const runAndRefreshUser = useCallback(
-		async <T>(
-			apiCall: () => Promise<{ success: boolean; message?: string; data?: T }>
-		) => {
-			const res = await apiCall();
-			if (res.success) {
-				await fetchUser(); // tự động refresh user sau khi update
-			}
-			return res;
-		},
-		[fetchUser]
-	);
+	// Kiểm tra xem user có vai trò được yêu cầu không
+	const isAuthorized = useCallback(() => {
+		if (!requiredRole) return true; // Nếu không yêu cầu vai trò, luôn được phép
+		if (!isAuthenticated) return false; // Nếu chưa đăng nhập, không được phép
 
-	// ====== Đăng nhập ======
+		const requiredRolesArray = Array.isArray(requiredRole)
+			? requiredRole
+			: [requiredRole];
+		return userRoles.some((role) => requiredRolesArray.includes(role));
+	}, [isAuthenticated, requiredRole, userRoles]);
+
+	// 3. Định nghĩa các HÀNH ĐỘNG
 	const login = useCallback(
 		async (usernameOrPhone: string, password: string) => {
 			setLoading(true);
 			try {
 				const res = await loginApi({ usernameOrPhone, password });
-
 				if (res.success) {
 					showToast(res.message || "Đăng nhập thành công!", "success");
-
-					// State vẫn được cập nhật để tránh "chớp" giao diện nếu có thể
 					await fetchUser();
-
-					// --- THAY ĐỔI QUYẾT ĐỊNH Ở ĐÂY ---
-					// Thay vì router.push, dùng window.location.href để buộc full-page reload
-					window.location.href = redirectAfterLogin; // redirectAfterLogin của bạn nên là "/"
+					// Dùng hard navigation để giải quyết triệt để vấn đề cache của Next.js
+					window.location.href = redirectAfterLogin;
 				} else {
 					showToast(res.message || "Đăng nhập thất bại", "error");
-					setLoading(false); // Tắt loading nếu đăng nhập thất bại
+					setLoading(false);
 				}
-
-				// Không return res nữa vì trang sẽ được tải lại hoàn toàn
 			} catch (error) {
-				const message = errorUtils.parseApiError(error);
-				showToast(message, "error");
-				setLoading(false); // Tắt loading nếu có lỗi
+				showToast(errorUtils.parseApiError(error), "error");
+				setLoading(false);
 			}
-			// Không cần `finally` nữa vì logic loading và chuyển trang đã được xử lý
 		},
-		[fetchUser, redirectAfterLogin, showToast]
+		[setLoading, fetchUser, redirectAfterLogin, showToast]
 	);
 
-	// ====== Đăng ký ======
 	const register = useCallback(
 		async (data: RegisterRequest) => {
 			setLoading(true);
 			try {
 				const res = await registerApi(data);
 				if (res.success) {
-					showToast(res.message || "Đăng ký thành công!", "success");
+					showToast(
+						res.message || "Đăng ký thành công! Vui lòng đăng nhập.",
+						"success"
+					);
 					router.push(redirectAfterRegister);
 				} else {
 					showToast(res.message || "Đăng ký thất bại", "error");
 				}
-				return res;
 			} catch (error) {
-				const message = errorUtils.parseApiError(error);
-				showToast(message, "error");
-				return { success: false, message, data: null };
+				showToast(errorUtils.parseApiError(error), "error");
 			} finally {
 				setLoading(false);
 			}
 		},
-		[router, redirectAfterRegister, showToast]
+		[setLoading, router, redirectAfterRegister, showToast]
 	);
 
-	// ====== Đổi mật khẩu ======
+	const logout = useCallback(async () => {
+		try {
+			await logoutApi();
+			showToast("Đăng xuất thành công", "success");
+		} catch (error) {
+			console.error("Logout failed:", error);
+			showToast("Có lỗi xảy ra khi đăng xuất", "error");
+		} finally {
+			// Luôn dọn dẹp và cập nhật state bất kể API thành công hay thất bại
+			tokenUtils.clearTokens();
+			setUser(null);
+			// Dùng router.push ở đây an toàn vì không có vấn đề cache khi logout
+			router.push(redirectAfterLogout);
+		}
+	}, [setUser, router, redirectAfterLogout, showToast]);
+
 	const changePassword = useCallback(
 		async (data: ChangePasswordRequest) => {
+			setLoading(true);
 			try {
-				const res = await runAndRefreshUser(() => changePasswordApi(data));
+				const res = await changePasswordApi(data);
 				if (res.success) {
 					showToast(res.message || "Đổi mật khẩu thành công!", "success");
+					await fetchUser(); // Làm mới thông tin user
 				} else {
 					showToast(res.message || "Đổi mật khẩu thất bại!", "error");
 				}
-				return res;
 			} catch (error) {
-				const message = errorUtils.parseApiError(error);
-				showToast(message, "error");
-				return { success: false, message, data: null };
+				showToast(errorUtils.parseApiError(error), "error");
+			} finally {
+				setLoading(false);
 			}
 		},
-		[runAndRefreshUser, showToast]
+		[setLoading, fetchUser, showToast]
 	);
 
-	// ====== Làm mới token ======
-	const handleRefreshToken = useCallback(async () => {
-		const refreshToken = tokenUtils.getRefreshToken();
-		if (!refreshToken) {
-			tokenUtils.clearTokens();
-			setUser(null);
-			setIsAuthorized(false);
-			setLoading(false);
-			return;
-		}
-
-		try {
-			const res = await refreshTokenApi(refreshToken);
-			if (res.success && res.data?.accessToken) {
-				await fetchUser();
-			} else {
-				tokenUtils.clearTokens();
-				setUser(null);
-				setIsAuthorized(false);
-			}
-		} catch (error) {
-			const message = errorUtils.parseApiError(error);
-			showToast(message, "error");
-			tokenUtils.clearTokens();
-			setUser(null);
-			setIsAuthorized(false);
-		} finally {
-			setLoading(false);
-		}
-	}, [fetchUser, showToast]);
-
-	// ====== Đăng xuất ======
-	const logout = useCallback(async () => {
-		let result: { success: boolean; message?: string; data?: any } = {
-			success: false,
-		};
-		try {
-			const res = await logoutApi();
-			if (res.success) {
-				showToast(res.message || "Đăng xuất thành công", "success");
-			} else {
-				showToast(res.message || "Đăng xuất thất bại", "error");
-			}
-			result = res; // Lưu lại kết quả thành công
-		} catch (error) {
-			const message = errorUtils.parseApiError(error);
-			showToast(message, "error");
-			result = { success: false, message }; // Lưu lại kết quả thất bại
-		} finally {
-			// Logic dọn dẹp và chuyển hướng vẫn nằm trong finally
-			tokenUtils.clearTokens();
-			setUser(null);
-			setIsAuthorized(false);
-			router.push(redirectAfterLogout);
-		}
-		// Trả về kết quả đã được lưu lại
-		return result;
-	}, [router, redirectAfterLogout, showToast]);
-
-	// ====== Xác minh token ======
-	const verifyToken = useCallback(async () => {
-		try {
-			const res = await verifyTokenApi();
-			if (!res.success) {
-				tokenUtils.clearTokens();
-				setUser(null);
-				setIsAuthorized(false);
-			}
-			return res;
-		} catch (error) {
-			const message = errorUtils.parseApiError(error);
-			showToast(message, "error");
-			tokenUtils.clearTokens();
-			setUser(null);
-			setIsAuthorized(false);
-			return { success: false, message };
-		}
-	}, [showToast]);
-
-	// ====== Khởi động ======
+	// 4. Logic khởi tạo khi tải ứng dụng
 	useEffect(() => {
-		const token = tokenUtils.getAccessToken();
-
 		const initializeAuth = async () => {
+			const token = tokenUtils.getAccessToken();
 			if (token) {
-				await fetchUser(); // Chờ fetch user
-			} else {
-				setUser(null);
-				setIsAuthorized(false);
+				await fetchUser();
 			}
-			setLoading(false); // Tắt loading sau khi khởi tạo xong
+			setLoading(false);
 		};
-
 		initializeAuth();
-	}, [fetchUser]); // Giữ nguyên dependency
+	}, [fetchUser, setLoading]);
 
+	// 5. Trả về API công khai cho các component
 	return {
 		user,
 		loading,
-		isAuthenticated: !!user,
-		isAuthorized,
+		isAuthenticated,
+		isAuthorized: isAuthorized(), // Trả về kết quả của hàm
 		login,
 		register,
 		logout,
 		changePassword,
-		verifyToken,
 		refreshUser: fetchUser,
-		handleRefreshToken,
 	};
 };

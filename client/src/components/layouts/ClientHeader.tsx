@@ -1,12 +1,6 @@
 "use client";
 
-import {
-	ShoppingCart,
-	Search,
-	Menu,
-	LogOut,
-	User as UserIcon,
-} from "lucide-react";
+import { ShoppingCart, Menu, LogOut, User as UserIcon } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthContext } from "@shared/features/auth/AuthProvider";
@@ -24,13 +18,11 @@ const UserInfoDisplay = ({
 	onAccountClick: () => void;
 }) => {
 	return (
-		// Bọc mọi thứ trong một div cha để giữ position relative
 		<div className="relative flex items-center gap-3">
 			{/* Phần tử Kích hoạt (Trigger) */}
 			<div
 				onClick={onAccountClick}
-				className="flex items-center gap-3 cursor-pointer peer" // <-- THÊM CLASS `peer` VÀO ĐÂY
-			>
+				className="flex items-center gap-3 cursor-pointer peer">
 				{/* Avatar */}
 				<div className="relative w-10 h-10">
 					{/* ... Lớp viền gradient ... */}
@@ -93,13 +85,13 @@ export default function ClientHeader() {
 	const dropdownRef = useRef<HTMLDivElement>(null);
 	const router = useRouter();
 	const [cartCount] = useState(0);
-	const [searchValue, setSearchValue] = useState(""); // State cho ô tìm kiếm
+	const [searchValue, setSearchValue] = useState("");
 
 	const handleSearch = () => {
 		if (!searchValue.trim()) return;
 		router.push(`/search?q=${encodeURIComponent(searchValue.trim())}`);
 	};
-	// Sử dụng giải pháp tạo profile "Khách" hoàn chỉnh để tránh lỗi TypeScript
+
 	useEffect(() => {
 		if (account) {
 			setUserProfile(parseUserProfile(account));
