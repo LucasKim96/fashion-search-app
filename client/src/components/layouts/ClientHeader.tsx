@@ -134,10 +134,9 @@ export default function ClientHeader() {
 			{/* Action Icons */}
 			<div className="flex items-center gap-6">
 				{/* Cart Icon */}
-				{/* ... giữ nguyên ... */}
 				<div
 					className="relative cursor-pointer"
-					onClick={() => router.push("/cart")}>
+					onClick={() => router.push("/user/cart")}>
 					<ShoppingCart className="w-6 h-6 text-gray-600 hover:text-primary transition" />
 					{cartCount > 0 && (
 						<span className="absolute -top-2 -right-2 bg-primary text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center shadow-md">
