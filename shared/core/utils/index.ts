@@ -11,3 +11,4 @@ export * from "./getCroppedImg";
 export * from "./profile.utils";
 export * from "./attribute.utils";
 export * from "./product.utils";
+export * from "./formatCurrency";

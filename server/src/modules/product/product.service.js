@@ -449,7 +449,9 @@ export const countProductsService = async ({ shopId, accountId, includeInactive 
       message: finalShopId
         ? `Tổng số sản phẩm của cửa hàng: ${total}`
         : `Tổng số sản phẩm toàn hệ thống: ${total}`,
-      total,
+      data: {
+        total: total
+      }
     };
   } catch (error) {
     return { success: false, message: error.message, total: 0 };

@@ -4,225 +4,293 @@ import { useState, useCallback } from "react";
 import * as AttributeValueApi from "./attributeValue.api";
 import { ApiResponse } from "@shared/types/common.types";
 import { useNotification, errorUtils } from "@shared/core";
-import { AttributeValue, UpdateAttributeValueRequest } from "./attributeValue.types";
+import {
+	AttributeValue,
+	UpdateAttributeValueRequest,
+} from "./attributeValue.types";
 import { useAttribute } from "./attribute.hook"; // import the main attribute hook
 
 export const useAttributeValue = () => {
-    const { showToast } = useNotification();
-    const { reloadAdminAttributes, reloadShopAttributes } = useAttribute();
+	const { showToast } = useNotification();
+	const { reloadAdminAttributes, reloadShopAttributes } = useAttribute();
 
-    // ================= ADMIN STATE =================
-    const [adminValues, setAdminValues] = useState<AttributeValue[] | null>(null);
-    const [loadingAdmin, setLoadingAdmin] = useState(false);
-    const [errorAdmin, setErrorAdmin] = useState<string | null>(null);
+	// ================= ADMIN STATE =================
+	const [adminValues, setAdminValues] = useState<AttributeValue[] | null>(null);
+	const [loadingAdmin, setLoadingAdmin] = useState(false);
+	const [errorAdmin, setErrorAdmin] = useState<string | null>(null);
 
-    // ================= SHOP STATE =================
-    const [shopValues, setShopValues] = useState<AttributeValue[] | null>(null);
-    const [loadingShop, setLoadingShop] = useState(false);
-    const [errorShop, setErrorShop] = useState<string | null>(null);
+	// ================= SHOP STATE =================
+	const [shopValues, setShopValues] = useState<AttributeValue[] | null>(null);
+	const [loadingShop, setLoadingShop] = useState(false);
+	const [errorShop, setErrorShop] = useState<string | null>(null);
 
-    // ================= ADMIN ACTIONS =================
-    const createAdminAttributeValues = useCallback(async (attributeId: string, payload: FormData) => {
-        setLoadingAdmin(true);
-        setErrorAdmin(null);
-        try {
-            const res = await AttributeValueApi.createAdminAttributeValues(attributeId, payload);
-            if (res.success) {
-                await reloadAdminAttributes();
-                showToast(res.message || "Tạo giá trị attribute thành công", "success");
-            } else {
-                showToast(res.message || "Lỗi API", "error");
-            }
-            return res;
-        } catch (err) {
-            const msg = errorUtils.parseApiError(err);
-            setErrorAdmin(msg);
-            showToast(msg, "error");
-            return { success: false, message: msg, data: null };
-        } finally {
-            setLoadingAdmin(false);
-        }
-    }, [reloadAdminAttributes, showToast]);
+	// ================= ADMIN ACTIONS =================
+	const createAdminAttributeValues = useCallback(
+		async (attributeId: string, payload: FormData) => {
+			setLoadingAdmin(true);
+			setErrorAdmin(null);
+			try {
+				const res = await AttributeValueApi.createAdminAttributeValues(
+					attributeId,
+					payload
+				);
+				if (res.success) {
+					//await reloadShopProducts();
+					showToast(
+						res.message || "Tạo giá trị attribute thành công",
+						"success"
+					);
+				} else {
+					showToast(res.message || "Lỗi API", "error");
+				}
+				return res;
+			} catch (err) {
+				const msg = errorUtils.parseApiError(err);
+				setErrorAdmin(msg);
+				showToast(msg, "error");
+				return { success: false, message: msg, data: null };
+			} finally {
+				setLoadingAdmin(false);
+			}
+		},
+		[reloadAdminAttributes, showToast]
+	);
 
-    const updateAdminAttributeValue = useCallback(async (valueId: string, payload: UpdateAttributeValueRequest | FormData) => {
-        setLoadingAdmin(true);
-        setErrorAdmin(null);
-        try {
-            const res = await AttributeValueApi.updateAdminAttributeValue(valueId, payload);
-            if (res.success) {
-                await reloadAdminAttributes();
-                showToast(res.message || "Cập nhật giá trị attribute thành công", "success");
-            } else {
-                showToast(res.message || "Lỗi API", "error");
-            }
-            return res;
-        } catch (err) {
-            const msg = errorUtils.parseApiError(err);
-            setErrorAdmin(msg);
-            showToast(msg, "error");
-            return { success: false, message: msg, data: null };
-        } finally {
-            setLoadingAdmin(false);
-        }
-    }, [reloadAdminAttributes, showToast]);
+	const updateAdminAttributeValue = useCallback(
+		async (
+			valueId: string,
+			payload: UpdateAttributeValueRequest | FormData
+		) => {
+			setLoadingAdmin(true);
+			setErrorAdmin(null);
+			try {
+				const res = await AttributeValueApi.updateAdminAttributeValue(
+					valueId,
+					payload
+				);
+				if (res.success) {
+					//await reloadShopProducts();
+					showToast(
+						res.message || "Cập nhật giá trị attribute thành công",
+						"success"
+					);
+				} else {
+					showToast(res.message || "Lỗi API", "error");
+				}
+				return res;
+			} catch (err) {
+				const msg = errorUtils.parseApiError(err);
+				setErrorAdmin(msg);
+				showToast(msg, "error");
+				return { success: false, message: msg, data: null };
+			} finally {
+				setLoadingAdmin(false);
+			}
+		},
+		[reloadAdminAttributes, showToast]
+	);
 
-    const toggleAdminAttributeValue = useCallback(async (valueId: string) => {
-        setLoadingAdmin(true);
-        setErrorAdmin(null);
-        try {
-            const res = await AttributeValueApi.toggleAdminAttributeValue(valueId);
-            if (res.success) {
-                await reloadAdminAttributes();
-                showToast(res.message || "Ẩn/hiện giá trị attribute thành công", "success");
-            } else {
-                showToast(res.message || "Lỗi API", "error");
-            }
-            return res;
-        } catch (err) {
-            const msg = errorUtils.parseApiError(err);
-            setErrorAdmin(msg);
-            showToast(msg, "error");
-            return { success: false, message: msg, data: null };
-        } finally {
-            setLoadingAdmin(false);
-        }
-    }, [reloadAdminAttributes, showToast]);
+	const toggleAdminAttributeValue = useCallback(
+		async (valueId: string) => {
+			setLoadingAdmin(true);
+			setErrorAdmin(null);
+			try {
+				const res = await AttributeValueApi.toggleAdminAttributeValue(valueId);
+				if (res.success) {
+					//await reloadShopProducts();
+					showToast(
+						res.message || "Ẩn/hiện giá trị attribute thành công",
+						"success"
+					);
+				} else {
+					showToast(res.message || "Lỗi API", "error");
+				}
+				return res;
+			} catch (err) {
+				const msg = errorUtils.parseApiError(err);
+				setErrorAdmin(msg);
+				showToast(msg, "error");
+				return { success: false, message: msg, data: null };
+			} finally {
+				setLoadingAdmin(false);
+			}
+		},
+		[reloadAdminAttributes, showToast]
+	);
 
-    const deleteAdminAttributeValue = useCallback(async (valueId: string) => {
-        setLoadingAdmin(true);
-        setErrorAdmin(null);
-        try {
-            const res = await AttributeValueApi.deleteAdminAttributeValue(valueId);
-            if (res.success) {
-                await reloadAdminAttributes();
-                showToast(res.message || "Xóa giá trị attribute thành công", "success");
-            } else {
-                showToast(res.message || "Lỗi API", "error");
-            }
-            return res;
-        } catch (err) {
-            const msg = errorUtils.parseApiError(err);
-            setErrorAdmin(msg);
-            showToast(msg, "error");
-            return { success: false, message: msg, data: null };
-        } finally {
-            setLoadingAdmin(false);
-        }
-    }, [reloadAdminAttributes, showToast]);
+	const deleteAdminAttributeValue = useCallback(
+		async (valueId: string) => {
+			setLoadingAdmin(true);
+			setErrorAdmin(null);
+			try {
+				const res = await AttributeValueApi.deleteAdminAttributeValue(valueId);
+				if (res.success) {
+					//await reloadShopProducts();
+					showToast(
+						res.message || "Xóa giá trị attribute thành công",
+						"success"
+					);
+				} else {
+					showToast(res.message || "Lỗi API", "error");
+				}
+				return res;
+			} catch (err) {
+				const msg = errorUtils.parseApiError(err);
+				setErrorAdmin(msg);
+				showToast(msg, "error");
+				return { success: false, message: msg, data: null };
+			} finally {
+				setLoadingAdmin(false);
+			}
+		},
+		[reloadAdminAttributes, showToast]
+	);
 
-    // ================= SHOP ACTIONS =================
-    const createShopAttributeValues = useCallback(async (attributeId: string, payload: FormData) => {
-        setLoadingShop(true);
-        setErrorShop(null);
-        try {
-            const res = await AttributeValueApi.createShopAttributeValues(attributeId, payload);
-            if (res.success) {
-                await reloadShopAttributes();
-                showToast(res.message || "Tạo giá trị attribute thành công", "success");
-            } else {
-                showToast(res.message || "Lỗi API", "error");
-            }
-            return res;
-        } catch (err) {
-            const msg = errorUtils.parseApiError(err);
-            setErrorShop(msg);
-            showToast(msg, "error");
-            return { success: false, message: msg, data: null };
-        } finally {
-            setLoadingShop(false);
-        }
-    }, [reloadShopAttributes, showToast]);
+	// ================= SHOP ACTIONS =================
+	const createShopAttributeValues = useCallback(
+		async (attributeId: string, payload: FormData) => {
+			setLoadingShop(true);
+			setErrorShop(null);
+			try {
+				const res = await AttributeValueApi.createShopAttributeValues(
+					attributeId,
+					payload
+				);
+				if (res.success) {
+					await reloadShopAttributes();
+					showToast(
+						res.message || "Tạo giá trị attribute thành công",
+						"success"
+					);
+				} else {
+					showToast(res.message || "Lỗi API", "error");
+				}
+				return res;
+			} catch (err) {
+				const msg = errorUtils.parseApiError(err);
+				setErrorShop(msg);
+				showToast(msg, "error");
+				return { success: false, message: msg, data: null };
+			} finally {
+				setLoadingShop(false);
+			}
+		},
+		[reloadShopAttributes, showToast]
+	);
 
-    const updateShopAttributeValue = useCallback(async (valueId: string, payload: UpdateAttributeValueRequest | FormData) => {
-        setLoadingShop(true);
-        setErrorShop(null);
-        try {
-            const res = await AttributeValueApi.updateShopAttributeValue(valueId, payload);
-            if (res.success) {
-                await reloadShopAttributes();
-                showToast(res.message || "Cập nhật giá trị attribute thành công", "success");
-            } else {
-                showToast(res.message || "Lỗi API", "error");
-            }
-            return res;
-        } catch (err) {
-            const msg = errorUtils.parseApiError(err);
-            setErrorShop(msg);
-            showToast(msg, "error");
-            return { success: false, message: msg, data: null };
-        } finally {
-            setLoadingShop(false);
-        }
-    }, [reloadShopAttributes, showToast]);
+	const updateShopAttributeValue = useCallback(
+		async (
+			valueId: string,
+			payload: UpdateAttributeValueRequest | FormData
+		) => {
+			setLoadingShop(true);
+			setErrorShop(null);
+			try {
+				const res = await AttributeValueApi.updateShopAttributeValue(
+					valueId,
+					payload
+				);
+				if (res.success) {
+					await reloadShopAttributes();
+					showToast(
+						res.message || "Cập nhật giá trị attribute thành công",
+						"success"
+					);
+				} else {
+					showToast(res.message || "Lỗi API", "error");
+				}
+				return res;
+			} catch (err) {
+				const msg = errorUtils.parseApiError(err);
+				setErrorShop(msg);
+				showToast(msg, "error");
+				return { success: false, message: msg, data: null };
+			} finally {
+				setLoadingShop(false);
+			}
+		},
+		[reloadShopAttributes, showToast]
+	);
 
-    const toggleShopAttributeValue = useCallback(async (valueId: string) => {
-        setLoadingShop(true);
-        setErrorShop(null);
-        try {
-            const res = await AttributeValueApi.toggleShopAttributeValue(valueId);
-            if (res.success) {
-                await reloadShopAttributes();
-                showToast(res.message || "Ẩn/hiện giá trị attribute thành công", "success");
-            } else {
-                showToast(res.message || "Lỗi API", "error");
-            }
-            return res;
-        } catch (err) {
-            const msg = errorUtils.parseApiError(err);
-            setErrorShop(msg);
-            showToast(msg, "error");
-            return { success: false, message: msg, data: null };
-        } finally {
-            setLoadingShop(false);
-        }
-    }, [reloadShopAttributes, showToast]);
+	const toggleShopAttributeValue = useCallback(
+		async (valueId: string) => {
+			setLoadingShop(true);
+			setErrorShop(null);
+			try {
+				const res = await AttributeValueApi.toggleShopAttributeValue(valueId);
+				if (res.success) {
+					await reloadShopAttributes();
+					showToast(
+						res.message || "Ẩn/hiện giá trị attribute thành công",
+						"success"
+					);
+				} else {
+					showToast(res.message || "Lỗi API", "error");
+				}
+				return res;
+			} catch (err) {
+				const msg = errorUtils.parseApiError(err);
+				setErrorShop(msg);
+				showToast(msg, "error");
+				return { success: false, message: msg, data: null };
+			} finally {
+				setLoadingShop(false);
+			}
+		},
+		[reloadShopAttributes, showToast]
+	);
 
-    const deleteShopAttributeValue = useCallback(async (valueId: string) => {
-        setLoadingShop(true);
-        setErrorShop(null);
-        try {
-            const res = await AttributeValueApi.deleteShopAttributeValue(valueId);
-            if (res.success) {
-                await reloadShopAttributes();
-                showToast(res.message || "Xóa giá trị attribute thành công", "success");
-            } else {
-                showToast(res.message || "Lỗi API", "error");
-            }
-            return res;
-        } catch (err) {
-            const msg = errorUtils.parseApiError(err);
-            setErrorShop(msg);
-            showToast(msg, "error");
-            return { success: false, message: msg, data: null };
-        } finally {
-            setLoadingShop(false);
-        }
-    }, [reloadShopAttributes, showToast]);
+	const deleteShopAttributeValue = useCallback(
+		async (valueId: string) => {
+			setLoadingShop(true);
+			setErrorShop(null);
+			try {
+				const res = await AttributeValueApi.deleteShopAttributeValue(valueId);
+				if (res.success) {
+					await reloadShopAttributes();
+					showToast(
+						res.message || "Xóa giá trị attribute thành công",
+						"success"
+					);
+				} else {
+					showToast(res.message || "Lỗi API", "error");
+				}
+				return res;
+			} catch (err) {
+				const msg = errorUtils.parseApiError(err);
+				setErrorShop(msg);
+				showToast(msg, "error");
+				return { success: false, message: msg, data: null };
+			} finally {
+				setLoadingShop(false);
+			}
+		},
+		[reloadShopAttributes, showToast]
+	);
 
-    return {
-        // States
-        adminValues,
-        loadingAdmin,
-        errorAdmin,
+	return {
+		// States
+		adminValues,
+		loadingAdmin,
+		errorAdmin,
 
-        shopValues,
-        loadingShop,
-        errorShop,
+		shopValues,
+		loadingShop,
+		errorShop,
 
-        // Admin actions
-        createAdminAttributeValues,
-        updateAdminAttributeValue,
-        toggleAdminAttributeValue,
-        deleteAdminAttributeValue,
+		// Admin actions
+		createAdminAttributeValues,
+		updateAdminAttributeValue,
+		toggleAdminAttributeValue,
+		deleteAdminAttributeValue,
 
-        // Shop actions
-        createShopAttributeValues,
-        updateShopAttributeValue,
-        toggleShopAttributeValue,
-        deleteShopAttributeValue,
-    };
+		// Shop actions
+		createShopAttributeValues,
+		updateShopAttributeValue,
+		toggleShopAttributeValue,
+		deleteShopAttributeValue,
+	};
 };
-
 
 // "use client";
 
