@@ -128,17 +128,15 @@ export default function ProductPage() {
 			<button onClick={() => setIsModalOpen(true)}>Xem nhanh sản phẩm</button>
 
 			<ProductDetailLayout
-				isModal={true} // Bật chế độ Modal
+				// isModal={true} // Bật chế độ Modal
+				modalWidth="w-full max-w-5xl"
 				isOpen={isModalOpen}
 				onClose={() => setIsModalOpen(false)}
 				// DIV 1: Ảnh
-				imageWidth="w-full md:w-[250px]"
+				imageWidth="w-[10%]"
 				imageContent={
-					<div className="aspect-[3/4] bg-gray-100 rounded-lg overflow-hidden">
-						<img
-							src="/test-product.jpg"
-							className="w-[70] h-full object-cover"
-						/>
+					<div className="rounded-lg overflow-hidden">
+						<img src="/test-product.jpg" className=" object-cover" />
 					</div>
 				}
 				// DIV 2: Header
@@ -160,14 +158,14 @@ export default function ProductPage() {
 					</div>
 				}
 				// DIV 4: Footer (Option - Có HR ngăn cách)
-				footerContent={
-					<div className="flex justify-end gap-3">
-						<button className="px-4 py-2 border rounded">Hủy</button>
-						<button className="px-4 py-2 bg-blue-600 text-white rounded">
-							Thêm vào giỏ
-						</button>
-					</div>
-				}
+				// footerContent={
+				// 	<div className="flex justify-end gap-3">
+				// 		<button className="px-4 py-2 border rounded">Hủy</button>
+				// 		<button className="px-4 py-2 bg-blue-600 text-white rounded">
+				// 			Thêm vào giỏ
+				// 		</button>
+				// 	</div>
+				// }
 			/>
 		</div>
 	);
