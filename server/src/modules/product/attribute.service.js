@@ -880,32 +880,41 @@ export const toggleActiveAttribute = async (attributeId, accountId = null, sessi
 //   }
 // };
 
-
-export const searchAttributes = async ({ query, isGlobal, accountId, page = 1, limit = 20 }) => {
+export const searchAttributes = async ({ query, accountId, page = 1, limit = 20, isAdmin = false }) => {
   try {
-    const filter = {};
-    let shopId = null;
-
-    if (accountId) {
-      const shop = await Shop.findOne({
-        accountId: toObjectId(accountId),
-        isDeleted: false,
-      }).lean();
-
-      if (!shop) throw new Error("Không tìm thấy cửa hàng cho tài khoản này");
-      shopId = shop._id;
-    }
-
-    if (typeof isGlobal === "boolean") filter.isGlobal = isGlobal;
-    if (shopId) filter.shopId = shopId;
-    if (query && query.trim()) filter.label = { $regex: query.trim(), $options: 'i' };
-
     const maxLimit = 100;
     const safePage = Math.max(1, parseInt(page) || 1);
     const safeLimit = Math.min(Math.max(1, parseInt(limit) || 20), maxLimit);
     const skip = (safePage - 1) * safeLimit;
 
-    // Aggregate với lookup để join AttributeValue
+    let filter = {};
+    let shopId = null;
+
+    if (!isAdmin && accountId) {
+      const shop = await Shop.findOne({ accountId: toObjectId(accountId), isDeleted: false }).lean();
+      if (!shop) throw new Error("Không tìm thấy cửa hàng cho tài khoản này");
+      shopId = shop._id;
+    }
+
+    // --- BUILD FILTER ---
+    if (isAdmin) {
+      // Admin: chỉ match theo query, không cần filter isGlobal/isActive
+      filter.isGlobal = true;
+      if (query && query.trim()) filter.label = { $regex: query.trim(), $options: "i" };
+    } else {
+      // Shop: lấy cả global active + shop tự tạo
+      // MongoDB $or filter: [{ shopId }, { isGlobal:true, isActive:true }]
+      const orFilter = [];
+      if (shopId) orFilter.push({ shopId: shopId });
+      orFilter.push({ isGlobal: true, isActive: true });
+      filter = { $or: orFilter };
+
+      if (query && query.trim()) {
+        filter.$and = [{ label: { $regex: query.trim(), $options: "i" } }];
+      }
+    }
+
+    // --- AGGREGATE ---
     const attributes = await Attribute.aggregate([
       { $match: filter },
       { $sort: { createdAt: -1 } },
@@ -913,11 +922,35 @@ export const searchAttributes = async ({ query, isGlobal, accountId, page = 1, l
       { $limit: safeLimit },
       {
         $lookup: {
-          from: "attributevalues",   // lưu ý tên collection phải viết đúng trong MongoDB
-          localField: "_id",
-          foreignField: "attributeId",
+          from: "attributevalues",
+          let: { attrId: "$_id", isGlobalAttr: "$isGlobal" },
+          pipeline: [
+            { $match: { $expr: { $eq: ["$attributeId", "$$attrId"] } } },
+            ...(isAdmin
+              ? [
+                  // Admin: chỉ lấy các value shopId=null
+                  { $match: { $expr: { $eq: ["$shopId", null] } } }
+                ]
+              : shopId
+              ? [
+          {
+            $match: {
+              $expr: {
+                $or: [
+                  // Global attribute: chỉ lấy shopId=null và isActive=true
+                  { $and: [{ $eq: ["$$isGlobalAttr", true] }, { $eq: ["$shopId", null] }, { $eq: ["$isActive", true] }] },
+                  // Các giá trị của shop đó (cả active và inactive)
+                  { $eq: ["$shopId", shopId] }
+                ]
+              }
+            }
+          }
+        ]
+              : []
+            ),
+          ],
           as: "values",
-        },
+        }
       },
     ]);
 
@@ -932,13 +965,73 @@ export const searchAttributes = async ({ query, isGlobal, accountId, page = 1, l
         page: safePage,
         limit: safeLimit,
         totalPages: Math.ceil(total / safeLimit),
-        query: query ? query.trim() : '',
+        query: query ? query.trim() : "",
       },
     };
   } catch (error) {
     return { success: false, message: error.message };
   }
 };
+
+
+// export const searchAttributes = async ({ query, isGlobal, accountId, page = 1, limit = 20 }) => {
+//   try {
+//     const filter = {};
+//     let shopId = null;
+
+//     if (accountId) {
+//       const shop = await Shop.findOne({
+//         accountId: toObjectId(accountId),
+//         isDeleted: false,
+//       }).lean();
+
+//       if (!shop) throw new Error("Không tìm thấy cửa hàng cho tài khoản này");
+//       shopId = shop._id;
+//     }
+
+//     if (typeof isGlobal === "boolean") filter.isGlobal = isGlobal;
+//     if (shopId) filter.shopId = shopId;
+//     if (query && query.trim()) filter.label = { $regex: query.trim(), $options: 'i' };
+
+//     const maxLimit = 100;
+//     const safePage = Math.max(1, parseInt(page) || 1);
+//     const safeLimit = Math.min(Math.max(1, parseInt(limit) || 20), maxLimit);
+//     const skip = (safePage - 1) * safeLimit;
+
+//     // Aggregate với lookup để join AttributeValue
+//     const attributes = await Attribute.aggregate([
+//       { $match: filter },
+//       { $sort: { createdAt: -1 } },
+//       { $skip: skip },
+//       { $limit: safeLimit },
+//       {
+//         $lookup: {
+//           from: "attributevalues",   // lưu ý tên collection phải viết đúng trong MongoDB
+//           localField: "_id",
+//           foreignField: "attributeId",
+//           as: "values",
+//         },
+//       },
+//     ]);
+
+//     const total = await Attribute.countDocuments(filter);
+
+//     return {
+//       success: true,
+//       message: "Tìm kiếm thuộc tính thành công!",
+//       data: {
+//         attributes,
+//         total,
+//         page: safePage,
+//         limit: safeLimit,
+//         totalPages: Math.ceil(total / safeLimit),
+//         query: query ? query.trim() : '',
+//       },
+//     };
+//   } catch (error) {
+//     return { success: false, message: error.message };
+//   }
+// };
 
 
 // export const searchAttributes = async ({ query, isGlobal, accountId, page = 1, limit = 20 }) => {

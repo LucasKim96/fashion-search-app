@@ -63,14 +63,37 @@ const handleUpdateAttributeLabel = async (req, res, isShop = false) => {
   }
 };
 
-const handleSearchAttributesBase = async (req, res, { isGlobal }) => {
+// const handleSearchAttributesBase = async (req, res, { isGlobal }) => {
+//   try {
+//     const { query, page = 1, limit = 20 } = req.query;
+//     const accountId = !isGlobal ? req.user?.id : null; // chỉ truyền khi là shop
+
+//     const result = await AttributeService.searchAttributes({
+//       query,
+//       isGlobal,
+//       accountId,
+//       page: parseInt(page),
+//       limit: parseInt(limit),
+//     });
+
+//     return res.status(result.success ? 200 : 400).json(result);
+//   } catch (error) {
+//     console.error("searchAttributesBase error:", error);
+//     return res.status(500).json({ success: false, message: error.message });
+//   }
+// };
+
+// shared/features/attribute/attribute.controller.js
+
+// Hàm chung handle search
+const handleSearchAttributesBase = async (req, res, { isAdmin }) => {
   try {
     const { query, page = 1, limit = 20 } = req.query;
-    const accountId = !isGlobal ? req.user?.id : null; // chỉ truyền khi là shop
+    const accountId = !isAdmin ? req.user?.id : null; // chỉ shop mới truyền accountId
 
     const result = await AttributeService.searchAttributes({
       query,
-      isGlobal,
+      isAdmin,
       accountId,
       page: parseInt(page),
       limit: parseInt(limit),
@@ -82,6 +105,15 @@ const handleSearchAttributesBase = async (req, res, { isGlobal }) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// Search cho admin
+export const searchGlobalAttributes = (req, res) =>
+  handleSearchAttributesBase(req, res, { isAdmin: true });
+
+// Search cho shop
+export const searchShopAttributes = (req, res) =>
+  handleSearchAttributesBase(req, res, { isAdmin: false });
+
 
 
 // export const getAttributesFlexible = async (req, res) => {
@@ -297,7 +329,7 @@ export const createGlobalAttribute = (req, res) => handleCreateAttribute(req, re
 // Cập nhật label cho admin
 export const updateGlobalAttributeLabel = (req, res) => handleUpdateAttributeLabel(req, res, false);
 //Tìm kiếm global
-export const searchGlobalAttributes = (req, res) => handleSearchAttributesBase(req, res, { isGlobal: true });
+// export const searchGlobalAttributes = (req, res) => handleSearchAttributesBase(req, res, { isGlobal: true });
 export const deleteAttributeByAdmin = (req, res) =>  handleDeleteAttribute(req, res, { isAdmin: true });
 export const toggleAttributeByAdmin = (req, res) =>  handleToggleAttribute(req, res, { isAdmin: true });
 // ========================= SHOP CONTROLLER =========================
@@ -351,7 +383,7 @@ export const createShopAttribute = (req, res) => handleCreateAttribute(req, res,
 // Cập nhật label cho shop
 export const updateShopAttributeLabel = (req, res) => handleUpdateAttributeLabel(req, res, true);
 // Tìm kiếm các thuộc tính của shop
-export const searchShopAttributes = (req, res) => handleSearchAttributesBase(req, res, { isGlobal: false });
+// export const searchShopAttributes = (req, res) => handleSearchAttributesBase(req, res, { isGlobal: false });
 export const deleteAttributeByShop = (req, res) => handleDeleteAttribute(req, res, { isAdmin: false });
 export const toggleAttributeByShop = (req, res) =>  handleToggleAttribute(req, res, { isAdmin: false });
 // Cập nhật thuộc tính + valus cho shop
