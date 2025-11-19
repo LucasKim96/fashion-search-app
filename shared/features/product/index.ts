@@ -4,3 +4,4 @@ export * from "./product.types";
 export * from "./productVariant.api";
 export * from "./productVariant.hook";
 export * from "./productVariant.types";
+export * from "./components/ProductCard";
