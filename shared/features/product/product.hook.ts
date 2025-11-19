@@ -151,7 +151,7 @@ export const useProduct = () => {
             const res = await ProductApi.deleteProductAdmin(productId);
             if (res.success) {
             showToast(res.message || "Xóa sản phẩm thành công", "success");
-            await getAllProductsAdmin();
+            
             } else showToast(res.message || "Lỗi API", "error");
             return res;
         } catch (err) {
@@ -169,7 +169,7 @@ export const useProduct = () => {
             const res = await ProductApi.toggleProductActive(productId);
             if (res.success) {
             showToast(res.message || "Cập nhật trạng thái thành công", "success");
-            await getAllProductsAdmin();
+            
             } else showToast(res.message || "Lỗi API", "error");
             return res;
         } catch (err) {
@@ -251,7 +251,7 @@ export const useProduct = () => {
             if (res.success) {
             setCreatedShopProduct(res.data);
             showToast(res.message || "Tạo sản phẩm thành công", "success");
-            await getShopProducts();
+            
             } else showToast(res.message || "Lỗi API", "error");
             return res;
         } catch (err) {
@@ -270,7 +270,7 @@ export const useProduct = () => {
             if (res.success) {
             setUpdatedShopProduct(res.data);
             showToast(res.message || "Cập nhật thông tin thành công", "success");
-            await getShopProducts();
+            
             } else showToast(res.message || "Lỗi API", "error");
             return res;
         } catch (err) {
@@ -289,7 +289,7 @@ export const useProduct = () => {
             if (res.success) {
             setUpdatedShopProduct(res.data);
             showToast(res.message || "Cập nhật hình ảnh thành công", "success");
-            await getShopProducts();
+            
             } else showToast(res.message || "Lỗi API", "error");
             return res;
         } catch (err) {
@@ -307,7 +307,7 @@ export const useProduct = () => {
             const res = await ProductApi.toggleShopProduct(productId);
             if (res.success) {
             showToast(res.message || "Cập nhật trạng thái sản phẩm thành công", "success");
-            await getShopProducts();
+            
             } else showToast(res.message || "Lỗi API", "error");
             return res;
         } catch (err) {
@@ -325,7 +325,7 @@ export const useProduct = () => {
             const res = await ProductApi.deleteShopProduct(productId);
             if (res.success) {
             showToast(res.message || "Xóa sản phẩm thành công", "success");
-            await getShopProducts();
+            
             } else showToast(res.message || "Lỗi API", "error");
             return res;
         } catch (err) {
