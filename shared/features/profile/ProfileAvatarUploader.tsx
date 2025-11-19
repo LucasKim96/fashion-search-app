@@ -6,6 +6,7 @@ import { useUser } from "@shared/features/user";
 import { UserProfile, getCroppedImg, ImagePreviewModal } from "@shared/core";
 import Cropper from "react-easy-crop";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuthContext } from "../auth/AuthProvider";
 
 interface Props {
 	profile: UserProfile;
@@ -18,6 +19,25 @@ export const ProfileAvatarUploader: React.FC<Props> = ({
 	size = 120,
 	onUpdate,
 }) => {
+	// --- BẮT ĐẦU DEBUG ---
+	const location =
+		typeof window !== "undefined" ? window.location.pathname : "server";
+	console.log(
+		`AVATAR UPLOADER (${
+			location.includes("/admin") ? "ADMIN" : "CLIENT"
+		}) - Props received:`,
+		{ profile }
+	);
+
+	const authContext = useAuthContext();
+	console.log(
+		`AVATAR UPLOADER (${
+			location.includes("/admin") ? "ADMIN" : "CLIENT"
+		}) - Auth context user ID:`,
+		authContext.user?._id
+	);
+	// --- KẾT THÚC DEBUG ---
+
 	const { updateAvatar } = useUser();
 	const [preview, setPreview] = useState<string>(profile.avatarUrl || "");
 	const [showCrop, setShowCrop] = useState(false);
@@ -62,10 +82,10 @@ export const ProfileAvatarUploader: React.FC<Props> = ({
 			if (res.success && onUpdate) {
 				setTimeout(() => {
 					onUpdate();
-				}, 200);
-				onUpdate();
+				}, 2);
+				// onUpdate();
 			}
-			await updateAvatar(profile.userId, file);
+			// await updateAvatar(profile.userId, file);
 		}
 	};
 
