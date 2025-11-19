@@ -21,7 +21,7 @@ import {
 	ProductSearchRequest,
 	ProductCard,
 } from "@shared/features/product";
-import { SearchHeader, GradientButton, formatCurrency } from "@shared/core";
+import { SearchHeader, GradientButton } from "@shared/core";
 
 // Danh sách bộ lọc giá (Giữ nguyên)
 const priceFilters = [
@@ -65,12 +65,12 @@ const priceFilters = [
 
 export default function SellerProductPage() {
 	// --- Hooks ---
-	// Lấy thêm fetchShopCount và shopCountState
+	// Lấy thêm fetchAdminCount và adminCountState
 	const {
-		searchShopProducts,
-		shopProductsState,
-		fetchShopCount,
-		shopCountState,
+		searchAdminProducts,
+		adminProductsState,
+		fetchAdminCount,
+		adminCountState,
 	} = useProduct();
 
 	// --- Local State ---
@@ -93,7 +93,7 @@ export default function SellerProductPage() {
 	// 1. Effect lấy danh sách sản phẩm (Search)
 	useEffect(() => {
 		const fetchData = async () => {
-			await searchShopProducts({
+			await searchAdminProducts({
 				query: searchQuery,
 				priceRange: selectedPriceRange,
 				status: "all",
@@ -107,15 +107,15 @@ export default function SellerProductPage() {
 		}, 300);
 
 		return () => clearTimeout(timer);
-	}, [searchQuery, selectedPriceRange, refreshKey, searchShopProducts]);
+	}, [searchQuery, selectedPriceRange, refreshKey, searchAdminProducts]);
 
 	// 2. Effect lấy tổng số lượng sản phẩm (chạy mỗi khi reload)
 	useEffect(() => {
 		const getStats = async () => {
 			// Gọi song song 2 request để tiết kiệm thời gian
 			const [resTotal, resActive] = await Promise.all([
-				fetchShopCount(true), // includeInactive = true (Lấy tổng cả ẩn)
-				fetchShopCount(false), // includeInactive = false (Chỉ lấy đang bán)
+				fetchAdminCount(true), // includeInactive = true (Lấy tổng cả ẩn)
+				fetchAdminCount(false), // includeInactive = false (Chỉ lấy đang bán)
 			]);
 
 			setStats({
@@ -124,7 +124,7 @@ export default function SellerProductPage() {
 			});
 		};
 		getStats();
-	}, [fetchShopCount, refreshKey]);
+	}, [fetchAdminCount, refreshKey]);
 
 	return (
 		<div className="p-6 space-y-4 h-screen flex flex-col bg-gray-50/50">
@@ -225,20 +225,19 @@ export default function SellerProductPage() {
 
 			{/* 4. Content List */}
 			<div className="flex-1 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden relative min-h-0">
-				{shopProductsState.loading ? (
+				{adminProductsState.loading ? (
 					<div className="flex items-center justify-center h-full text-gray-500">
 						Đang tải dữ liệu...
 					</div>
 				) : (
 					<div className="p-6 h-full overflow-y-auto">
-						{shopProductsState.data && shopProductsState.data.length > 0 ? (
+						{adminProductsState.data && adminProductsState.data.length > 0 ? (
 							<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-								{shopProductsState.data.map((prod) => (
+								{adminProductsState.data.map((prod) => (
 									<ProductCard
 										key={prod._id}
 										product={prod}
-										// mode="shop" // Chế độ Shop
-										mode="client" // Chế độ Shop
+										mode="admin" // Chế độ Admin
 										showActions={true} // Hiển thị nút xóa/ẩn
 										showStatusBadge={true} // Hiển thị badge nếu ẩn
 										onProductChange={triggerReload} // Quan trọng: Gọi reload khi có thay đổi
