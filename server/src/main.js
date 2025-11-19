@@ -83,7 +83,7 @@ app.use("/api/shops", ShopRoutes);
 app.use("/api/carts", CartRoutes);
 app.use("/api/orders", OrderRoutes);
 app.use("/api/attributes", AttributeRoutes);
-app.use("/api/attribute-value", AttributeValueRoutes);
+app.use("/api/attribute-values", AttributeValueRoutes);
 app.use("/api/products", ProductRoutes);
 app.use("/api/product-variants", ProductVariantRoutes);
 

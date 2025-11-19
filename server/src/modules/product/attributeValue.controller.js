@@ -75,11 +75,7 @@ const handleToggleAttributeValue = async (req, res, { isAdmin = false }) => {
       accountId
     );
 
-    res.json({
-      success: true,
-      message: "Cập nhật trạng thái thành công",
-      data: result,
-    });
+    res.status(result.success ? 200 : 400).json(result);
   } catch (error) {
     res.status(400).json({
       success: false,
@@ -94,15 +90,7 @@ const handleDeleteAttributeValue = async (req, res, { isAdmin = false }) => {
     const accountId = !isAdmin ? req.user?.id : null;
 
     const result = await AttributeValueService.deleteAttributeValue(valueId, accountId);
-
-    if (!result.success) {
-      return res.status(400).json({
-        success: false,
-        message: result.message || "Xóa giá trị thuộc tính thất bại",
-      });
-    }
-
-    return res.json({success: true, message: result.message });
+    res.status(result.success ? 200 : 400).json(result);
   } catch (error) {
     // console.error("Lỗi khi xóa attribute value:", error);
     res.status(500).json({

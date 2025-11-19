@@ -227,7 +227,7 @@ export const AdminSidebar: React.FC = () => {
       <div className="relative group flex justify-center mt-3">
         <button
           className={clsx(
-            "relative p-2 rounded-full transition-all duration-500 backdrop-blur-md",
+            "relative p-2 rounded-full transition-all duration-500 backdrop-blur-md peer",
             "bg-gradient-to-br from-white/80 via-white/50 to-white/30",
             "text-gray-700 shadow-inner shadow-gray-400/50 border border-white/40",
             "hover:bg-gradient-to-br hover:from-white/90 hover:to-[#f3ebe6]/90",
@@ -252,50 +252,47 @@ export const AdminSidebar: React.FC = () => {
           // const itemRef = React.createRef<HTMLDivElement>();
           const isActive = pathname?.startsWith(item.path);
           return (
-            <div
-              key={item.label}
-              // ref={itemRef}
+            <div 
+              className="relative" 
+              key={item.label} 
               onClick={() => router.push(item.path)}
-              className={clsx(
-                  "relative flex items-center gap-3 p-2.5 rounded-full cursor-pointer transition-all duration-500 group select-none",
+            >
+              <div
+                className={clsx(
+                  "group flex items-center gap-3 p-2.5 rounded-full cursor-pointer transition-all duration-500 peer select-none relative",
                   collapsed ? "justify-center" : "justify-start",
                   isActive
                     ? "bg-white/70 text-gray-900 font-semibold shadow-md"
-                    : "text-gray-700 hover:text-gray-900"
-                )}
-
-            >
-              {/* Icon */}
-              <item.icon
-                size={20}
-                className={clsx(
-                  "flex-shrink-0 transition-transform duration-300 group-hover:scale-110 z-20",
-                  collapsed ? "ml-0" : "ml-3",
-                  item.color ? item.color : isActive ? "text-gray-900" : "text-gray-600"
-                )}
-              />
-
-              {/* Label */}
-              {!collapsed && (
-                <span className="ml-1 text-sm tracking-wide group-hover:translate-x-1 transition-transform duration-300 z-20">
-                  {item.label}
-                </span>
-              )}
-
-              {/* Hiệu ứng ánh sáng trắng dịu hơn */}
-              <span
-                className={clsx(
-                  "absolute inset-0 rounded-full z-10 pointer-events-none",
-                  "transition-all duration-300",
-                  isActive
-                    ? "bg-white/70 shadow-md border border-white/90"
-                    : ["group-hover:border group-hover:border-white/90",
-                        "group-hover:[background-image:linear-gradient(to_top_right,rgba(255,255,255,0.8),rgba(240,240,240,0.5))]",
-                        "group-hover:[box-shadow:inset_0_2px_4px_rgba(0,0,0,0.1),_0_5px_10px_rgba(0,0,0,0.1)]"
-                      ]
+                    : "text-gray-700 hover:text-gray-900 hover:border hover:border-white/90"
                 )}
               >
-              </span>
+                {/* Icon */}
+                <item.icon
+                  size={20}
+                  className={clsx(
+                    "flex-shrink-0 transition-transform duration-300 hover:scale-110 z-20",
+                    collapsed ? "ml-0" : "ml-3",
+                    item.color ? item.color : isActive ? "text-gray-900" : "text-gray-600"
+                  )}
+                />
+
+                {/* Label */}
+                {!collapsed && (
+                  <span className="ml-1 text-sm tracking-wide hover:translate-x-1 transition-transform duration-300 z-20">
+                    {item.label}
+                  </span>
+                )}
+
+                {/* Overlay glow chỉ hiển thị khi hover */}
+                <span
+                  className="absolute inset-0 rounded-full z-10 pointer-events-none
+                            bg-gradient-to-tr from-white/10 to-white/20
+                            opacity-0 group-hover:opacity-100
+                            transition-all duration-300
+                            shadow-[inset_0_2px_4px_rgba(0,0,0,0.1),_0_5px_10px_rgba(0,0,0,0.1)]"
+                />
+              </div>
+
               {/* Hiển thị label khi rê chuột */}
               {collapsed && <SidebarTooltip label={item.label} />}
             </div>
@@ -305,44 +302,46 @@ export const AdminSidebar: React.FC = () => {
 
       {/* Footer / Logout */}
       <div className="border-t border-white/50 p-3 backdrop-blur-md">
-        <div
-          onClick={handleLogout}
-          className={clsx(
-            "relative flex items-center gap-3 p-2.5 rounded-full cursor-pointer transition-all duration-500 group select-none shadow-md",
-            collapsed ? "justify-center" : "justify-start",
-            // Nền đỏ gradient giữ nguyên
-            "bg-gradient-to-r from-red-500/90 to-red-600/90 text-white",
-            // Hiệu ứng hover
-            "hover:from-red-400 hover:to-red-500 hover:shadow-lg active:scale-95"
-          )}
-        >
-          {/* Icon */}
-          <LogOut
-            size={20}
-            className= {clsx(
-              "flex-shrink-0 transition-transform duration-300 group-hover:scale-110 z-20",
-              collapsed ? "ml-0" : "ml-3",
+        <div className="relative">
+          <button
+            onClick={handleLogout}
+            className={clsx(
+              "relative flex items-center gap-3 p-2.5 rounded-full cursor-pointer transition-all duration-500 select-none shadow-md w-full",
+              "peer", // <- đặt peer ở đây
+              collapsed ? "justify-center" : "justify-start",
+              "bg-gradient-to-r from-red-500/90 to-red-600/90 text-white",
+              "hover:from-red-400 hover:to-red-500 hover:shadow-lg active:scale-95"
             )}
-          />
+          >
+            {/* Icon */}
+            <LogOut
+              size={20}
+              className={clsx(
+                "flex-shrink-0 transition-transform duration-300 hover:scale-110 z-20",
+                collapsed ? "ml-0" : "ml-3"
+              )}
+            />
 
-          {/* Label */}
-          {!collapsed && (
-            <span className="ml-1 text-sm tracking-wide group-hover:translate-x-1 transition-transform duration-300 z-20">
-              Đăng xuất
-            </span>
-          )}
+            {/* Label */}
+            {!collapsed && (
+              <span className="ml-1 text-sm tracking-wide hover:translate-x-1 transition-transform duration-300 z-20">
+                Đăng xuất
+              </span>
+            )}
 
-          {/* Hiệu ứng ánh sáng mờ lan dần khi hover */}
-          <span
-            className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100
-              transition-all duration-500 pointer-events-none z-10
-              bg-gradient-to-r from-white/10 via-white/10 to-transparent"
-          ></span>
+            {/* Glow hover */}
+            <span
+              className="absolute inset-0 rounded-full opacity-0 peer-hover:opacity-100
+                transition-all duration-500 pointer-events-none z-10
+                bg-gradient-to-r from-white/10 via-white/10 to-transparent"
+            />
+          </button>
 
-          {/* Tooltip khi thu gọn */}
-          {collapsed && <SidebarTooltip label="Đăng xuất" />}
+          {/* Tooltip khi collapsed */}
+          {collapsed && <SidebarTooltip label="Đăng xuất" position="right" />}
         </div>
       </div>
+
     </aside>
   );
 };
