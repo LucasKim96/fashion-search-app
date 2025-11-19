@@ -1,45 +1,56 @@
 // file: shared/features/cart/cart.types.ts
-// Thông tin rút gọn của sản phẩm và biến thể để hiển thị trong giỏ hàng
+
+// Kiểu dữ liệu rút gọn cho Product, được populate trong item
 interface CartItemProduct {
 	_id: string;
 	name: string;
+	// Bạn có thể thêm các trường khác nếu backend populate, ví dụ: slug
 }
 
-interface CartItemVariantAttribute {
-	attribute: string;
-	value: string;
-}
-
+// Kiểu dữ liệu rút gọn cho ProductVariant, được populate trong item
 interface CartItemVariant {
 	_id: string;
 	imageUrl?: string;
-	attributes: CartItemVariantAttribute[];
+	attributes: {
+		attribute: string;
+		value: string;
+		// Thêm các trường khác nếu backend populate, ví dụ: color, hex
+	}[];
+	// Bạn có thể thêm các trường khác nếu backend populate, ví dụ: sku, stock
 }
 
+/**
+ * Kiểu dữ liệu cho MỘT item trong mảng `items` của giỏ hàng.
+ */
 export interface CartItem {
-	product: any; // Kiểu `any` để linh hoạt, hoặc định nghĩa kiểu chi tiết hơn
-	productVariant: any;
+	product: CartItemProduct;
+	productVariant: CartItemVariant;
 	productVariantId: string;
 	quantity: number;
-	price: number; // Sẽ nhận `finalPrice` từ backend
+	price: number; // Tên này khớp với `price` trong response của backend
 }
 
-// Cấu trúc đầy đủ của giỏ hàng
+/**
+ * Cấu trúc đầy đủ của object Giỏ hàng mà API trả về.
+ */
 export interface Cart {
-	// _id?: string; // Giỏ hàng có thể không có _id nếu được tạo động
 	accountId: string;
-	items: CartItem[];
-	subtotal: number; // Sẽ nhận `totalAmount` từ backend
-	totalQuantity: number; // Sẽ nhận `itemCount` từ backend
+	items: CartItem[]; // <-- ĐÃ ĐỔI LẠI: `cartItems` thành `items`
+	subtotal: number; // <-- ĐÃ ĐỔI LẠI: `totalAmount` thành `subtotal`
+	totalQuantity: number; // <-- ĐÃ ĐỔI LẠI: `itemCount` thành `totalQuantity`
 }
 
-// Dữ liệu cần gửi lên khi thêm sản phẩm
+/**
+ * Dữ liệu cần gửi lên khi thêm sản phẩm vào giỏ hàng.
+ */
 export interface AddToCartRequest {
 	productVariantId: string;
 	quantity: number;
 }
 
-// Dữ liệu cần gửi lên khi cập nhật số lượng
+/**
+ * Dữ liệu cần gửi lên khi cập nhật số lượng của một item.
+ */
 export interface UpdateCartItemRequest {
 	quantity: number;
 }
