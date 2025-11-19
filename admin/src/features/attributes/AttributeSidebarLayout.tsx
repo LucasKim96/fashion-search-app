@@ -9,7 +9,7 @@ import { CardAttributeValue } from "./CardAttributeValue";
 import { Calendar, Activity, Eye, Edit2, Trash2, Plus, Zap, Shapes, Tags} from "lucide-react";
 import { AttributeHeader } from "./AttributeHeader";
 import { CreateAttributePanel, CreateAttributeValue} from "./index";
-import {AttributeValue } from "../attributeValue.types"
+import {AttributeValue } from "../../../../shared/features/attribute/attributeValue.types"
 
 interface AttributeSidebarLayoutProps {
     searchQuery?: string;
