@@ -13,7 +13,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="grid grid-cols-[auto,1fr] h-screen overflow-hidden bg-gray-100">
           {/* Sidebar cố định */}
           <div className="sticky top-0 h-screen z-30">
-            <AdminSidebar menuItems={shopMenuItems} />
+            <AdminSidebar menuItems={shopMenuItems} isShop={true}  />
           </div>
 
           {/* Phần bên phải: Navbar cố định, Main cuộn */}

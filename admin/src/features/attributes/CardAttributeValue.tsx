@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { AttributeValue, useAttributeValue, UpdateAttributeValueRequest, Attribute } from "../index";
+import { AttributeValue, useAttributeValue, UpdateAttributeValueRequest, Attribute } from "../../../../shared/features/attribute/index";
 import { Edit, EyeOff, Eye, Trash2, X , Check, Camera } from "lucide-react";
 import { buildImageUrl, SidebarTooltip, ImagePreviewModal, Input, useNotification } from "@shared/core";
 import clsx from "clsx";
