@@ -129,12 +129,6 @@ export default function SellerProductPage() {
 	return (
 		<div className="p-6 space-y-4 h-screen flex flex-col bg-gray-50/50">
 			{/* 1. Header với Search */}
-			<SearchHeader
-				title="QUẢN LÝ SẢN PHẨM"
-				searchPlaceholder="Tìm kiếm theo tên sản phẩm..."
-				searchValue={searchQuery}
-				onSearchChange={setSearchQuery}
-			/>
 
 			{/* ---Thống kê số lượng --- */}
 			<div className="flex flex-wrap gap-4 justify-end">
@@ -178,7 +172,12 @@ export default function SellerProductPage() {
 					</div>
 				</div>
 			</div>
-
+			<SearchHeader
+				title="QUẢN LÝ SẢN PHẨM"
+				searchPlaceholder="Tìm kiếm theo tên sản phẩm..."
+				searchValue={searchQuery}
+				onSearchChange={setSearchQuery}
+			/>
 			{/* 2. Bộ lọc + Nút tạo */}
 			<div className="flex flex-col xl:flex-row xl:items-end justify-between gap-4">
 				{/* Filter */}
