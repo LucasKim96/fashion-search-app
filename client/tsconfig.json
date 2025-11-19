@@ -1,26 +1,37 @@
 {
-  "extends": "../tsconfig.base.json",
   "compilerOptions": {
-    "module": "esnext",
-    "moduleResolution": "bundler",
-    "noEmit": true,
-    "jsx": "preserve",
+    "target": "ES2017",
+    "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
+    "skipLibCheck": true,
+    "strict": false,
+    "noEmit": true,
     "incremental": true,
-    "plugins": [{ "name": "next" }],
-    "baseUrl": ".",
+    "module": "esnext",
+    "esModuleInterop": true,
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "baseUrl": "src",
     "paths": {
-      "@/*": ["src/*"],
-      "@shared/*": ["../shared/*"]
-    }
+      "@/*": ["*"],
+      "@shared/*": ["../../shared/*"]
+    },
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ]
   },
   "include": [
     "next-env.d.ts",
     ".next/types/**/*.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    "../shared/**/*.ts",
-    "../shared/**/*.tsx"
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "../../shared/**/*.ts",
+    "../../shared/**/*.tsx",
+    ".next/dev/types/**/*.ts"
   ],
   "exclude": ["node_modules"]
 }

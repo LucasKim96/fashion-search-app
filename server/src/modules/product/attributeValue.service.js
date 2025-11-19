@@ -108,7 +108,6 @@ export const updateAttributeValue = async (valueId, payload, accountId = null, f
 
       // --- Xác định quyền ---
       let isAdmin = false;
-      let currentShopId = null;
 
       if (accountId) {
         const shop = await Shop.findOne({
@@ -116,12 +115,9 @@ export const updateAttributeValue = async (valueId, payload, accountId = null, f
           isDeleted: false,
         }).session(session);
         if (!shop) throw new Error("Không tìm thấy cửa hàng cho tài khoản này");
-        currentShopId = shop._id;
-
-        if (attribute.isGlobal)
-          throw new Error("Shop không được phép chỉnh sửa thuộc tính toàn cục");
-        if (attribute.shopId?.toString() !== currentShopId.toString())
-          throw new Error("Bạn không có quyền sửa thuộc tính của shop khác!");
+        if (!oldValue.shopId || oldValue.shopId.toString() !== shop._id.toString()) {
+        throw new Error("Bạn không có quyền vô hiệu hóa value này");
+      }
       } else {
         isAdmin = true;
         if (!attribute.isGlobal)
@@ -159,8 +155,6 @@ export const updateAttributeValue = async (valueId, payload, accountId = null, f
 
       oldValue.value = payload.value ?? oldValue.value;
       oldValue.image = newImage;
-      oldValue.shopId = isAdmin ? null : currentShopId;
-      oldValue.isActive = true;
 
       await oldValue.save({ session });
 
@@ -201,10 +195,9 @@ export const toggleAttributeValueStatus = async (valueId, accountId = null, sess
     if (accountId) {
       const shop = await Shop.findOne({ accountId: toObjectId(accountId), isDeleted: false }).session(session);
       if (!shop) throw new Error("Không tìm thấy cửa hàng cho tài khoản này");
-      if (attribute.isGlobal)
-        throw new Error("Shop không được phép chỉnh sửa thuộc tính toàn cục");
-      if (attribute.shopId?.toString() !== shop._id.toString())
-        throw new Error("Bạn không có quyền chỉnh sửa thuộc tính của shop khác!");
+      if (!oldValue.shopId || oldValue.shopId.toString() !== shop._id.toString()) {
+        throw new Error("Bạn không có quyền vô hiệu hóa value này");
+      }
     } else {
       if (!attribute.isGlobal)
         throw new Error("Admin chỉ được phép chỉnh sửa thuộc tính toàn cục");
@@ -215,7 +208,7 @@ export const toggleAttributeValueStatus = async (valueId, accountId = null, sess
     
     return {
       success: true,
-      message: `Đã ${oldValue.isActive ? "kích hoạt" : "vô hiệu hóa"} value thành công`,
+      message: `Đã ${oldValue.isActive ? "kích hoạt" : "vô hiệu hóa"} giá trị thành công`,
       data: oldValue,
     };
   } catch (error) {
@@ -243,13 +236,14 @@ export const deleteAttributeValue = async (valueId, accountId = null) => {
         }).session(session);
 
         if (!shop) throw new Error("Không tìm thấy cửa hàng cho tài khoản này");
-        if (attribute.isGlobal)
-          throw new Error("Shop không được phép xóa thuộc tính toàn cục");
-        if (attribute.shopId?.toString() !== shop._id.toString())
-          throw new Error("Bạn không có quyền xóa thuộc tính của shop khác!");
+        // Shop chỉ được xóa value thuộc shop mình
+        // value.global (shopId=null) cũng không được shop xóa
+        if (!oldValue.shopId || oldValue.shopId.toString() !== shop._id.toString()) {
+          throw new Error("Bạn không có quyền xóa value này");
+        }
       } else {
         if (!attribute.isGlobal)
-          throw new Error("Admin chỉ được phép xóa thuộc tính toàn cục");
+          throw new Error("Admin chỉ được phép xóa giá trị thuộc tính toàn cục");
       }
 
       // Backup ảnh nếu có

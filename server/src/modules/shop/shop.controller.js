@@ -55,7 +55,7 @@ export const getShop = async (req, res, next) => {
  */
 export const addShop = async (req, res, next) => {
   try {
-    const accountId = req.user?.id; // || req.body.accountId;
+    const accountId = req.user?.id;
     const shopData = { ...req.body, accountId };
 
     validateObjectId(accountId, "accID");

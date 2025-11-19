@@ -11,7 +11,7 @@ dotenv.config();
 // Cấu hình JWT
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = "1d";
-const REFRESH_TOKEN_EXPIRES_IN = "7d";
+const REFRESH_TOKEN_EXPIRES_IN = "3d";
 
 // Đăng ký tài khoản mới
 export const register = async (data) => {
@@ -22,7 +22,7 @@ export const register = async (data) => {
     const existing = await Account.findOne({
       $or: [{ username }, { phoneNumber }],
     });
-    if (existing) throw new Error("Username hoặc số điện thoại đã tồn tại!");
+    if (existing) throw new Error("Tên đăng nhập hoặc số điện thoại đã tồn tại!");
 
     // Băm mật khẩu
     const hashedPassword = await bcrypt.hash(password, 10);

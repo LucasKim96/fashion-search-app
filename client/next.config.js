@@ -1,23 +1,22 @@
-/** @type {import('next').NextConfig} */
-const path = require("path");
+// client/next.config.js
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const IMAGE_DOMAIN = process.env.NEXT_PUBLIC_IMAGE_DOMAIN || "localhost";
 
+/** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+
   experimental: {
     externalDir: true,
+    optimizeCss: false,
   },
-  webpack: (config) => {
-    // Alias nội bộ
-    config.resolve.alias["@"] = path.resolve(__dirname, "src");
-    // Alias dùng chung cho FE
-    config.resolve.alias["@shared"] = path.resolve(__dirname, "../shared");
-    return config;
-  },
+
   images: {
-    // Cho phép ảnh từ BE (uploads/assets)
-    domains: [IMAGE_DOMAIN],
     remotePatterns: [
       {
         protocol: "http",
@@ -33,6 +32,8 @@ const nextConfig = {
       },
     ],
   },
+
+  turbopack: {},
 };
 
-module.exports = nextConfig;
+export default nextConfig;
