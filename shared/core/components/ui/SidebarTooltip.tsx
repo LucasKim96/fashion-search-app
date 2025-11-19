@@ -59,7 +59,7 @@ export const SidebarTooltip: React.FC<SidebarTooltipProps> = ({
             <span
                 className={clsx(
                     "absolute w-2 h-2 rotate-45",
-                    "bg-gradient-to-tr from-white/90 to-gray-200/90",
+                    "bg-gradient-to-tr  from-gray-900/95 to-gray-800/90",
                     "shadow-[2px_2px_6px_rgba(0,0,0,0.25)]",
                     "border border-white/30 rounded-sm",
                     arrowClasses[position]

@@ -14,6 +14,6 @@
     "resolveJsonModule": true,
     "strict": true
   },
-  "include": ["**/*.ts", "**/*.tsx", "**/*.css"],
+  "include": ["**/*.ts", "**/*.tsx", "**/*.css", "../admin/src/features/attributes/AttributeHeader.tsx", "../admin/src/features/attributes/AttributeSidebarLayout.tsx", "../admin/src/features/attributes/CardAttributeValue.tsx", "../admin/src/features/attributes/CreateAttributePanel.tsx", "../admin/src/features/attributes/CreateAttributeValue.tsx", "../admin/src/features/attributes/index.ts"],
   "exclude": ["node_modules", "dist"]
 }
