@@ -7,28 +7,45 @@ import clsx from "clsx";
 
 interface ProductDetailLayoutProps {
 	// --- Chế độ hiển thị ---
-	isModal?: boolean; // True: hiện Modal popup, False: hiện Inline bình thường
-	isOpen?: boolean; // Chỉ dùng khi isModal = true
-	onClose?: () => void; // Hàm đóng modal
+	isModal?: boolean;
+	isOpen?: boolean;
+	onClose?: () => void;
+
+	// --- Cấu hình kích thước ---
+	/**
+	 * Width của Modal khi hiển thị dạng Popup.
+	 * VD: "max-w-4xl", "w-[800px]", "max-w-5xl"
+	 * Default: "w-full max-w-5xl"
+	 */
+	modalWidth?: string;
+
+	/**
+	 * Width của Div 1 (Cột chứa ảnh).
+	 * Div 2 sẽ chiếm phần còn lại.
+	 * Nên truyền class responsive. VD: "w-full md:w-[250px]" hoặc "w-full md:w-1/3"
+	 */
+	imageWidth?: string;
 
 	// --- Nội dung các phần ---
-	imageContent: React.ReactNode; // Div 1: Ảnh
-	imageWidth?: string; // Tùy chỉnh width ảnh (VD: "w-1/3", "w-[300px]", "md:w-96")
-
-	headerContent: React.ReactNode; // Div 2: Thông tin ngang ảnh
-	detailContent: React.ReactNode; // Div 3: Thông tin chi tiết bên dưới
-	footerContent?: React.ReactNode; // Div 4: Option (nếu có thì hiện HR + nội dung)
+	imageContent: React.ReactNode; // Div 1
+	headerContent: React.ReactNode; // Div 2
+	detailContent: React.ReactNode; // Div 3
+	footerContent?: React.ReactNode; // Div 4
 
 	// --- Style tùy chỉnh ---
-	className?: string; // Class cho container chính
+	className?: string;
 }
 
 export const ProductDetailLayout: React.FC<ProductDetailLayoutProps> = ({
 	isModal = false,
 	isOpen = false,
 	onClose,
+
+	// Cấu hình mặc định
+	modalWidth = "w-full max-w-5xl",
+	imageWidth = "w-full md:w-1/3", // Mặc định trên mobile full, desktop 1/3
+
 	imageContent,
-	imageWidth = "w-full md:w-1/3", // Mặc định chiếm 1/3 trên desktop
 	headerContent,
 	detailContent,
 	footerContent,
@@ -36,11 +53,8 @@ export const ProductDetailLayout: React.FC<ProductDetailLayoutProps> = ({
 }) => {
 	const [mounted, setMounted] = useState(false);
 
-	// Fix lỗi hydration khi dùng Portal trong Next.js
 	useEffect(() => {
 		setMounted(true);
-
-		// Khóa scroll body khi mở modal
 		if (isModal && isOpen) {
 			document.body.style.overflow = "hidden";
 		} else {
@@ -51,19 +65,21 @@ export const ProductDetailLayout: React.FC<ProductDetailLayoutProps> = ({
 		};
 	}, [isModal, isOpen]);
 
-	// Nội dung chính (Layout 4 phần)
+	// Nội dung chính
 	const MainContent = (
 		<div
 			className={clsx(
-				"bg-white p-6 rounded-2xl shadow-sm", // Style nền trắng
+				"bg-white p-6 rounded-2xl shadow-sm",
 				isModal
-					? "shadow-2xl w-full max-w-5xl mx-4 relative animate-in fade-in zoom-in duration-300"
-					: "border border-gray-200", // Style riêng cho modal vs inline
+					? clsx(
+							"shadow-2xl relative animate-in fade-in zoom-in duration-300 mx-4",
+							modalWidth // <--- Áp dụng width cho Modal tại đây
+					  )
+					: "border border-gray-200 w-full", // <--- Chế độ thường: w-full chiếm hết cha
 				className
 			)}
-			onClick={(e) => e.stopPropagation()} // Chặn click xuyên qua modal đóng popup
-		>
-			{/* Nút Close Tròn nằm bên ngoài Modal (Góc trên phải) */}
+			onClick={(e) => e.stopPropagation()}>
+			{/* Nút Close (Chỉ hiện khi Modal) */}
 			{isModal && (
 				<button
 					onClick={onClose}
@@ -73,16 +89,19 @@ export const ProductDetailLayout: React.FC<ProductDetailLayoutProps> = ({
 				</button>
 			)}
 
-			{/* Hàng trên: Div 1 (Ảnh) + Div 2 (Header Info) */}
-			<div className="flex flex-col md:flex-row gap-6">
-				{/* DIV 1: Ảnh (Góc trái) */}
+			{/* HEADER GROUP: Div 1 (Ảnh) + Div 2 (Thông tin) */}
+			<div className="flex flex-col md:flex-row gap-6 items-start">
+				{/* DIV 1: Vùng chứa ảnh */}
+				{/* flex-shrink-0: Không bị co lại nhỏ hơn imageWidth quy định */}
 				<div className={clsx("flex-shrink-0", imageWidth)}>{imageContent}</div>
 
-				{/* DIV 2: Info (Phần còn lại) */}
+				{/* DIV 2: Vùng thông tin */}
+				{/* flex-1: Chiếm toàn bộ không gian còn lại sau khi trừ đi Div 1 */}
+				{/* min-w-0: Ngăn text bị tràn ra khỏi flex container */}
 				<div className="flex-1 min-w-0">{headerContent}</div>
 			</div>
 
-			{/* DIV 3: Chi tiết (Bên dưới) */}
+			{/* DIV 3: Chi tiết (Full width bên dưới) */}
 			<div className="mt-6">{detailContent}</div>
 
 			{/* DIV 4: Footer (Option) */}
@@ -97,20 +116,19 @@ export const ProductDetailLayout: React.FC<ProductDetailLayoutProps> = ({
 
 	// Render Logic
 	if (isModal) {
-		// Nếu là Modal -> Dùng Portal + Overlay Blur
 		if (!mounted || !isOpen) return null;
-
 		return createPortal(
 			<div
-				className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-				onClick={onClose} // Click ra ngoài thì đóng
-			>
-				{MainContent}
+				className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto"
+				onClick={onClose}>
+				{/* Wrapper này để căn giữa modal nếu chiều cao modal nhỏ hơn màn hình */}
+				<div className="flex min-h-full items-center justify-center w-full py-8">
+					{MainContent}
+				</div>
 			</div>,
 			document.body
 		);
 	}
 
-	// Nếu không phải Modal -> Render Inline bình thường
 	return MainContent;
 };
