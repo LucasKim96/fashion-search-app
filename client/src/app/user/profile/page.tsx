@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import {
 	Card,
 	CardContent,
@@ -9,32 +9,23 @@ import {
 	parseUserProfile,
 	UserProfile,
 } from "@shared/core";
-import { useAuth } from "@shared/features/auth";
+
 import { ProfileView } from "@shared/features/profile";
+import { useAuthContext } from "@shared/features/auth/AuthProvider";
 
 export default function ProfilePage() {
-	const { user, loading, refreshUser } = useAuth();
-	const [profile, setProfile] = useState<UserProfile | null>(null);
+	const { user, loading } = useAuthContext();
 
-	useEffect(() => {
-		if (user) setProfile(parseUserProfile(user));
-	}, [user]);
-
-	const handleProfileUpdate = async () => {
-		if (refreshUser) {
-			await refreshUser();
-			if (user) setProfile(parseUserProfile(user));
-		}
-	};
-
-	if (loading)
-		return <div className="p-6 text-center text-lg">Đang tải thông tin...</div>;
-	if (!profile)
+	if (!user) {
 		return (
 			<div className="p-6 text-center text-lg text-red-500">
-				Không tìm thấy tài khoản!
+				Không tìm thấy tài khoản! Vui lòng đăng nhập lại.
 			</div>
 		);
+	}
+	if (loading)
+		return <div className="p-6 text-center text-lg">Đang tải thông tin...</div>;
+	const profile: UserProfile = parseUserProfile(user);
 
 	return (
 		<div className="container mx-auto max-w-5xl">
@@ -50,7 +41,7 @@ export default function ProfilePage() {
 					</div>
 				</CardHeader>
 				<CardContent>
-					<ProfileView profile={profile} onUpdate={handleProfileUpdate} />
+					<ProfileView profile={profile} />
 				</CardContent>
 			</Card>
 		</div>
