@@ -24,8 +24,6 @@ export const getMyShopApi = () =>
 export const createShopApi = (formData: FormData) =>
 	axiosInstance
 		.post<ApiResponse<ShopResponse>>(SHOP_ENDPOINTS.CREATE, formData)
-		// Lưu ý: Không cần đặt header 'Content-Type' ở đây.
-		// Axios sẽ tự động làm điều đó một cách chính xác khi bạn truyền vào một đối tượng FormData.
 		.then((res) => res.data);
 
 // Cập nhật shop

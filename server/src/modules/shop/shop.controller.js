@@ -70,13 +70,42 @@ export const getMyShopDetails = async (req, res, next) => {
  */
 export const createShop = async (req, res, next) => {
 	try {
+		// --- BẮT ĐẦU DEBUG TOÀN DIỆN ---
+		console.log("\n=============================================");
+		console.log("--- Bắt đầu xử lý Request tạo Shop ---");
+		console.log("Thời gian:", new Date().toISOString());
+
+		// 1. In Headers của Request
+		// Quan trọng: Tìm 'content-type'. Nó phải là 'multipart/form-data; boundary=...'
+		console.log("\n[1] HEADERS:");
+		console.log(req.headers);
+
+		// 2. In Body của Request
+		// Đây là các trường text mà middleware đã phân tích được.
+		console.log("\n[2] BODY (Dữ liệu text):");
+		console.log(req.body);
+
+		// 3. In Files của Request (Đây là mục tiêu chính)
+		// Đây là các file mà multer đã xử lý.
+		console.log("\n[3] FILES (Dữ liệu file từ multer):");
+		console.log(req.files);
+
+		// 4. In các thông tin khác nếu cần
+		console.log("\n[4] PARAMS (Từ URL):");
+		console.log(req.params);
+		console.log("\n[5] QUERY (Từ URL):");
+		console.log(req.query);
+		console.log("\n[6] USER (Từ Auth Middleware):");
+		console.log(req.user);
+
+		console.log("\n--- Kết thúc phần Logging ---");
+		console.log("=============================================\n");
+		// --- KẾT THÚC DEBUG TOÀN DIỆN ---
+
 		// 1. Lấy dữ liệu text từ req.body
 		const { shopName, description } = req.body;
 		const accountId = req.user?.id; // Từ authMiddleware
 
-		// 2. DEBUG: KIỂM TRA XEM FILE ĐÃ LÊN ĐẾN SERVER CHƯA
-		// Thêm dòng log này để xem multer có hoạt động không.
-		// Nếu req.files là undefined, nghĩa là middleware upload của bạn chưa được áp dụng đúng vào route.
 		console.log("Request Files:", req.files);
 
 		// 3. Xử lý đường dẫn file (Phần quan trọng nhất)

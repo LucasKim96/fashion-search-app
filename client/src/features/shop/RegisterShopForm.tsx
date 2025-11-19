@@ -66,6 +66,14 @@ export default function RegisterShopForm({ onSuccess }: RegisterShopFormProps) {
 			formData.append("cover", coverFile);
 		}
 
+		// // --- DEBUG: In FormData ra console ---
+		// console.log("--- Bắt đầu kiểm tra FormData ---");
+		// for (const pair of formData.entries()) {
+		// 	console.log(`${pair[0]}:`, pair[1]);
+		// }
+		// console.log("--- Kết thúc kiểm tra FormData ---");
+		// // --- Kết thúc phần DEBUG ---
+
 		try {
 			setLoading(true);
 			await createShopApi(formData);
