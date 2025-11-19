@@ -1,6 +1,6 @@
 import { Account } from "@shared/features/account/account.types";
 import { mapBackendRoles } from "./role.utils";
-import { RoleKey } from "../constants/role.constants";
+import { RoleKey, ROLES } from "../constants/role.constants";
 import { buildImageUrl } from "./image.utils";
 
 export interface UserProfile {
@@ -26,7 +26,30 @@ export interface UserProfile {
 
     // ===== Roles =====
     roles: RoleKey[];
+    roleLabel: string;
 }
+
+const getHighestPriorityRoleLabel = (roles: RoleKey[]): string => {
+    if (!roles || roles.length === 0) {
+        return "Thành viên"; // Fallback nếu user không có role nào
+    }
+    
+    // Tìm vai trò có level cao nhất
+    const highestRole = roles.reduce((highest, currentRoleKey) => {
+        const highestRoleInfo = ROLES[highest];
+        const currentRoleInfo = ROLES[currentRoleKey];
+
+        // Nếu level của role hiện tại cao hơn level của role cao nhất đã tìm thấy
+        if (currentRoleInfo && highestRoleInfo && currentRoleInfo.level > highestRoleInfo.level) {
+            return currentRoleKey; // Thì role hiện tại trở thành role cao nhất mới
+        }
+        
+        return highest; // Nếu không thì vẫn giữ role cao nhất cũ
+    }, roles[0]); // Bắt đầu so sánh với vai trò đầu tiên trong mảng
+
+    // Trả về thuộc tính `roleName` của vai trò cao nhất đã tìm được
+    return ROLES[highestRole]?.roleName || "Thành viên";
+};
 
 /**
  * Chuyển từ Account API response sang UserProfile dùng frontend
@@ -57,5 +80,6 @@ export const parseUserProfile = (account: Account): UserProfile => {
 
         // Roles
         roles: mapBackendRoles(account.roles),
+        roleLabel: getHighestPriorityRoleLabel(mapBackendRoles(account.roles)),
     };
 };
