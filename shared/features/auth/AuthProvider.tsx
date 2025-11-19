@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext } from "react";
+import React, { createContext, useContext, useEffect } from "react";
 // 1. Import hook useAuth của bạn và các kiểu dữ liệu liên quan
 import { useAuth } from "./useAuth.hook";
 
@@ -16,7 +16,9 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 	// Gọi hook useAuth của bạn MỘT LẦN DUY NHẤT ở đây
 	const auth = useAuth();
-
+	useEffect(() => {
+		console.log("AUTH_PROVIDER: Trạng thái user đã thay đổi thành:", auth.user);
+	}, [auth.user]);
 	// Dùng AuthContext.Provider để "cung cấp" giá trị của `auth` cho tất cả các component con
 	return <AuthContext.Provider value={auth}>{children}</AuthContext.Provider>;
 };
