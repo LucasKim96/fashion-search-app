@@ -115,7 +115,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 		<div
 			className={clsx(
 				"relative bg-white rounded-xl border border-gray-200 transition-all duration-300",
-				"shadow-md hover:shadow-xl hover:-translate-y-1",
+				"shadow-md hover:shadow-xl hover:-translate-y-1 cursor-pointer ",
 				"group flex flex-col p-2",
 				width,
 				!product.isActive &&
@@ -129,19 +129,23 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 				<img
 					src={imageUrl}
 					alt={product.pdName}
-					className="w-full h-full object-cover"
+					className={clsx(
+						"w-full h-full object-cover",
+						// --- HIỆU ỨNG SCALE ---
+						"transition-transform duration-500 ease-in-out", // Chuyển động mượt trong 0.5s
+						"group-hover:scale-110" // Zoom nhẹ lên 110% khi hover vào Card
+					)}
 					loading="lazy"
 				/>
-
+				{/* --- HIỆU ỨNG LỚP PHỦ (OVERLAY) --- */}
+				{/* Lớp này tạo màu tối nhẹ phủ lên ảnh giúp tạo chiều sâu sang trọng */}
+				<div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-500" />
 				{/* Badge trạng thái */}
 				{shouldShowBadge && (
 					<span className="absolute top-2 right-2 z-10 px-2 py-1 bg-black/60 text-white text-[10px] font-bold uppercase tracking-wider rounded backdrop-blur-sm">
 						Đang ẩn
 					</span>
 				)}
-
-				{/* Overlay tối khi hover */}
-				<div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300" />
 			</div>
 
 			{/* 2. Phần Thông tin (Info Container) */}
@@ -154,7 +158,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 				</h3>
 
 				{/* Giá tiền */}
-				<p className="text-indigo-700 font-bold text-base mt-auto">
+				<p className="text-red-600 font-bold text-base mt-auto">
 					{formatCurrency(product.basePrice)}
 				</p>
 
