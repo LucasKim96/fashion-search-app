@@ -136,49 +136,6 @@ export default function SellerProductPage() {
 				onSearchChange={setSearchQuery}
 			/>
 
-			{/* ---Thống kê số lượng --- */}
-			<div className="flex flex-wrap gap-4 justify-end">
-				{/* Card 1: Tổng tất cả sản phẩm */}
-				<div className="flex items-center gap-3 bg-white py-3 px-5 rounded-xl border border-gray-200 shadow-sm min-w-[200px]">
-					<div className="p-2.5 bg-blue-50 rounded-lg text-blue-600">
-						<Package size={24} strokeWidth={2} />
-					</div>
-					<div className="flex flex-col">
-						<span className="text-[11px] text-gray-500 font-bold uppercase tracking-wide">
-							Tổng số lượng
-						</span>
-						<div className="flex items-baseline gap-1">
-							<span className="text-2xl font-extrabold text-gray-800 leading-none">
-								{stats.total}
-							</span>
-							<span className="text-xs font-medium text-gray-400">
-								sản phẩm
-							</span>
-						</div>
-					</div>
-				</div>
-
-				{/* Card 2: Sản phẩm đang bán (Khả dụng) */}
-				<div className="flex items-center gap-3 bg-white py-3 px-5 rounded-xl border border-gray-200 shadow-sm min-w-[200px]">
-					<div className="p-2.5 bg-emerald-50 rounded-lg text-emerald-600">
-						<CheckCircle size={24} strokeWidth={2} />
-					</div>
-					<div className="flex flex-col">
-						<span className="text-[11px] text-gray-500 font-bold uppercase tracking-wide">
-							Đang kinh doanh
-						</span>
-						<div className="flex items-baseline gap-1">
-							<span className="text-2xl font-extrabold text-emerald-600 leading-none">
-								{stats.active}
-							</span>
-							<span className="text-xs font-medium text-gray-400">
-								khả dụng
-							</span>
-						</div>
-					</div>
-				</div>
-			</div>
-
 			{/* 2. Bộ lọc + Nút tạo */}
 			<div className="flex flex-col xl:flex-row xl:items-end justify-between gap-4">
 				{/* Filter */}
@@ -220,6 +177,48 @@ export default function SellerProductPage() {
 						onClick={() => setIsCreateClicked(true)}
 						className="shadow-lg shadow-green-500/30 h-[46px]"
 					/>
+				</div>
+			</div>
+			{/* ---Thống kê số lượng --- */}
+			<div className="flex flex-wrap gap-4 justify-end">
+				{/* Card 1: Tổng tất cả sản phẩm */}
+				<div className="flex items-center gap-3 bg-white py-3 px-5 rounded-xl border border-gray-200 shadow-sm min-w-[200px]">
+					<div className="p-2.5 bg-blue-50 rounded-lg text-blue-600">
+						<Package size={24} strokeWidth={2} />
+					</div>
+					<div className="flex flex-col">
+						<span className="text-[11px] text-gray-500 font-bold uppercase tracking-wide">
+							Tổng số lượng
+						</span>
+						<div className="flex items-baseline gap-1">
+							<span className="text-2xl font-extrabold text-gray-800 leading-none">
+								{stats.total}
+							</span>
+							<span className="text-xs font-medium text-gray-400">
+								sản phẩm
+							</span>
+						</div>
+					</div>
+				</div>
+
+				{/* Card 2: Sản phẩm đang bán (Khả dụng) */}
+				<div className="flex items-center gap-3 bg-white py-3 px-5 rounded-xl border border-gray-200 shadow-sm min-w-[200px]">
+					<div className="p-2.5 bg-emerald-50 rounded-lg text-emerald-600">
+						<CheckCircle size={24} strokeWidth={2} />
+					</div>
+					<div className="flex flex-col">
+						<span className="text-[11px] text-gray-500 font-bold uppercase tracking-wide">
+							Đang kinh doanh
+						</span>
+						<div className="flex items-baseline gap-1">
+							<span className="text-2xl font-extrabold text-emerald-600 leading-none">
+								{stats.active}
+							</span>
+							<span className="text-xs font-medium text-gray-400">
+								khả dụng
+							</span>
+						</div>
+					</div>
 				</div>
 			</div>
 
