@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Heart, ShoppingCart, Loader2 } from "lucide-react";
+import { Heart, ShoppingCart, Loader2, Shirt, ImageIcon } from "lucide-react";
 import { buildImageUrl, formatCurrency, useNotification } from "@shared/core";
 import { ProductListItem } from "@shared/features/product";
 import { useCart } from "@shared/features/cart";
@@ -20,7 +20,7 @@ export const PublicProductCard: React.FC<PublicProductCardProps> = ({
 	const [isLiking, setIsLiking] = useState(false);
 
 	const handleCardClick = () => {
-		// router.push(`/products/${product._id}`);
+		router.push(`/products/${product._id}`);
 	};
 
 	const handleAddToCart = async (e: React.MouseEvent) => {
@@ -50,16 +50,28 @@ export const PublicProductCard: React.FC<PublicProductCardProps> = ({
 
 	return (
 		<div
-			onClick={handleCardClick}
+			// onClick={handleCardClick}
 			className="group relative flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer">
-			<div className="aspect-w-1 aspect-h-1 w-full overflow-hidden bg-gray-200">
-				<img
-					src={buildImageUrl(product.thumbnail)}
-					alt={product.name}
-					className="h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-110"
-					loading="lazy"
-				/>
-				<div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-4">
+			{/* Image Container */}
+			<div
+				className="w-full relative bg-gray-200"
+				style={{ paddingTop: "100%" }}>
+				{product.thumbnail ? (
+					// 2. Ảnh sẽ được đặt tuyệt đối để lấp đầy khung
+					<img
+						src={buildImageUrl(product.thumbnail)}
+						alt={product.name}
+						className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+						loading="lazy"
+					/>
+				) : (
+					// Icon cũng được đặt tuyệt đối để lấp đầy khung
+					<div className="absolute inset-0 h-full w-full flex items-center justify-center bg-gray-200">
+						<Shirt className="w-16 h-16 text-gray-400" strokeWidth={1} />
+					</div>
+				)}
+				{/* Overlay actions (giữ nguyên, nó đã được đặt `absolute` nên sẽ nằm trên cùng) */}
+				<div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-4 z-10">
 					<button
 						onClick={handleAddToCart}
 						disabled={isAdding}
@@ -82,8 +94,16 @@ export const PublicProductCard: React.FC<PublicProductCardProps> = ({
 					</button>
 				</div>
 			</div>
+			{/* Product Info */}
 			<div className="flex flex-1 flex-col space-y-2 p-4">
 				<h3 className="text-sm font-medium text-gray-900 group-hover:text-primary transition-colors line-clamp-2">
+					<a
+						href={`/products/${product._id}`}
+						onClick={(e) => {
+							e.preventDefault();
+							handleCardClick();
+						}}
+					/>
 					<span aria-hidden="true" className="absolute inset-0" />
 					{product.name}
 				</h3>
@@ -100,7 +120,8 @@ export const PublicProductCard: React.FC<PublicProductCardProps> = ({
 export const ProductCardSkeleton: React.FC = () => {
 	return (
 		<div className="flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white animate-pulse">
-			<div className="aspect-w-1 aspect-h-1 w-full bg-gray-200"></div>
+			{/* Áp dụng `aspect-square` cho cả skeleton */}
+			<div className="w-full bg-gray-200" style={{ paddingTop: "100%" }}></div>
 			<div className="flex flex-1 flex-col space-y-3 p-4">
 				<div className="h-5 w-3/4 bg-gray-200 rounded"></div>
 				<div className="h-4 w-1/4 bg-gray-200 rounded"></div>

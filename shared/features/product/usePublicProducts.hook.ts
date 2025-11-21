@@ -12,7 +12,7 @@ const mapProductToListItem = (product: Product): ProductListItem => ({
 	_id: product._id,
 	name: product.pdName,
 	basePrice: product.basePrice,
-	thumbnail: product.images?.[0] || "/placeholder-image.jpg",
+	thumbnail: product.images?.[0],
 });
 
 /**
