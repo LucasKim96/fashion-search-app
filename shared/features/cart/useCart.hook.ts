@@ -2,16 +2,18 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useNotification, errorUtils } from "@shared/core";
-import { Cart } from "./cart.types";
+import { Cart, AddToCartRequest } from "./cart.types";
 import {
 	getMyCartApi,
 	updateCartItemQuantityApi,
 	removeCartItemApi,
+	addItemToCartApi,
 } from "./cart.api";
 
 export const useCart = () => {
 	const [cart, setCart] = useState<Cart | null>(null);
 	const [loading, setLoading] = useState(true);
+	const [isAdding, setIsAdding] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const { showToast } = useNotification();
 
@@ -37,6 +39,33 @@ export const useCart = () => {
 	useEffect(() => {
 		fetchCart();
 	}, [fetchCart]);
+
+	const addItemToCart = useCallback(
+		async (payload: AddToCartRequest) => {
+			setIsAdding(true);
+			try {
+				const res = await addItemToCartApi(payload);
+				if (res.success && res.data) {
+					setCart(res.data); // Cập nhật giỏ hàng với dữ liệu mới
+					// showToast("Đã thêm vào giỏ hàng!", "success"); // Có thể bỏ toast ở đây nếu card đã có hiệu ứng
+				} else {
+					showToast(res.message || "Thêm sản phẩm thất bại.", "error");
+				}
+				return res; // Trả về response để component có thể xử lý thêm
+			} catch (err) {
+				showToast(errorUtils.parseApiError(err), "error");
+				// Trả về một response thất bại để component biết
+				return {
+					success: false,
+					message: errorUtils.parseApiError(err),
+					data: null,
+				};
+			} finally {
+				setIsAdding(false);
+			}
+		},
+		[showToast]
+	);
 
 	// Hàm cập nhật số lượng
 	const updateItemQuantity = useCallback(
@@ -79,8 +108,10 @@ export const useCart = () => {
 	return {
 		cart,
 		loading,
+		isAdding,
 		error,
-		fetchCart, // Export để có thể refresh thủ công nếu cần
+		fetchCart,
+		addItemToCart,
 		updateItemQuantity,
 		removeItem,
 	};

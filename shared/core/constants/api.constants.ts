@@ -92,11 +92,10 @@ export const ATTRIBUTE_VALUE_ENDPOINTS = {
 };
 
 export const PRODUCT_ENDPOINTS = {
-	// ----- Public -----
-	PUBLIC_LIST: "/products",
-	PUBLIC_LIST_BY_SHOP: "/products/shop",
-	PUBLIC_DETAIL: (productId: string) => `/products/${productId}`,
-	PUBLIC_COUNT_SHOP: (shopId: string) => `/products/count/${shopId}`,
+	PUBLIC_LIST: "/products/public",
+	PUBLIC_LIST_BY_SHOP: (shopId: string) => `/products/public/shop/${shopId}`,
+	PUBLIC_DETAIL: (productId: string) => `/products/public/${productId}`,
+	PUBLIC_COUNT_SHOP: (shopId: string) => `/products/public/count/${shopId}`,
 
 	// ----- Admin -----
 	ADMIN_LIST: "/products/admin",
