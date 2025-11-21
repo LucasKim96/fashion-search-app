@@ -1,27 +1,29 @@
-// admin/src/app/layout.tsx
 import "./globals.css";
 import React from "react";
+// --- 1. IMPORT CÁC PROVIDER CẦN THIẾT ---
 import { NotificationProvider } from "@shared/core/ui/NotificationProvider";
+import { AuthProvider } from "@shared/features/auth/AuthProvider";
 
 export const metadata = {
-  title: "Fashion Search Admin",
-  description: "Trang quản trị hệ thống Fashion Search",
+	title: "Fashion Search Admin",
+	description: "Trang quản trị hệ thống Fashion Search",
 };
 
 export default function RootLayout({
-  children,
+	children,
 }: {
-  children: React.ReactNode;
+	children: React.ReactNode;
 }) {
-  return (
-    <html lang="vi">
-      <body className="bg-gray-100 min-h-screen">
-        {/* Container toast luôn ở ngoài NotificationProvider */}
-        <div id="toast-root" />
-        <NotificationProvider>
-          {children}
-        </NotificationProvider>
-      </body>
-    </html>
-  );
+	return (
+		<html lang="vi">
+			<body className="bg-gray-100 min-h-screen">
+				<div id="toast-root" />
+				{/* --- 2. BỌC TOÀN BỘ APP BẰNG CÁC PROVIDER --- */}
+				{/* Thứ tự đúng: NotificationProvider ở ngoài, AuthProvider ở trong */}
+				<NotificationProvider>
+					<AuthProvider>{children}</AuthProvider>
+				</NotificationProvider>
+			</body>
+		</html>
+	);
 }

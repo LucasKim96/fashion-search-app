@@ -6,15 +6,18 @@ import { useUser } from "@shared/features/user";
 import { UserProfile, getCroppedImg, ImagePreviewModal } from "@shared/core";
 import Cropper from "react-easy-crop";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuthContext } from "../auth/AuthProvider";
 
 interface Props {
 	profile: UserProfile;
 	size?: number;
+	onUpdate?: () => void;
 }
 
 export const ProfileAvatarUploader: React.FC<Props> = ({
 	profile,
 	size = 120,
+	onUpdate,
 }) => {
 	const { updateAvatar } = useUser();
 	const [preview, setPreview] = useState<string>(profile.avatarUrl || "");
@@ -55,7 +58,15 @@ export const ProfileAvatarUploader: React.FC<Props> = ({
 			const croppedUrl = URL.createObjectURL(file);
 			setPreview(croppedUrl);
 			setShowCrop(false);
-			await updateAvatar(profile.userId, file);
+
+			const res = await updateAvatar(profile.userId, file);
+			if (res.success && onUpdate) {
+				setTimeout(() => {
+					onUpdate();
+				}, 2);
+				// onUpdate();
+			}
+			// await updateAvatar(profile.userId, file);
 		}
 	};
 

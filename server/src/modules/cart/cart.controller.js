@@ -1,147 +1,169 @@
-// server/src/modules/cart/cart.controller.js
 import * as CartService from "./cart.service.js";
 import { apiResponse, ApiError } from "../../utils/index.js";
 
 const { successResponse } = apiResponse;
 
-// Lấy giỏ hàng
-export const getCart = async (req, res, next) => {
-  try {
-    const accountId = req.user?.id;
-    if (!accountId) throw ApiError.unauthorized("Chưa đăng nhập");
-
-    const cart = await CartService.getCartWithDetails(accountId);
-    const { totalAmount, itemCount, itemsWithFinalPrice } =
-      await CartService.calculateCartTotal(accountId);
-
-    // Thay thế cart.cartItems bằng bản có finalPrice
-    const enhancedCart = {
-      ...cart.toObject(),
-      cartItems: itemsWithFinalPrice.map((i) => ({
-        productVariant: i.productVariant,
-        product: i.product,
-        quantity: i.quantity,
-        finalPrice: i.finalPrice,
-      })),
-      totalAmount,
-      itemCount,
-    };
-
-    return successResponse(res, enhancedCart, "Lấy giỏ hàng thành công");
-  } catch (error) {
-    next(error);
-  }
+/**
+ * HÀM HELPER: Định dạng lại dữ liệu giỏ hàng để trả về cho client.
+ * Hàm này nhận kết quả từ calculateCartTotal và chuyển đổi nó.
+ * @param {object} cartData - { totalAmount, itemCount, itemsWithFinalPrice }
+ * @param {string} accountId - ID tài khoản của người dùng
+ * @returns {object} - Dữ liệu giỏ hàng đã được định dạng theo chuẩn frontend.
+ */
+const formatCartForResponse = (cartData, accountId) => {
+	const { totalAmount, itemCount, itemsWithFinalPrice } = cartData;
+	return {
+		accountId: accountId,
+		items: itemsWithFinalPrice.map((i) => ({
+			product: i.product,
+			productVariant: i.productVariant,
+			productVariantId: i.productVariant._id.toString(), // Đảm bảo là string
+			quantity: i.quantity,
+			price: i.finalPrice,
+		})),
+		subtotal: totalAmount,
+		totalQuantity: itemCount,
+	};
 };
 
+// Lấy giỏ hàng
+export const getCart = async (req, res, next) => {
+	try {
+		const accountId = req.user?.id;
+		if (!accountId) throw ApiError.unauthorized("Chưa đăng nhập");
+
+		// 1. Chỉ cần gọi calculateCartTotal
+		const cartDataFromService = await CartService.calculateCartTotal(accountId);
+
+		// 2. Dùng helper để định dạng lại
+		const responseCart = formatCartForResponse(cartDataFromService, accountId);
+
+		return successResponse(res, responseCart, "Lấy giỏ hàng thành công");
+	} catch (error) {
+		next(error);
+	}
+};
 
 // Thêm sản phẩm vào giỏ
 export const addItem = async (req, res, next) => {
-  try {
-    const accountId = req.user?.id;
-    const { productVariantId, quantity } = req.body;
+	try {
+		const accountId = req.user?.id;
+		const { productVariantId, quantity } = req.body;
+		if (!accountId || !productVariantId || !quantity)
+			throw ApiError.badRequest("Thiếu thông tin cần thiết");
 
-    if (!accountId) throw ApiError.unauthorized("Chưa đăng nhập");
-    if (!productVariantId || !quantity)
-      throw ApiError.badRequest("Thiếu thông tin sản phẩm hoặc số lượng");
+		// 1. Thực hiện hành động
+		await CartService.addToCart(accountId, productVariantId, quantity);
 
-    const updatedCart = await CartService.addToCart(
-      accountId,
-      productVariantId,
-      quantity
-    );
-    return successResponse(
-      res,
-      updatedCart,
-      "Thêm sản phẩm vào giỏ thành công"
-    );
-  } catch (error) {
-    next(error);
-  }
+		// 2. Lấy dữ liệu mới nhất, tính toán và định dạng để trả về
+		const cartDataFromService = await CartService.calculateCartTotal(accountId);
+		const responseCart = formatCartForResponse(cartDataFromService, accountId);
+
+		return successResponse(res, responseCart, "Thêm sản phẩm thành công");
+	} catch (error) {
+		next(error);
+	}
 };
 
 // Cập nhật số lượng
 export const updateQuantity = async (req, res, next) => {
-  try {
-    const accountId = req.user?.id;
-    const { productVariantId, quantity } = req.body;
+	try {
+		const accountId = req.user?.id;
+		const { productVariantId } = req.params; // Sửa để lấy từ params cho đúng RESTful
+		const { quantity } = req.body;
+		if (!accountId || !productVariantId || quantity === undefined)
+			throw ApiError.badRequest("Thiếu thông tin cần thiết");
 
-    if (!accountId) throw ApiError.unauthorized("Chưa đăng nhập");
-    if (!productVariantId || quantity === undefined)
-      throw ApiError.badRequest("Thiếu thông tin sản phẩm hoặc số lượng");
+		await CartService.updateItemQuantity(accountId, productVariantId, quantity);
 
-    const updatedCart = await CartService.updateItemQuantity(
-      accountId,
-      productVariantId,
-      quantity
-    );
-    return successResponse(res, updatedCart, "Cập nhật số lượng thành công");
-  } catch (error) {
-    next(error);
-  }
+		const cartDataFromService = await CartService.calculateCartTotal(accountId);
+		const responseCart = formatCartForResponse(cartDataFromService, accountId);
+
+		return successResponse(res, responseCart, "Cập nhật số lượng thành công");
+	} catch (error) {
+		next(error);
+	}
 };
 
 // Xóa sản phẩm
 export const removeItem = async (req, res, next) => {
-  try {
-    const accountId = req.user?.id;
-    const { productVariantId } = req.params;
+	try {
+		const accountId = req.user?.id;
+		const { productVariantId } = req.params;
+		if (!accountId || !productVariantId)
+			throw ApiError.badRequest("Thiếu ID sản phẩm");
 
-    if (!accountId) throw ApiError.unauthorized("Chưa đăng nhập");
-    if (!productVariantId) throw ApiError.badRequest("Thiếu ID sản phẩm");
+		await CartService.removeFromCart(accountId, productVariantId);
 
-    const updatedCart = await CartService.removeFromCart(
-      accountId,
-      productVariantId
-    );
-    return successResponse(res, updatedCart, "Xóa sản phẩm thành công");
-  } catch (error) {
-    next(error);
-  }
+		const cartDataFromService = await CartService.calculateCartTotal(accountId);
+		const responseCart = formatCartForResponse(cartDataFromService, accountId);
+
+		return successResponse(res, responseCart, "Xóa sản phẩm thành công");
+	} catch (error) {
+		next(error);
+	}
 };
 
 // Xóa toàn bộ giỏ
 export const clearCart = async (req, res, next) => {
-  try {
-    const accountId = req.user?.id;
-    if (!accountId) throw ApiError.unauthorized("Chưa đăng nhập");
+	try {
+		const accountId = req.user?.id;
+		if (!accountId) throw ApiError.unauthorized("Chưa đăng nhập");
 
-    const clearedCart = await CartService.clearCart(accountId);
-    return successResponse(res, clearedCart, "Đã xóa toàn bộ giỏ hàng");
-  } catch (error) {
-    next(error);
-  }
+		await CartService.clearCart(accountId);
+
+		// Sau khi xóa, giỏ hàng sẽ rỗng
+		const cartDataFromService = await CartService.calculateCartTotal(accountId);
+		const responseCart = formatCartForResponse(cartDataFromService, accountId);
+
+		return successResponse(res, responseCart, "Đã xóa toàn bộ giỏ hàng");
+	} catch (error) {
+		next(error);
+	}
 };
 
 // Bulk add
 export const bulkAdd = async (req, res, next) => {
-  try {
-    const accountId = req.user?.id;
-    const { items } = req.body;
+	try {
+		const accountId = req.user?.id;
+		const { items } = req.body;
 
-    if (!accountId) throw ApiError.unauthorized("Chưa đăng nhập");
-    if (!items || !Array.isArray(items) || items.length === 0)
-      throw ApiError.badRequest("Danh sách sản phẩm không hợp lệ");
+		if (!accountId) throw ApiError.unauthorized("Chưa đăng nhập");
+		if (!items || !Array.isArray(items) || items.length === 0)
+			throw ApiError.badRequest("Danh sách sản phẩm không hợp lệ");
 
-    const updatedCart = await CartService.bulkAdd(accountId, items);
-    return successResponse(res, updatedCart, "Đã thêm nhiều sản phẩm vào giỏ");
-  } catch (error) {
-    next(error);
-  }
+		// 1. Thực hiện hành động bulk add
+		await CartService.bulkAdd(accountId, items);
+
+		// 2. Lấy dữ liệu mới nhất, tính toán và định dạng để trả về
+		const cartDataFromService = await CartService.calculateCartTotal(accountId);
+		const responseCart = formatCartForResponse(cartDataFromService, accountId);
+
+		return successResponse(res, responseCart, "Đã thêm nhiều sản phẩm vào giỏ");
+	} catch (error) {
+		next(error);
+	}
 };
 
 // Refresh cart
 export const refreshCart = async (req, res, next) => {
-  try {
-    const accountId = req.user?.id;
-    if (!accountId) throw ApiError.unauthorized("Chưa đăng nhập");
+	try {
+		const accountId = req.user?.id;
+		if (!accountId) throw ApiError.unauthorized("Chưa đăng nhập");
 
-    const refreshedCart = await CartService.refreshCart(accountId);
-    return successResponse(
-      res,
-      refreshedCart,
-      "Đã đồng bộ lại giỏ hàng thành công"
-    );
-  } catch (error) {
-    next(error);
-  }
+		// 1. Thực hiện hành động refresh
+		await CartService.refreshCart(accountId);
+
+		// 2. Lấy dữ liệu mới nhất, tính toán và định dạng để trả về
+		const cartDataFromService = await CartService.calculateCartTotal(accountId);
+		const responseCart = formatCartForResponse(cartDataFromService, accountId);
+
+		return successResponse(
+			res,
+			responseCart,
+			"Đã đồng bộ lại giỏ hàng thành công"
+		);
+	} catch (error) {
+		next(error);
+	}
 };

@@ -16,9 +16,12 @@ import {
 /** ========================= PUBLIC API ========================= */
 
 // Lấy danh sách sản phẩm public
-export const getPublicProducts = async (): Promise<ApiResponse<Product[]>> => {
+export const getPublicProducts = async (
+	params?: { page?: number; limit?: number } // <-- Thêm tham số `params`
+): Promise<ApiResponse<Product[]>> => {
 	const res = await axiosInstance.get<ApiResponse<Product[]>>(
-		PRODUCT_ENDPOINTS.PUBLIC_LIST
+		PRODUCT_ENDPOINTS.PUBLIC_LIST,
+		{ params } // <-- Truyền `params` vào request của axios
 	);
 	return res.data;
 };
@@ -27,12 +30,13 @@ export const getPublicProducts = async (): Promise<ApiResponse<Product[]>> => {
 export const getPublicProductsByShop = async (
 	shopId: string
 ): Promise<ApiResponse<Product[]>> => {
-	const res = await axiosInstance.get<ApiResponse<Product[]>>(
-		PRODUCT_ENDPOINTS.PUBLIC_LIST_BY_SHOP,
-		{
-			params: { shopId },
-		}
-	);
+	// --- SỬA Ở ĐÂY ---
+	// Gọi hàm và truyền `shopId` vào
+	const url = PRODUCT_ENDPOINTS.PUBLIC_LIST_BY_SHOP(shopId);
+
+	// Không cần `params` nữa vì `shopId` đã nằm trong URL
+	const res = await axiosInstance.get<ApiResponse<Product[]>>(url);
+
 	return res.data;
 };
 

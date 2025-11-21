@@ -1,53 +1,39 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@shared/features/auth/useAuth.hook";
 import { Store, User, Package } from "lucide-react";
 import clsx from "clsx";
-import { tokenUtils } from "@shared/core/utils/auth.utils";
 
-export default function ClientSidebar({ onOpenRegisterModal }) {
+interface ClientSidebarProps {
+	onOpenRegisterModal: () => void;
+}
+
+export default function ClientSidebar({
+	onOpenRegisterModal,
+}: ClientSidebarProps) {
 	const { user: currentUser, loading } = useAuth();
 	const router = useRouter();
 	const pathname = usePathname();
-	const [showRegisterForm, setShowRegisterForm] = useState(false);
-	const [formData, setFormData] = useState({
-		shopName: "",
-		description: "",
-		address: "",
-		phone: "",
-	});
-	const maxLevel = tokenUtils.getMaxLevel();
 
 	if (loading) return <p className="p-4 text-gray-500">Đang tải...</p>;
 	if (!currentUser)
 		return <p className="p-4 text-red-500">Không lấy được user</p>;
 
-	const canSwitch = maxLevel >= 2; // buyer có quyền chuyển sang seller
-	const isBuyer = maxLevel === 1; // thực sự là buyer
+	const maxLevel = currentUser.roles?.length
+		? Math.max(...currentUser.roles.map((r: any) => r.level))
+		: 1; // fallback level 1 nếu không có role
+
+	const isBuyer = maxLevel === 1;
 
 	const handleSwitchRole = () => {
-		if (isBuyer && !canSwitch) {
-			// Buyer chưa đủ quyền → popup
+		if (isBuyer) {
+			// Buyer chưa có quyền → hiện popup đăng ký shop
 			onOpenRegisterModal();
 		} else {
-			// Seller/Admin hoặc buyer có quyền → chuyển sang seller
+			// Seller/Admin → chuyển sang dashboard
 			router.push("/seller/dashboard");
 		}
-	};
-
-	// Submit đăng ký shop
-	const handleRegisterShop = (e: React.FormEvent) => {
-		e.preventDefault();
-		console.log("Form đăng ký shop:", formData);
-
-		// TODO: gọi API đăng ký shop ở đây
-		// await api.registerShop(formData);
-
-		setShowRegisterForm(false);
-		alert("Đăng ký shop thành công! 🎉");
-		router.push("/seller/dashboard");
 	};
 
 	const menuItems = [
@@ -80,7 +66,7 @@ export default function ClientSidebar({ onOpenRegisterModal }) {
 				})}
 			</div>
 
-			{/* Nút chuyển giao diện luôn hiển thị */}
+			{/* Nút chuyển sang seller */}
 			<div className="mt-auto border-t border-gray-200 pt-3">
 				<button
 					onClick={handleSwitchRole}

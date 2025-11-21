@@ -2,24 +2,29 @@
 import "./globals.css";
 import React from "react";
 import { NotificationProvider } from "@shared/core/ui/NotificationProvider";
+import { AuthProvider } from "@shared/features/auth/AuthProvider";
 
 export const metadata = {
-  title: "Fashion Search Client",
-  description: "Trang khách hàng hệ thống Fashion Search",
+	title: "Fashion Search Client",
+	description: "Trang khách hàng hệ thống Fashion Search",
 };
 
 export default function RootLayout({
-  children,
+	children,
 }: {
-  children: React.ReactNode;
+	children: React.ReactNode;
 }) {
-  return (
-    <html lang="vi">
-      <body className="bg-gray-100 min-h-screen">
-        {/* Container toast luôn ở ngoài NotificationProvider */}
-        <div id="toast-root" />
-        <NotificationProvider>{children}</NotificationProvider>
-      </body>
-    </html>
-  );
+	return (
+		<html lang="vi">
+			<body>
+				<div id="toast-root" />
+				{/* --- SỬA LẠI THỨ TỰ Ở ĐÂY --- */}
+				{/* Provider nào cung cấp "dịch vụ" cho provider khác thì phải được đặt ở ngoài */}
+				<NotificationProvider>
+					<AuthProvider>{children}</AuthProvider>
+				</NotificationProvider>
+				{/* --- KẾT THÚC PHẦN SỬA --- */}
+			</body>
+		</html>
+	);
 }
