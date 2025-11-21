@@ -59,7 +59,7 @@ export const SHOP_ENDPOINTS = {
 
 export const ATTRIBUTE_ENDPOINTS = {
 	// ----- Public -----
-	PUBLIC_BY_ID: (id: string) => `/attributes/${id}`,
+	PUBLIC_BY_ID: (id: string) => `/attributes/public/${id}`,
 
 	// ----- Admin -----
 	ADMIN_LIST: "/attributes/admin",
