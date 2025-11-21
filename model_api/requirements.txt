@@ -1,8 +1,6 @@
-<<<<<<< HEAD
 fastapi
 uvicorn
 faiss-cpu
 sentence-transformers
-=======
 numpy==2.2.6
->>>>>>> python/query-text
+
