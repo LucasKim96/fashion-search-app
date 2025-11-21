@@ -11,7 +11,7 @@ import {
 export interface ProductListItem {
 	_id: string;
 	name: string; // Tên đã được chuẩn hóa
-	thumbnail: string; // Ảnh đại diện
+	thumbnail?: string; // Ảnh đại diện
 	basePrice: number;
 	// slug?: string;    // (Tùy chọn)
 }

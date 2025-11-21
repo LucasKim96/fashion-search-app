@@ -56,23 +56,27 @@ export const SHOP_ENDPOINTS = {
 	UPDATE_DEFAULT_COVER: "/shops/admin/default-cover",
 	CLEANUP_NULL: "/shops/admin/cleanup/null-accounts",
 };
+
 export const ATTRIBUTE_ENDPOINTS = {
 	// ----- Public -----
-	PUBLIC_BY_ID: (id: string) => `/attributes/public/${id}`,
-	PUBLIC_DELETE: (id: string) => `/attributes/${id}`,
-	PUBLIC_TOGGLE: (id: string) => `/attributes/toggle/${id}`,
+	PUBLIC_BY_ID: (id: string) => `/attributes/${id}`,
 
 	// ----- Admin -----
 	ADMIN_LIST: "/attributes/admin",
 	ADMIN_SEARCH: "/attributes/admin/search",
 	ADMIN_CREATE: "/attributes/admin",
 	ADMIN_UPDATE_LABEL: (id: string) => `/attributes/admin/label/${id}`,
-
+	ADMIN_DELETE: (id: string) => `/attributes/admin/${id}`,
+	ADMIN_TOGGLE: (id: string) => `/attributes/admin/toggle/${id}`,
 	// ----- Shop -----
 	SHOP_LIST: "/attributes/shop",
 	SHOP_SEARCH: "/attributes/shop/search",
 	SHOP_CREATE: "/attributes/shop",
+	SHOP_AVAILABLE_LIST: "/attributes/shop/available", // lấy danh sách attribute khả dụng
+	SHOP_AVAILABLE_BY_ID: (id: string) => `/attributes/shop/available/${id}`, // lấy chi tiết attribute khả dụng theo id
 	SHOP_UPDATE_LABEL: (id: string) => `/attributes/shop/label/${id}`,
+	SHOP_DELETE: (id: string) => `/attributes/shop/${id}`,
+	SHOP_TOGGLE: (id: string) => `/attributes/shop/toggle/${id}`,
 };
 
 export const ATTRIBUTE_VALUE_ENDPOINTS = {
@@ -92,6 +96,7 @@ export const ATTRIBUTE_VALUE_ENDPOINTS = {
 };
 
 export const PRODUCT_ENDPOINTS = {
+	// ----- Public -----
 	PUBLIC_LIST: "/products/public",
 	PUBLIC_LIST_BY_SHOP: (shopId: string) => `/products/public/shop/${shopId}`,
 	PUBLIC_DETAIL: (productId: string) => `/products/public/${productId}`,
@@ -103,7 +108,7 @@ export const PRODUCT_ENDPOINTS = {
 	ADMIN_DETAIL: (productId: string) => `/products/admin/${productId}`,
 	ADMIN_TOGGLE: (productId: string) => `/products/admin/toggle/${productId}`,
 	ADMIN_DELETE: (productId: string) => `/products/admin/${productId}`,
-
+	ADMIN_SEARCH: "/products/admin/search",
 	// ----- Shop -----
 	SHOP_LIST: "/products/shop",
 	SHOP_COUNT: "/products/shop/count",
@@ -112,6 +117,7 @@ export const PRODUCT_ENDPOINTS = {
 	SHOP_UPDATE_IMAGES: (productId: string) =>
 		`/products/shop/images/${productId}`,
 	SHOP_TOGGLE: (productId: string) => `/products/shop/toggle/${productId}`,
+	SHOP_SEARCH: "/products/shop/search",
 	SHOP_DELETE: (productId: string) => `/products/shop/${productId}`,
 };
 
