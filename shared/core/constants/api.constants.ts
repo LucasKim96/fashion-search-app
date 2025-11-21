@@ -58,7 +58,7 @@ export const SHOP_ENDPOINTS = {
 };
 export const ATTRIBUTE_ENDPOINTS = {
 	// ----- Public -----
-	PUBLIC_BY_ID: (id: string) => `/attributes/${id}`,
+	PUBLIC_BY_ID: (id: string) => `/attributes/public/${id}`,
 	PUBLIC_DELETE: (id: string) => `/attributes/${id}`,
 	PUBLIC_TOGGLE: (id: string) => `/attributes/toggle/${id}`,
 
