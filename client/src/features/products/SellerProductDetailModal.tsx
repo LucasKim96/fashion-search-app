@@ -146,6 +146,7 @@ export const SellerProductDetailModal: React.FC<
 					imageContent={
 						<ProductImageGallery
 							productId={displayProduct._id}
+							// createMode={true}
 							mode="shop" // Hiện nút sửa ảnh
 							width="w-full"
 							height="aspect-square"
@@ -168,7 +169,7 @@ export const SellerProductDetailModal: React.FC<
 					detailContent={
 						<ProductDescSection
 							shopInfo={shopInfo}
-							// isShop={true}
+							isShop={true}
 							currentMode={isEditing ? "edit" : "view"}
 						/>
 					}
