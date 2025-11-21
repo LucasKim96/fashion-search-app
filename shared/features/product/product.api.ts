@@ -3,6 +3,7 @@ import { axiosInstance, PRODUCT_ENDPOINTS } from "@shared/core";
 import { ApiResponse } from "@shared/types/common.types";
 import {
 	Product,
+	ProductDetail,
 	CreateProductWithVariantsRequest,
 	UpdateProductBasicInfoRequest,
 	UpdateProductImagesRequest,
@@ -14,7 +15,6 @@ import {
 
 /** ========================= PUBLIC API ========================= */
 
-// Lấy danh sách sản phẩm public
 // Lấy danh sách sản phẩm public
 export const getPublicProducts = async (
 	params?: { page?: number; limit?: number } // <-- Thêm tham số `params`
@@ -43,8 +43,8 @@ export const getPublicProductsByShop = async (
 // Xem chi tiết sản phẩm
 export const getProductDetail = async (
 	productId: string
-): Promise<ApiResponse<Product>> => {
-	const res = await axiosInstance.get<ApiResponse<Product>>(
+): Promise<ApiResponse<ProductDetail>> => {
+	const res = await axiosInstance.get<ApiResponse<ProductDetail>>(
 		PRODUCT_ENDPOINTS.PUBLIC_DETAIL(productId)
 	);
 	return res.data;
@@ -95,8 +95,8 @@ export const countAllProductsAdmin = async (
 // Xem chi tiết sản phẩm (admin)
 export const getProductDetailAdmin = async (
 	productId: string
-): Promise<ApiResponse<Product>> => {
-	const res = await axiosInstance.get<ApiResponse<Product>>(
+): Promise<ApiResponse<ProductDetail>> => {
+	const res = await axiosInstance.get<ApiResponse<ProductDetail>>(
 		PRODUCT_ENDPOINTS.ADMIN_DETAIL(productId)
 	);
 	return res.data;

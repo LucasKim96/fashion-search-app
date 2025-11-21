@@ -63,6 +63,27 @@ export interface Product {
 	updatedAt: string;
 	variants?: ProductVariantDetail[]; // kèm biến thể nếu chi tiết
 }
+export interface ProductDetailShopInfo {
+	_id: string;
+	shopName: string;
+	logoUrl?: string;
+	isOnline: boolean;
+	lastActiveAt: string | null; // ISO datetime hoặc null
+	lastActiveText: string | null; // "Hoạt động 5 phút trước"
+	accountId: string | null; // ID tài khoản gốc của shop
+}
+export interface ProductDetail {
+	_id: string;
+	pdName: string;
+	basePrice: number;
+	description?: string;
+	images: string[];
+	shopId: string | ProductDetailShopInfo; // nếu populate shop info
+	isActive: boolean;
+	createdAt: string;
+	updatedAt: string;
+	variants?: ProductVariantDetail[]; // kèm biến thể nếu chi tiết
+}
 
 export interface ShopFullInfo {
 	_id: string;
@@ -138,7 +159,7 @@ export type ProductSearchRequest = {
 };
 // Search Response Type
 export interface ProductAdmin extends Product {
-	shopId: ShopFullInfo;
+	shopId: ProductShopInfo; // Luôn populate shop info cho admin
 }
 
 //search cho admin
