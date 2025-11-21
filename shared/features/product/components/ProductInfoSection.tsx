@@ -11,9 +11,11 @@ import {
 	Clock,
 	Tag,
 	Box,
+	Layers,
+	Check,
 } from "lucide-react";
 import clsx from "clsx";
-import { useProduct, ProductDetail } from "../index";
+import { useProduct, ProductDetail, ProductVariantDetail } from "../index";
 import { GradientButton, Input, formatCurrency } from "@shared/core";
 
 interface ProductInfoSectionProps {
@@ -25,6 +27,8 @@ interface ProductInfoSectionProps {
 	// onVariantClick?: () => void;
 	onCancelEdit?: () => void;
 	onEditClick?: () => void;
+	// BỔ SUNG CALLBACK
+	onVariantSelect?: (variant: ProductVariantDetail | null) => void;
 }
 
 export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({
@@ -36,6 +40,7 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({
 	// onVariantClick,
 	onCancelEdit,
 	onEditClick,
+	onVariantSelect,
 }) => {
 	// Dùng form context của cha
 	const {
@@ -71,6 +76,88 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({
 			0
 		);
 	}, [product]);
+
+	const [selectedOptions, setSelectedOptions] = useState<
+		Record<string, string>
+	>({});
+
+	// --- BỔ SUNG: Logic gom nhóm thuộc tính từ variants ---
+	const groupedAttributes = useMemo(() => {
+		if (!product || !product.variants) return {};
+
+		// Dùng Set để loại bỏ các giá trị trùng lặp (VD: nhiều size cùng màu Đỏ)
+		const groups: Record<string, Set<string>> = {};
+
+		product.variants.forEach((variant) => {
+			variant.attributes.forEach((attr) => {
+				const label = attr.attributeLabel;
+				const value = attr.valueLabel;
+
+				// Chỉ lấy khi có đủ tên và giá trị
+				if (label && value) {
+					if (!groups[label]) {
+						groups[label] = new Set();
+					}
+					groups[label].add(value);
+				}
+			});
+		});
+
+		// Chuyển Set thành Array để hiển thị
+		const result: Record<string, string[]> = {};
+		Object.keys(groups).forEach((key) => {
+			result[key] = Array.from(groups[key]);
+		});
+
+		return result;
+	}, [product]);
+
+	const handleOptionClick = (label: string, value: string) => {
+		const newOptions = { ...selectedOptions };
+
+		// Nếu đang chọn cái này rồi -> Click lại thì bỏ chọn (toggle)
+		if (newOptions[label] === value) {
+			delete newOptions[label];
+		} else {
+			// Nếu chưa chọn -> Chọn nó (sẽ tự đè value cũ của label này)
+			newOptions[label] = value;
+		}
+
+		setSelectedOptions(newOptions);
+
+		// --- TÌM BIẾN THỂ KHỚP (MATCHING VARIANT) ---
+		if (product?.variants && onVariantSelect) {
+			// Logic tìm: Variant phải chứa TẤT CẢ các cặp (label, value) đang chọn
+			// Và số lượng attribute của variant phải bằng số lượng attribute user đã chọn
+			// (Để tránh trường hợp user mới chọn "Màu" mà đã match variant có "Màu + Size")
+
+			// Tuy nhiên, logic phổ biến là: Tìm variant khớp nhất.
+			// Ở đây ta tìm variant khớp hoàn toàn với các key đã chọn.
+
+			const matchedVariant = product.variants.find((variant) => {
+				// Kiểm tra xem variant này có thỏa mãn tất cả option đang chọn không
+				const isMatch = Object.entries(newOptions).every(
+					([selLabel, selValue]) => {
+						return variant.attributes.some(
+							(attr) =>
+								attr.attributeLabel === selLabel && attr.valueLabel === selValue
+						);
+					}
+				);
+
+				// Kiểm tra chiều ngược lại: Variant này có bao nhiêu attribute?
+				// Nếu user chọn full attributes thì mới trả về variant cuối cùng
+				const variantAttrCount = variant.attributes.filter(
+					(a) => a.attributeLabel && a.valueLabel
+				).length;
+				const selectedCount = Object.keys(newOptions).length;
+
+				return isMatch && variantAttrCount === selectedCount;
+			});
+
+			onVariantSelect(matchedVariant || null);
+		}
+	};
 
 	if (!product && mode !== "create")
 		return <div className="h-32 animate-pulse bg-gray-100 rounded-xl" />;
@@ -278,6 +365,57 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({
 						/>
 					)}
 				</div>
+
+				{/* --- BỔ SUNG: UI HIỂN THỊ THUỘC TÍNH (Ngay dưới giá) --- */}
+				{Object.keys(groupedAttributes).length > 0 && (
+					<div className="relative pl-3 border-l-4 border-blue-400 transition-all hover:border-blue-300 mt-4">
+						<span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 block">
+							Tùy chọn sản phẩm
+						</span>
+
+						<div className="flex flex-col gap-4">
+							{Object.entries(groupedAttributes).map(([label, values]) => (
+								<div key={label} className="flex flex-col gap-2">
+									{/* Tên thuộc tính */}
+									<div className="flex items-center gap-2">
+										<Layers size={14} className="text-gray-400" />
+										<span className="text-sm font-semibold text-gray-700 capitalize">
+											{label}:
+											{/* Hiện giá trị đang chọn bên cạnh label cho dễ nhìn */}
+											{selectedOptions[label] && (
+												<span className="ml-1 text-blue-600 font-bold">
+													{selectedOptions[label]}
+												</span>
+											)}
+										</span>
+									</div>
+
+									{/* Danh sách nút bấm */}
+									<div className="flex flex-wrap gap-2">
+										{values.map((val, idx) => {
+											const isSelected = selectedOptions[label] === val;
+											return (
+												<button
+													key={idx}
+													type="button" // Quan trọng để không submit form
+													onClick={() => handleOptionClick(label, val)}
+													className={clsx(
+														"px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 border select-none flex items-center gap-2",
+														isSelected
+															? "bg-blue-600 border-blue-600 text-white shadow-md scale-105"
+															: "bg-white border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50"
+													)}>
+													{val}
+													{isSelected && <Check size={14} strokeWidth={3} />}
+												</button>
+											);
+										})}
+									</div>
+								</div>
+							))}
+						</div>
+					</div>
+				)}
 
 				{/* 3. DASHBOARD INFO (Grid Layout) */}
 				{/* Chỉ hiển thị ở chế độ View của Shop để thông tin gọn gàng */}
