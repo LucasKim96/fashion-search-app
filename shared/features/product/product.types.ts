@@ -5,6 +5,18 @@ import {
 } from "./productVariant.types";
 
 /**
+ * Kiểu dữ liệu rút gọn cho một sản phẩm trong danh sách (ví dụ: trang chủ).
+ * Nó sẽ được tạo ra từ kiểu `Product` đầy đủ.
+ */
+export interface ProductListItem {
+	_id: string;
+	name: string; // Tên đã được chuẩn hóa
+	thumbnail: string; // Ảnh đại diện
+	basePrice: number;
+	// slug?: string;    // (Tùy chọn)
+}
+
+/**
  * Thông tin cơ bản của shop
  */
 export interface ProductShopInfo {

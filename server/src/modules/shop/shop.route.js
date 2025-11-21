@@ -2,10 +2,10 @@
 import express from "express";
 import * as ShopController from "./shop.controller.js";
 import {
-  validateShop,
-  uploadShopImage,
-  authMiddleware,
-  uploadShopDefaultImage,
+	validateShop,
+	uploadShopImage,
+	authMiddleware,
+	uploadShopDefaultImage,
 } from "../../middlewares/index.js";
 import { isAdminOrSuperAdmin } from "../../middlewares/role.middleware.js";
 
@@ -19,19 +19,32 @@ router.get("/:id", ShopController.getShop);
 const ownerRouter = express.Router();
 ownerRouter.use(authMiddleware);
 
-ownerRouter.post("/", validateShop, ShopController.addShop);
+ownerRouter.get("/mine", ShopController.getMyShopDetails);
+ownerRouter.post(
+	"/",
+	(req, res, next) => {
+		console.log("ĐÃ ĐI QUA ROUTE POST /shops");
+		next();
+	},
+	// validateShop,
+	uploadShopImage.fields([
+		{ name: "logo", maxCount: 1 },
+		{ name: "cover", maxCount: 1 },
+	]),
+	ShopController.createShop
+);
 ownerRouter.put("/:id", validateShop, ShopController.editShop);
 ownerRouter.delete("/:id", ShopController.removeShop);
 ownerRouter.patch("/:id/status", ShopController.changeStatus);
 ownerRouter.put(
-  "/:id/logo",
-  uploadShopImage.single("logo"),
-  ShopController.updateLogo
+	"/:id/logo",
+	uploadShopImage.single("logo"),
+	ShopController.updateLogo
 );
 ownerRouter.put(
-  "/:id/cover",
-  uploadShopImage.single("cover"),
-  ShopController.updateCover
+	"/:id/cover",
+	uploadShopImage.single("cover"),
+	ShopController.updateCover
 );
 
 // Mount owner routes under prefix
@@ -43,14 +56,14 @@ adminRouter.use(authMiddleware, isAdminOrSuperAdmin); // xác thực + check quy
 
 adminRouter.patch("/:id/restore", ShopController.restoreShop);
 adminRouter.put(
-  "/default-logo",
-  uploadShopDefaultImage.single("defaultLogo"),
-  ShopController.updateDefaultLogo
+	"/default-logo",
+	uploadShopDefaultImage.single("defaultLogo"),
+	ShopController.updateDefaultLogo
 );
 adminRouter.put(
-  "/default-cover",
-  uploadShopDefaultImage.single("defaultCover"),
-  ShopController.updateDefaultCover
+	"/default-cover",
+	uploadShopDefaultImage.single("defaultCover"),
+	ShopController.updateDefaultCover
 );
 
 // Super Admin Only
