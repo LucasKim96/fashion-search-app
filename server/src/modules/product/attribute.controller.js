@@ -1,5 +1,9 @@
 import * as AttributeService from "./attribute.service.js";
-import { handleValidation, attachImagesByFileKey, rollbackFiles} from "../../utils/index.js";
+import {
+	handleValidation,
+	attachImagesByFileKey,
+	rollbackFiles,
+} from "../../utils/index.js";
 import path from "path";
 
 const UPLOADS_ROOT = path.join(process.cwd(), "uploads");
@@ -7,60 +11,72 @@ export const ATTRIBUTE_FOLDER = path.join(UPLOADS_ROOT, "attributes");
 export const ATTRIBUTE_PUBLIC = "/uploads/attributes";
 
 export const handleCreateAttribute = async (req, res, isAdmin = false) => {
-  const tempFiles = [];
-  try {
-    // Validate body cơ bản
-    const validationError = handleValidation(req);
-    if (validationError) return res.status(400).json(validationError);
+	const tempFiles = [];
+	try {
+		// Validate body cơ bản
+		const validationError = handleValidation(req);
+		if (validationError) return res.status(400).json(validationError);
 
-    // Parse và gắn ảnh vào các value (đồng thời lưu ra thư mục uploads/attributes)
-    req.body.values = attachImagesByFileKey(req, "values", tempFiles, {
-      baseFolder: ATTRIBUTE_FOLDER,
-      publicPath: ATTRIBUTE_PUBLIC,
-    });
+		// Parse và gắn ảnh vào các value (đồng thời lưu ra thư mục uploads/attributes)
+		req.body.values = attachImagesByFileKey(req, "values", tempFiles, {
+			baseFolder: ATTRIBUTE_FOLDER,
+			publicPath: ATTRIBUTE_PUBLIC,
+		});
 
-    const accountId = isAdmin ? null : req.user?.id;
-    if (!isAdmin && !accountId)
-      return res.status(401).json({ success: false, message: "Không xác thực được tài khoản shop" });
+		const accountId = isAdmin ? null : req.user?.id;
+		if (!isAdmin && !accountId)
+			return res
+				.status(401)
+				.json({
+					success: false,
+					message: "Không xác thực được tài khoản shop",
+				});
 
-    // Gọi service
-    const result = await AttributeService.createAttribute(req.body, accountId, tempFiles);
+		// Gọi service
+		const result = await AttributeService.createAttribute(
+			req.body,
+			accountId,
+			tempFiles
+		);
 
-    if (!result.success) rollbackFiles(tempFiles);
-    return res.status(result.success ? 201 : 400).json(result);
-
-  } catch (error) {
-    console.error("handleCreateAttribute error:", error);
-    rollbackFiles(tempFiles);
-    return res.status(500).json({ success: false, message: error.message });
-  }
+		if (!result.success) rollbackFiles(tempFiles);
+		return res.status(result.success ? 201 : 400).json(result);
+	} catch (error) {
+		console.error("handleCreateAttribute error:", error);
+		rollbackFiles(tempFiles);
+		return res.status(500).json({ success: false, message: error.message });
+	}
 };
 
 const handleUpdateAttributeLabel = async (req, res, isShop = false) => {
-  try {
-    // --- Validate ---
-    const validationError = handleValidation(req);
-    if (validationError) 
-      return res.status(400).json(validationError);
+	try {
+		// --- Validate ---
+		const validationError = handleValidation(req);
+		if (validationError) return res.status(400).json(validationError);
 
-    const { id } = req.params;
-    const { label } = req.body;
-    let accountId = null;
+		const { id } = req.params;
+		const { label } = req.body;
+		let accountId = null;
 
-    // --- Nếu là shop thì cần kiểm tra token ---
-    if (isShop) {
-      accountId = req.user?.id;
-      if (!accountId)
-        return res.status(401).json({ success: false, message: "Token không hợp lệ" });
-    }
+		// --- Nếu là shop thì cần kiểm tra token ---
+		if (isShop) {
+			accountId = req.user?.id;
+			if (!accountId)
+				return res
+					.status(401)
+					.json({ success: false, message: "Token không hợp lệ" });
+		}
 
-    // --- Gọi service cập nhật ---
-    const result = await AttributeService.updateAttributeOnly(id, { label }, accountId);
-    return res.status(result.success ? 200 : 400).json(result);
-
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
+		// --- Gọi service cập nhật ---
+		const result = await AttributeService.updateAttributeOnly(
+			id,
+			{ label },
+			accountId
+		);
+		return res.status(result.success ? 200 : 400).json(result);
+	} catch (error) {
+		res.status(500).json({ success: false, message: error.message });
+	}
 };
 
 // const handleSearchAttributesBase = async (req, res, { isGlobal }) => {
@@ -87,34 +103,32 @@ const handleUpdateAttributeLabel = async (req, res, isShop = false) => {
 
 // Hàm chung handle search
 const handleSearchAttributesBase = async (req, res, { isAdmin }) => {
-  try {
-    const { query, page = 1, limit = 20 } = req.query;
-    const accountId = !isAdmin ? req.user?.id : null; // chỉ shop mới truyền accountId
+	try {
+		const { query, page = 1, limit = 20 } = req.query;
+		const accountId = !isAdmin ? req.user?.id : null; // chỉ shop mới truyền accountId
 
-    const result = await AttributeService.searchAttributes({
-      query,
-      isAdmin,
-      accountId,
-      page: parseInt(page),
-      limit: parseInt(limit),
-    });
+		const result = await AttributeService.searchAttributes({
+			query,
+			isAdmin,
+			accountId,
+			page: parseInt(page),
+			limit: parseInt(limit),
+		});
 
-    return res.status(result.success ? 200 : 400).json(result);
-  } catch (error) {
-    console.error("searchAttributesBase error:", error);
-    return res.status(500).json({ success: false, message: error.message });
-  }
+		return res.status(result.success ? 200 : 400).json(result);
+	} catch (error) {
+		console.error("searchAttributesBase error:", error);
+		return res.status(500).json({ success: false, message: error.message });
+	}
 };
 
 // Search cho admin
 export const searchGlobalAttributes = (req, res) =>
-  handleSearchAttributesBase(req, res, { isAdmin: true });
+	handleSearchAttributesBase(req, res, { isAdmin: true });
 
 // Search cho shop
 export const searchShopAttributes = (req, res) =>
-  handleSearchAttributesBase(req, res, { isAdmin: false });
-
-
+	handleSearchAttributesBase(req, res, { isAdmin: false });
 
 // export const getAttributesFlexible = async (req, res) => {
 //   try {
@@ -156,50 +170,51 @@ export const searchShopAttributes = (req, res) =>
 //   }
 // };
 
-
 // Hàm chung, nhận isAdmin từ bên ngoài
 const handleGetAttributesFlexible = async (req, res, { isAdmin = false }) => {
-  try {
-    const { page = 1, limit = 20, sortBy = "createdAt", sortOrder = "desc" } = req.query;
+	try {
+		const {
+			page = 1,
+			limit = 20,
+			sortBy = "createdAt",
+			sortOrder = "desc",
+		} = req.query;
 
-    const accountId = !isAdmin ? req.user?.id : null;
+		const accountId = !isAdmin ? req.user?.id : null;
 
-    const result = await AttributeService.getAttributesFlexible({
-      isAdmin,
-      accountId,
-      page,
-      limit,
-      sortBy,
-      sortOrder,
-    });
+		const result = await AttributeService.getAttributesFlexible({
+			isAdmin,
+			accountId,
+			page,
+			limit,
+			sortBy,
+			sortOrder,
+		});
 
-    return res.status(result.success ? 200 : 400).json(result);
-  } catch (error) {
-    console.error("getAttributesFlexible error:", error);
-    return res.status(500).json({ success: false, message: error.message });
-  }
+		return res.status(result.success ? 200 : 400).json(result);
+	} catch (error) {
+		console.error("getAttributesFlexible error:", error);
+		return res.status(500).json({ success: false, message: error.message });
+	}
 };
-
-
 
 // Export riêng cho admin
 export const getAttributesFlexibleAdmin = (req, res) =>
-  handleGetAttributesFlexible(req, res, { isAdmin: true });
+	handleGetAttributesFlexible(req, res, { isAdmin: true });
 
 // Export riêng cho shop
 export const getAttributesFlexibleShop = (req, res) =>
-  handleGetAttributesFlexible(req, res, { isAdmin: false });
-
+	handleGetAttributesFlexible(req, res, { isAdmin: false });
 
 export const getAttributeById = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const result = await AttributeService.getAttributeById(id);
-    return res.status(result.success ? 200 : 404).json(result);
-  } catch (error) {
-    console.error("getAttributeById error:", error);
-    res.status(500).json({ success: false, message: error.message });
-  }
+	try {
+		const { id } = req.params;
+		const result = await AttributeService.getAttributeById(id);
+		return res.status(result.success ? 200 : 404).json(result);
+	} catch (error) {
+		console.error("getAttributeById error:", error);
+		res.status(500).json({ success: false, message: error.message });
+	}
 };
 
 // // export const getAttributes = async (req, res) => {
@@ -232,7 +247,6 @@ export const getAttributeById = async (req, res) => {
 
 // // [GET] /attributes/:id
 
-
 // // [DELETE] /attributes/:id
 // export const deleteGlobalAttribute = async (req, res) => {
 //   try {
@@ -254,7 +268,6 @@ export const getAttributeById = async (req, res) => {
 //     res.status(500).json({ success: false, message: error.message });
 //   }
 // };
-
 
 // --- Cập nhật Attribute ---
 // export const handleUpdateAttribute = async (req, res, isAdmin = false) => {
@@ -290,101 +303,125 @@ export const getAttributeById = async (req, res) => {
 
 // [DELETE] /attributes/:id
 export const handleDeleteAttribute = async (req, res, { isAdmin = false }) => {
-  try {
-    const attributeId = req.params.id;
-    const accountId = !isAdmin ? req.user?.id : null;
+	try {
+		const attributeId = req.params.id;
+		const accountId = !isAdmin ? req.user?.id : null;
 
-    const result = await AttributeService.deleteAttribute(attributeId, accountId);
-    return res.status(result.success ? 200 : 400).json(result);
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message || "Lỗi server khi xóa thuộc tính",
-    });
-  }
+		const result = await AttributeService.deleteAttribute(
+			attributeId,
+			accountId
+		);
+		return res.status(result.success ? 200 : 400).json(result);
+	} catch (error) {
+		res.status(500).json({
+			success: false,
+			message: error.message || "Lỗi server khi xóa thuộc tính",
+		});
+	}
 };
 
 // [PATCH] /attributes/:id/toggle
 export const handleToggleAttribute = async (req, res, { isAdmin = false }) => {
-  try {
-    const attributeId = req.params.id;
-    const accountId = !isAdmin ? req.user?.id : null;
+	try {
+		const attributeId = req.params.id;
+		const accountId = !isAdmin ? req.user?.id : null;
 
-    const result = await AttributeService.toggleActiveAttribute(attributeId, accountId, null); 
-    // session null, hoặc nếu bạn có session từ middleware, truyền vào
+		const result = await AttributeService.toggleActiveAttribute(
+			attributeId,
+			accountId,
+			null
+		);
+		// session null, hoặc nếu bạn có session từ middleware, truyền vào
 
-    return res.status(result.success ? 200 : 400).json(result);
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message || "Lỗi server khi thay đổi trạng thái thuộc tính",
-    });
-  }
+		return res.status(result.success ? 200 : 400).json(result);
+	} catch (error) {
+		res.status(500).json({
+			success: false,
+			message: error.message || "Lỗi server khi thay đổi trạng thái thuộc tính",
+		});
+	}
 };
 
-
-export const createGlobalAttribute = (req, res) => handleCreateAttribute(req, res, true);
+export const createGlobalAttribute = (req, res) =>
+	handleCreateAttribute(req, res, true);
 // Cập nhật thuộc tính + valus cho admin
 // export const updateGlobalAttribute = (req, res) => handleUpdateAttribute(req, res, true);
 // Cập nhật label cho admin
-export const updateGlobalAttributeLabel = (req, res) => handleUpdateAttributeLabel(req, res, false);
+export const updateGlobalAttributeLabel = (req, res) =>
+	handleUpdateAttributeLabel(req, res, false);
 //Tìm kiếm global
 // export const searchGlobalAttributes = (req, res) => handleSearchAttributesBase(req, res, { isGlobal: true });
-export const deleteAttributeByAdmin = (req, res) =>  handleDeleteAttribute(req, res, { isAdmin: true });
-export const toggleAttributeByAdmin = (req, res) =>  handleToggleAttribute(req, res, { isAdmin: true });
+export const deleteAttributeByAdmin = (req, res) =>
+	handleDeleteAttribute(req, res, { isAdmin: true });
+export const toggleAttributeByAdmin = (req, res) =>
+	handleToggleAttribute(req, res, { isAdmin: true });
 // ========================= SHOP CONTROLLER =========================
 // Controller lấy danh sách Attribute khả dụng cho shop
 export const getShopAvailableAttributesController = async (req, res) => {
-  try {
-    const { page = 1, limit = 20, sortBy = "createdAt", sortOrder = "desc" } = req.query;
+	try {
+		const {
+			page = 1,
+			limit = 20,
+			sortBy = "createdAt",
+			sortOrder = "desc",
+		} = req.query;
 
-    const accountId = req.user?.id;
-    if (!accountId) {
-      return res.status(401).json({
-        success: false,
-        message: "Không xác định được shop từ token",
-      });
-    }
+		const accountId = req.user?.id;
+		if (!accountId) {
+			return res.status(401).json({
+				success: false,
+				message: "Không xác định được shop từ token",
+			});
+		}
 
-    const result = await AttributeService.getShopAvailableAttributes({
-      accountId,
-      page,
-      limit,
-      sortBy,
-      sortOrder,
-    });
+		const result = await AttributeService.getShopAvailableAttributes({
+			accountId,
+			page,
+			limit,
+			sortBy,
+			sortOrder,
+		});
 
-    return res.status(result.success ? 200 : 400).json(result);
-  } catch (error) {
-    console.error("getShopAvailableAttributesController error:", error);
-    return res.status(500).json({
-      success: false,
-      message: error.message || "Lỗi khi lấy danh sách thuộc tính khả dụng",
-    });
-  }
+		return res.status(result.success ? 200 : 400).json(result);
+	} catch (error) {
+		console.error("getShopAvailableAttributesController error:", error);
+		return res.status(500).json({
+			success: false,
+			message: error.message || "Lỗi khi lấy danh sách thuộc tính khả dụng",
+		});
+	}
 };
-
 
 export const getShopAvailableAttributeByIdController = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const accountId = req.user?.id;
+	try {
+		const { id } = req.params;
+		const accountId = req.user?.id;
 
-    if (!accountId) return res.status(401).json({ success: false, message: "Token không hợp lệ" });
+		if (!accountId)
+			return res
+				.status(401)
+				.json({ success: false, message: "Token không hợp lệ" });
 
-    const result = await AttributeService.getShopAvailableAttributeWithValues(id, accountId);
-    return res.status(result.success ? 200 : 400).json(result);
-  } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
-  }
+		const result = await AttributeService.getShopAvailableAttributeWithValues(
+			id,
+			accountId
+		);
+		return res.status(result.success ? 200 : 400).json(result);
+	} catch (error) {
+		return res.status(500).json({ success: false, message: error.message });
+	}
 };
 // Tạo thuộc tính + valus cho shop
-export const createShopAttribute = (req, res) => handleCreateAttribute(req, res, false);
+export const createShopAttribute = (req, res) =>
+	handleCreateAttribute(req, res, false);
 // Cập nhật label cho shop
-export const updateShopAttributeLabel = (req, res) => handleUpdateAttributeLabel(req, res, true);
+export const updateShopAttributeLabel = (req, res) =>
+	handleUpdateAttributeLabel(req, res, true);
 // Tìm kiếm các thuộc tính của shop
 // export const searchShopAttributes = (req, res) => handleSearchAttributesBase(req, res, { isGlobal: false });
-export const deleteAttributeByShop = (req, res) => handleDeleteAttribute(req, res, { isAdmin: false });
-export const toggleAttributeByShop = (req, res) =>  handleToggleAttribute(req, res, { isAdmin: false });
+export const deleteAttributeByShop = (req, res) =>
+	handleDeleteAttribute(req, res, { isAdmin: false });
+export const toggleAttributeByShop = (req, res) =>
+	handleToggleAttribute(req, res, { isAdmin: false });
 // Cập nhật thuộc tính + valus cho shop
 // export const updateShopAttribute = (req, res) => handleUpdateAttribute(req, res, false);
