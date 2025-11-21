@@ -125,7 +125,7 @@ export const ProfileAvatarUploader: React.FC<Props> = ({
 
 							{/* Title */}
 							<h2 className="text-2xl md:text-3xl font-bold text-gray-800 bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-600 drop-shadow-lg">
-								Crop Your Image
+								CẮT ẢNH ĐẠI DIỆN
 							</h2>
 						</div>
 
@@ -151,7 +151,7 @@ export const ProfileAvatarUploader: React.FC<Props> = ({
 								onClick={handleCropCancel}
 								className="flex items-center gap-2 px-5 py-2 bg-gray-100 text-gray-700 rounded-full shadow-md hover:bg-gray-200 hover:scale-105 transition-all duration-200">
 								<X className="w-5 h-5" />
-								Cancel
+								Hủy
 							</button>
 
 							{/* Save Button */}
@@ -159,7 +159,7 @@ export const ProfileAvatarUploader: React.FC<Props> = ({
 								onClick={handleCropSave}
 								className="flex items-center gap-2 px-5 py-2 text-white bg-gradient-to-r from-blue-500 to-purple-600 rounded-full shadow-lg hover:from-blue-600 hover:to-purple-700 hover:scale-105 transition-all duration-200">
 								<Check className="w-5 h-5" />
-								Save
+								Lưu
 							</button>
 						</div>
 					</div>

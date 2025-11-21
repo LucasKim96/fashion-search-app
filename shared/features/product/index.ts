@@ -6,3 +6,6 @@ export * from "./productVariant.hook";
 export * from "./productVariant.types";
 export * from "./components/ProductCard";
 export * from "./components/ProductDetailLayout";
+export * from "./components/ProductImageGallery";
+export * from "./components/ProductInfoSection";
+export * from "./components/ProductDescSection";
