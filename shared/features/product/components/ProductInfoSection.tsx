@@ -107,18 +107,21 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({
 					) : (
 						// Mode Edit hoặc Create -> Hiện nút Lưu & Hủy
 						<>
-							<GradientButton
-								type="button" // Nút Hủy không submit form
-								onClick={handleCancel}
-								icon={X}
-								label="Hủy"
-								gradient="bg-red-50 hover:bg-red-100"
-								labelColor="text-red-700"
-								iconColor="text-red-700"
-								className="flex items-center gap-2 px-3 py-1 text-sm shadow-md"
-								roundedFull
-								shadow
-							/>
+							{mode !== "create" && (
+								<GradientButton
+									type="button" // Nút Hủy không submit form
+									onClick={handleCancel}
+									icon={X}
+									label="Hủy"
+									gradient="bg-red-50 hover:bg-red-100"
+									labelColor="text-red-700"
+									iconColor="text-red-700"
+									className="flex items-center gap-2 px-3 py-1 text-sm shadow-md"
+									roundedFull
+									shadow
+								/>
+							)}
+
 							<GradientButton
 								form={formId}
 								type="submit" // Nút Lưu submit form

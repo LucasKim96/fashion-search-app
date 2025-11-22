@@ -95,12 +95,12 @@ export default function AdminProductPage() {
 		<div className="p-6 space-y-4 h-screen flex flex-col bg-gray-50/50">
 			{/* 1. Toolbar (Header, Filter, Stats) */}
 			<ProductToolbar
+				isAdmin={true}
 				searchQuery={searchQuery}
 				onSearchChange={setSearchQuery}
 				selectedPriceRange={selectedPriceRange}
 				onPriceRangeChange={setSelectedPriceRange}
 				stats={stats}
-				onCreateClick={() => setIsCreateClicked(true)}
 			/>
 			{/* 4. Content List */}
 			<div className="flex-1 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden relative min-h-0">
