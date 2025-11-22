@@ -11,12 +11,8 @@ import {
 	Product,
 } from "@shared/features/product";
 
-// Import 2 Component con đã tách
-import {
-	SellerProductToolbar,
-	SellerProductDetailModal,
-} from "@/features/products";
-
+import { SellerProductDetailModal } from "@/features/products";
+import { ProductToolbar } from "@shared/features/product";
 export default function SellerProductPage() {
 	// --- Hooks ---
 	const { searchShopProducts, shopProductsState, fetchShopCount } =
@@ -87,7 +83,7 @@ export default function SellerProductPage() {
 	return (
 		<div className="p-6 space-y-4 h-screen flex flex-col bg-gray-50/50">
 			{/* 1. Toolbar (Header, Filter, Stats) */}
-			<SellerProductToolbar
+			<ProductToolbar
 				searchQuery={searchQuery}
 				onSearchChange={setSearchQuery}
 				selectedPriceRange={selectedPriceRange}
@@ -132,7 +128,7 @@ export default function SellerProductPage() {
 				)}
 			</div>
 
-			{/* 3. Modal Chi tiết (Đã tách riêng) */}
+			{/* 3. Modal Chi tiết*/}
 			<SellerProductDetailModal
 				isOpen={isDetailModalOpen}
 				onClose={handleCloseDetailModal}

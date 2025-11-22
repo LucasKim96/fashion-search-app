@@ -9,3 +9,5 @@ export * from "./components/ProductDetailLayout";
 export * from "./components/ProductImageGallery";
 export * from "./components/ProductInfoSection";
 export * from "./components/ProductDescSection";
+export * from "./components/ProductVariantSection";
+export * from "./components/ProductToolbar";

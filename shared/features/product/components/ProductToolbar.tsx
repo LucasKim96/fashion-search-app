@@ -13,6 +13,7 @@ import {
 	Filter,
 	Package,
 	CheckCircle,
+	CirclePoundSterling,
 } from "lucide-react";
 import { SearchHeader, GradientButton } from "@shared/core";
 import { ProductSearchRequest } from "@shared/features/product";
@@ -29,25 +30,25 @@ const priceFilters = [
 		label: "Dưới 100k",
 		value: "<100",
 		color: "from-blue-400 via-blue-500 to-blue-600",
-		icon: <Coins size={16} />,
+		icon: <CirclePoundSterling size={16} />,
 	},
 	{
 		label: "100k - 300k",
 		value: "100-300",
 		color: "from-cyan-400 via-cyan-500 to-cyan-600",
-		icon: <Banknote size={16} />,
+		icon: <Coins size={16} />,
 	},
 	{
 		label: "300k - 500k",
 		value: "300-500",
 		color: "from-teal-400 via-teal-500 to-teal-600",
-		icon: <CreditCard size={16} />,
+		icon: <Banknote size={16} />,
 	},
 	{
 		label: "500k - 1 triệu",
 		value: "500-1000",
 		color: "from-indigo-400 via-indigo-500 to-indigo-600",
-		icon: <Tag size={16} />,
+		icon: <CreditCard size={16} />,
 	},
 	{
 		label: "Trên 1 triệu",
@@ -57,7 +58,7 @@ const priceFilters = [
 	},
 ];
 
-interface SellerProductToolbarProps {
+interface ProductToolbarProps {
 	// Search Props
 	searchQuery: string;
 	onSearchChange: (value: string) => void;
@@ -78,7 +79,7 @@ interface SellerProductToolbarProps {
 	onCreateClick: () => void;
 }
 
-export const SellerProductToolbar: React.FC<SellerProductToolbarProps> = ({
+export const ProductToolbar: React.FC<ProductToolbarProps> = ({
 	searchQuery,
 	onSearchChange,
 	selectedPriceRange,
