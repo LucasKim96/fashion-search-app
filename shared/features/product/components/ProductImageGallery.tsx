@@ -85,12 +85,12 @@ export const ProductImageGallery: React.FC<ProductImageGalleryProps> = ({
 
 		if (!product) return [];
 		const mainImages = product.images || [];
-		const variantImages =
-			product.variants
-				?.map((v) => v.image)
-				.filter((img): img is string => !!img) || [];
+		// const variantImages =
+		// 	product.variants
+		// 		?.map((v) => v.image)
+		// 		.filter((img): img is string => !!img) || [];
 
-		return [...mainImages, ...variantImages];
+		return [...mainImages /* , ...variantImages */];
 	}, [product, createMode, createPreviewUrls]);
 
 	const editableImages = useMemo(() => {

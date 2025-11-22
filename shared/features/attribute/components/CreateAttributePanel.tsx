@@ -138,6 +138,7 @@ export const CreateAttributePanel: React.FC<{
 			iconColor: "text-indigo-600",
 			width: 200,
 			align: "center" as const,
+
 			render: (row: NewValueRow) => (
 				<div className="flex flex-col items-center w-full">
 					<div className="flex items-center gap-3">
