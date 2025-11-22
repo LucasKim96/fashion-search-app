@@ -283,9 +283,12 @@ export const ProductVariantSection: React.FC<ProductVariantSectionProps> = ({
 	const [isLoadingAttribute, setIsLoadingAttribute] = useState<string | null>(
 		null
 	);
-
+	// Lấy context từ cha (chỉ có ở createMode)
+	const formContext = createMode ? useFormContext() : null;
+	// --- 1. INIT LOAD DATA ---
 	useEffect(() => {
 		const init = async () => {
+			// Chỉ chạy khi ở Create Mode và có Form Contex
 			if (createMode) {
 				// --- Load attribute khi createMode ---
 				const attrRes = await getShopAvailableAttributes({ limit: 100 });
@@ -398,6 +401,44 @@ export const ProductVariantSection: React.FC<ProductVariantSectionProps> = ({
 		}
 	}, [product]);
 
+	// --- LIVE SYNC DATA TO FORM CONTEXT (CREATE MODE ONLY) ---
+	useEffect(() => {
+		// Chỉ chạy khi ở Create Mode và có Form Context
+		if (createMode && formContext) {
+			// Gom dữ liệu từ bảng (variantRows) và dữ liệu đang nhập (editingData)
+			const payload = variantRows.map((v) => {
+				const stock = editingData[v._id]?.stock ?? v.stock;
+				const priceAdjustment =
+					editingData[v._id]?.priceAdjustment ?? v.priceAdjustment;
+				const file = editingData[v._id]?.file;
+
+				// Tạo fileKey nếu có file
+				const fileKey = file ? `file_${v.variantKey}` : undefined;
+
+				// Nếu có file, set ngay vào Form Context
+				if (file && fileKey) {
+					formContext.setValue(fileKey, file);
+				}
+
+				return {
+					variantKey: v.variantKey,
+					attributes: v.attributes.map((a: any) => ({
+						attributeId: a.attributeId,
+						valueId: a.valueId,
+					})),
+					stock: Number(stock),
+					priceAdjustment: Number(priceAdjustment),
+					fileKey: fileKey,
+				};
+			});
+
+			// Cập nhật field chính variantsPayload
+			// console.log("[Auto Sync] Variants to Form:", payload);
+			formContext.setValue("variantsPayload", payload);
+		}
+	}, [variantRows, editingData, createMode, formContext]);
+	// Chạy lại mỗi khi danh sách dòng thay đổi hoặc người dùng nhập liệu
+
 	const handleAttributeChange = async (rowIndex: number, attrId: string) => {
 		// 1. Cập nhật UI
 		const newRows = [...generatorRows];
@@ -467,7 +508,7 @@ export const ProductVariantSection: React.FC<ProductVariantSectionProps> = ({
 			(r) => r.attributeId && r.values.length > 0
 		);
 
-		// console.log("🧩 [Generate] UI Selected Rows:", uiSelectedRows);
+		// console.log(" [Generate] UI Selected Rows:", uiSelectedRows);
 
 		// 2. Xây dựng Payload Attributes
 		let payloadAttributes: { attributeId: string; values: string[] }[] = [];
@@ -567,10 +608,10 @@ export const ProductVariantSection: React.FC<ProductVariantSectionProps> = ({
 			// console.log(" API Response Data:", res.data);
 
 			if (res.data.length === 0) {
-				// showToast(
-				// 	"Không có biến thể mới nào được sinh ra (Tất cả tổ hợp đã tồn tại)",
-				// 	"error"
-				// );
+				showToast(
+					"Không có biến thể mới nào được sinh ra (Tất cả tổ hợp đã tồn tại)",
+					"error"
+				);
 				return;
 			}
 
@@ -1247,6 +1288,9 @@ export const ProductVariantSection: React.FC<ProductVariantSectionProps> = ({
 										onClick={() => {
 											setMode("generate");
 											setVariantRows([]);
+											// Nếu cancel thì nhớ clear data trong form luôn
+											if (createMode && formContext)
+												formContext.setValue("variantsPayload", []);
 										}}
 										icon={X}
 										label="Hủy bỏ"
@@ -1257,18 +1301,20 @@ export const ProductVariantSection: React.FC<ProductVariantSectionProps> = ({
 										roundedFull
 										shadow
 									/>
-									<GradientButton
-										onClick={handleBulkSave}
-										icon={Save}
-										label="Lưu tất cả"
-										iconColor="text-white"
-										labelColor="text-white"
-										// gradient="bg-gradient-to-r from-yellow-400 to-orange-500"
-										// hoverGradient="hover:from-yellow-500 hover:to-orange-600"
-										className="flex items-center gap-2 px-3 py-1 text-sm shadow-md"
-										roundedFull
-										shadow
-									/>
+									{!createMode && (
+										<GradientButton
+											onClick={handleBulkSave}
+											icon={Save}
+											label="Lưu tất cả"
+											iconColor="text-white"
+											labelColor="text-white"
+											// gradient="bg-gradient-to-r from-yellow-400 to-orange-500"
+											// hoverGradient="hover:from-yellow-500 hover:to-orange-600"
+											className="flex items-center gap-2 px-3 py-1 text-sm shadow-md"
+											roundedFull
+											shadow
+										/>
+									)}
 								</>
 							) : (
 								<>
@@ -1286,9 +1332,10 @@ export const ProductVariantSection: React.FC<ProductVariantSectionProps> = ({
 											shadow
 										/>
 									)}
+
 									<GradientButton
 										onClick={() => setIsEditingVariant(!isEditingVariant)}
-										icon={Edit}
+										icon={Settings2}
 										label="Chỉnh sửa"
 										iconColor="text-white"
 										labelColor="text-white"
