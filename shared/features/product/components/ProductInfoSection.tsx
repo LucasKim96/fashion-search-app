@@ -10,7 +10,7 @@ import {
 	Calendar,
 	Clock,
 	Tag,
-	Box,
+	Warehouse,
 } from "lucide-react";
 import clsx from "clsx";
 import { useProduct, ProductDetail } from "../index";
@@ -22,6 +22,7 @@ interface ProductInfoSectionProps {
 	product: ProductDetail | null;
 	mode?: "view" | "create" | "edit";
 	isShop?: boolean;
+	isAdmin?: boolean;
 	// onVariantClick?: () => void;
 	onCancelEdit?: () => void;
 	onEditClick?: () => void;
@@ -33,6 +34,7 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({
 	// productId,
 	mode = "view",
 	isShop = false,
+	isAdmin = false,
 	// onVariantClick,
 	onCancelEdit,
 	onEditClick,
@@ -105,18 +107,21 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({
 					) : (
 						// Mode Edit hoặc Create -> Hiện nút Lưu & Hủy
 						<>
-							<GradientButton
-								type="button" // Nút Hủy không submit form
-								onClick={handleCancel}
-								icon={X}
-								label="Hủy"
-								gradient="bg-red-50 hover:bg-red-100"
-								labelColor="text-red-700"
-								iconColor="text-red-700"
-								className="flex items-center gap-2 px-3 py-1 text-sm shadow-md"
-								roundedFull
-								shadow
-							/>
+							{mode !== "create" && (
+								<GradientButton
+									type="button" // Nút Hủy không submit form
+									onClick={handleCancel}
+									icon={X}
+									label="Hủy"
+									gradient="bg-red-50 hover:bg-red-100"
+									labelColor="text-red-700"
+									iconColor="text-red-700"
+									className="flex items-center gap-2 px-3 py-1 text-sm shadow-md"
+									roundedFull
+									shadow
+								/>
+							)}
+
 							<GradientButton
 								form={formId}
 								type="submit" // Nút Lưu submit form
@@ -281,7 +286,7 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({
 
 				{/* 3. DASHBOARD INFO (Grid Layout) */}
 				{/* Chỉ hiển thị ở chế độ View của Shop để thông tin gọn gàng */}
-				{isShop && currentMode === "view" && product && (
+				{(isShop || isAdmin) && currentMode === "view" && product && (
 					<div className="grid grid-cols-2 gap-4 mt-4">
 						{/* 1. TRẠNG THÁI */}
 						<div className="group relative overflow-hidden p-4 bg-white rounded-2xl border border-gray-100 shadow-md hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-1">
@@ -323,7 +328,11 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({
 
 							<div className="relative flex items-center gap-4">
 								<div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100 text-blue-600 flex items-center justify-center shadow-inner">
-									<Box size={24} strokeWidth={2} className="drop-shadow-sm" />
+									<Warehouse
+										size={24}
+										strokeWidth={2}
+										className="drop-shadow-sm"
+									/>
 								</div>
 								<div className="flex flex-col min-w-0">
 									<span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest mb-0.5">

@@ -7,6 +7,7 @@ import {
 	VariantGeneratedItem,
 	ProductAttributeWithValues,
 	UpdateProductVariantRequest,
+	GenerateNewVariantCombinationsRequest,
 } from "./productVariant.types";
 import { ApiResponse } from "@shared/types/common.types";
 import { useNotification, errorUtils } from "@shared/core";
@@ -33,6 +34,16 @@ export const useProductVariant = () => {
 	const [loadingGeneratedVariants, setLoadingGeneratedVariants] =
 		useState(false);
 	const [errorGeneratedVariants, setErrorGeneratedVariants] = useState<
+		string | null
+	>(null);
+
+	// State riêng cho generateNewVariantCombinations (kiểu trả về khác)
+	const [newGeneratedVariants, setNewGeneratedVariants] = useState<
+		VariantGeneratedItem[] | null
+	>(null);
+	const [loadingNewGeneratedVariants, setLoadingNewGeneratedVariants] =
+		useState(false);
+	const [errorNewGeneratedVariants, setErrorNewGeneratedVariants] = useState<
 		string | null
 	>(null);
 
@@ -112,22 +123,22 @@ export const useProductVariant = () => {
 				typeof ProductVariantApi.generateNewVariantCombinations
 			>[0]
 		): Promise<ApiResponse<VariantGeneratedItem[]>> => {
-			setLoadingGeneratedVariants(true);
-			setErrorGeneratedVariants(null);
+			setLoadingNewGeneratedVariants(true);
+			setErrorNewGeneratedVariants(null);
 			try {
 				const res = await ProductVariantApi.generateNewVariantCombinations(
 					payload
 				);
-				if (res.success) setGeneratedVariants(res.data);
-				else setErrorGeneratedVariants(res.message || "Lỗi API");
+				if (res.success) setNewGeneratedVariants(res.data);
+				else setErrorNewGeneratedVariants(res.message || "Lỗi API");
 				return res;
 			} catch (err) {
 				const msg = errorUtils.parseApiError(err);
-				setErrorGeneratedVariants(msg);
+				setErrorNewGeneratedVariants(msg);
 				showToast(msg, "error");
 				return { success: false, message: msg, data: null };
 			} finally {
-				setLoadingGeneratedVariants(false);
+				setLoadingNewGeneratedVariants(false);
 			}
 		},
 		[showToast]
@@ -203,6 +214,11 @@ export const useProductVariant = () => {
 			data: generatedVariants,
 			loading: loadingGeneratedVariants,
 			error: errorGeneratedVariants,
+		},
+		newGeneratedVariantsState: {
+			data: newGeneratedVariants,
+			loading: loadingNewGeneratedVariants,
+			error: errorNewGeneratedVariants,
 		},
 		createdVariantsState: {
 			data: createdVariants,

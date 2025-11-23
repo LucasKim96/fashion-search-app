@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { Camera, X, Check, ZoomIn, Crop } from "lucide-react";
+import { Camera, X, Check, ZoomIn, Crop, Focus } from "lucide-react";
 import { useUser } from "@shared/features/user";
 import { UserProfile, getCroppedImg, ImagePreviewModal } from "@shared/core";
 import Cropper from "react-easy-crop";
@@ -95,7 +95,7 @@ export const ProfileAvatarUploader: React.FC<Props> = ({
 				{/* Hiệu ứng overlay khi hover */}
 				<div className="absolute inset-0 rounded-full bg-gradient-to-tr from-black/60 via-black/30 to-transparent opacity-0 group-hover:opacity-100 backdrop-blur-[1px] transition-all duration-500 flex items-center justify-center">
 					<div className="bg-white/20 p-3 rounded-full backdrop-blur-sm border border-white/30 shadow-inner scale-90 group-hover:scale-100 transition-all duration-300">
-						<ZoomIn className="w-6 h-6 text-white drop-shadow-md" />
+						<Focus className="w-6 h-6 text-white drop-shadow-md" />
 					</div>
 				</div>
 			</div>
