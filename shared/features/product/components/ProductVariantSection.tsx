@@ -23,6 +23,8 @@ import {
 	Warehouse,
 	Info,
 	Lightbulb,
+	Check,
+	CheckCheck,
 } from "lucide-react";
 import clsx from "clsx";
 import { set, useFormContext } from "react-hook-form";
@@ -1333,7 +1335,7 @@ export const ProductVariantSection: React.FC<ProductVariantSectionProps> = ({
 										/>
 									)}
 
-									<GradientButton
+									{/* <GradientButton
 										onClick={() => setIsEditingVariant(!isEditingVariant)}
 										icon={Settings2}
 										label="Chỉnh sửa"
@@ -1344,7 +1346,36 @@ export const ProductVariantSection: React.FC<ProductVariantSectionProps> = ({
 										className="flex items-center gap-2 px-3 py-1 text-sm shadow-md"
 										roundedFull
 										shadow
-									/>
+									/> */}
+									{!isEditingVariant ? (
+										// --- TRẠNG THÁI 1: HIỆN NÚT CHỈNH SỬA ---
+										<GradientButton
+											onClick={() => setIsEditingVariant(true)}
+											icon={Settings2}
+											label="Chỉnh sửa"
+											iconColor="text-white"
+											labelColor="text-white"
+											gradient="bg-gradient-to-r from-yellow-400 to-orange-500"
+											hoverGradient="hover:from-yellow-500 hover:to-orange-600"
+											className="flex items-center gap-2 px-3 py-1 text-sm shadow-md"
+											roundedFull
+											shadow
+										/>
+									) : (
+										// --- TRẠNG THÁI 2: HIỆN NÚT TRỞ VỀ (HOÀN TẤT) ---
+										<GradientButton
+											onClick={() => setIsEditingVariant(false)}
+											icon={CheckCheck} // Hoặc dùng icon X nếu muốn mang ý nghĩa "Đóng"
+											label="Hoàn tất"
+											iconColor="text-white"
+											labelColor="text-white"
+											gradient="bg-gradient-to-r from-emerald-400 to-teal-500" // Màu xanh tạo cảm giác đã xong/an toàn
+											hoverGradient="hover:from-emerald-500 hover:to-teal-600"
+											className="flex items-center gap-2 px-3 py-1 text-sm shadow-md"
+											roundedFull
+											shadow
+										/>
+									)}
 								</>
 							)}
 						</div>
