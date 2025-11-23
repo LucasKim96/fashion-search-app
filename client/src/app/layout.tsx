@@ -5,8 +5,8 @@ import { NotificationProvider } from "@shared/core/ui/NotificationProvider";
 import { AuthProvider } from "@shared/features/auth/AuthProvider";
 
 export const metadata = {
-	title: "Fashion Search Client",
-	description: "Trang khách hàng hệ thống Fashion Search",
+	title: "Nera Luna - Thương mại điện tử thời trang",
+	description: "Trang khách hàng của thương mại điện tử Nera Luna",
 };
 
 export default function RootLayout({
