@@ -63,20 +63,3 @@ export default function ConfirmationModal({
 		</div>
 	);
 }
-
-// Optional: Thêm một vài keyframes animation vào file globals.css của bạn để có hiệu ứng đẹp hơn
-/*
-@keyframes fade-in-up {
-  from {
-    opacity: 0;
-    transform: translateY(20px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-.animate-fade-in-up {
-  animation: fade-in-up 0.3s ease-out forwards;
-}
-*/

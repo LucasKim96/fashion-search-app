@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@shared/features/cart/useCart.hook"; // Giả định bạn có hook này
 import { buildImageUrl, formatCurrency } from "@shared/core";
-import { Loader2, Trash2, ShoppingBag, Plus, Minus } from "lucide-react";
+import { Loader2, Trash2, ShoppingBag, Plus, Minus, Shirt } from "lucide-react";
+import { clsx } from "clsx";
 
 // ===================================================================
 // COMPONENT CON: Hiển thị khi giỏ hàng trống
@@ -62,8 +63,12 @@ const CartLoadingSkeleton = () => {
 // COMPONENT CON: Hiển thị một sản phẩm trong giỏ hàng
 // ===================================================================
 const CartItemRow = ({ item, onUpdateQuantity, onRemove }) => {
+	console.log("Check Item:", item.product?.name);
+	console.log("Check Attributes:", item.productVariant?.attributes);
+
 	const [quantity, setQuantity] = useState(item.quantity);
 	const [isUpdating, setIsUpdating] = useState(false);
+	const [imageError, setImageError] = useState(false);
 
 	// Debounce: Chỉ gọi API sau khi người dùng ngừng gõ/nhấn 500ms
 	useEffect(() => {
@@ -86,14 +91,27 @@ const CartItemRow = ({ item, onUpdateQuantity, onRemove }) => {
 
 	return (
 		<div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 py-4">
-			<img
-				src={
-					buildImageUrl(item.productVariant?.imageUrl) ||
-					"/placeholder-image.jpg"
-				}
-				alt={item.product?.name}
-				className="w-24 h-24 object-cover rounded-lg border border-gray-200 flex-shrink-0"
-			/>
+			{/* 1. Tạo một container cho ảnh */}
+			<div className="w-24 h-24 flex-shrink-0 relative bg-gray-200 rounded-lg border border-gray-200">
+				{/* 2. Thẻ img với `onError` */}
+				<img
+					// Dùng clsx để ẩn ảnh khi có lỗi
+					className={clsx("w-full h-full object-cover rounded-lg", {
+						hidden: imageError,
+					})}
+					src={buildImageUrl(item.productVariant?.imageUrl)}
+					alt={item.product?.name}
+					// Khi ảnh lỗi, set state imageError thành true
+					onError={() => setImageError(true)}
+				/>
+
+				{/* 3. Icon chỉ hiển thị khi có lỗi ảnh */}
+				{imageError && (
+					<div className="absolute inset-0 flex items-center justify-center">
+						<Shirt className="w-10 h-10 text-gray-400" strokeWidth={1.5} />
+					</div>
+				)}
+			</div>
 			<div className="flex-1">
 				<h3 className="font-semibold text-gray-800">{item.product?.name}</h3>
 				<p className="text-sm text-gray-500">

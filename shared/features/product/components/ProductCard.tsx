@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import clsx from "clsx";
-import { Eye, EyeOff, Trash2, Edit } from "lucide-react";
+import { Eye, EyeOff, Trash2, Edit, Shirt } from "lucide-react";
 import { Product } from "../product.types"; // Import type Product của bạn
 import { useProduct } from "../index"; // Import hook
 import {
@@ -41,6 +41,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
 	const [isLoading, setIsLoading] = useState(false);
 	const { showConfirm } = useNotification();
+	const [imageError, setImageError] = useState(false);
+
 	// --- Handlers ---
 	// Xử lý ẩn/hiện sản phẩm
 	const handleToggleActive = (e: React.MouseEvent) => {
@@ -104,7 +106,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 	const imageUrl =
 		product.images && product.images.length > 0
 			? buildImageUrl(product.images[0])
-			: "/images/placeholder-product.png"; // Đường dẫn placeholder mặc định
+			: undefined;
 
 	// Xác định trạng thái hiển thị badge
 	// Client thường không hiện badge "Đang ẩn" vì Client chỉ thấy active.
@@ -126,17 +128,26 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 			onClick={onClick}>
 			{/* 1. Phần Ảnh (Image Container) */}
 			<div className="relative aspect-square w-full bg-gray-100 overflow-hidden rounded-lg">
-				<img
-					src={imageUrl}
-					alt={product.pdName}
-					className={clsx(
-						"w-full h-full object-cover",
-						// --- HIỆU ỨNG SCALE ---
-						"transition-transform duration-500 ease-in-out", // Chuyển động mượt trong 0.5s
-						"group-hover:scale-110" // Zoom nhẹ lên 110% khi hover vào Card
-					)}
-					loading="lazy"
-				/>
+				{imageUrl && !imageError ? (
+					// Nếu có imageUrl VÀ chưa bị lỗi -> render ảnh
+					<img
+						src={imageUrl}
+						alt={product.pdName}
+						className={clsx(
+							"w-full h-full object-cover",
+							"transition-transform duration-500 ease-in-out",
+							"group-hover:scale-110"
+						)}
+						loading="lazy"
+						// Thêm onError để xử lý khi ảnh không tải được
+						onError={() => setImageError(true)}
+					/>
+				) : (
+					// Nếu không có imageUrl HOẶC đã bị lỗi -> render icon
+					<div className="w-full h-full flex items-center justify-center bg-gray-200">
+						<Shirt className="w-16 h-16 text-gray-400" strokeWidth={1} />
+					</div>
+				)}
 				{/* --- HIỆU ỨNG LỚP PHỦ (OVERLAY) --- */}
 				{/* Lớp này tạo màu tối nhẹ phủ lên ảnh giúp tạo chiều sâu sang trọng */}
 				<div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-500" />
