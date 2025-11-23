@@ -63,9 +63,6 @@ const CartLoadingSkeleton = () => {
 // COMPONENT CON: Hiển thị một sản phẩm trong giỏ hàng
 // ===================================================================
 const CartItemRow = ({ item, onUpdateQuantity, onRemove }) => {
-	console.log("Check Item:", item.product?.name);
-	console.log("Check Attributes:", item.productVariant?.attributes);
-
 	const [quantity, setQuantity] = useState(item.quantity);
 	const [isUpdating, setIsUpdating] = useState(false);
 	const [imageError, setImageError] = useState(false);
@@ -88,76 +85,115 @@ const CartItemRow = ({ item, onUpdateQuantity, onRemove }) => {
 			setQuantity(newQuantity);
 		}
 	};
+	// --- 1. XỬ LÝ ẢNH (Ưu tiên ảnh biến thể -> ảnh sản phẩm) ---
+	const displayImage =
+		item.productVariant?.image ||
+		item.productVariant?.imageUrl ||
+		item.product?.images?.[0] ||
+		"";
+
+	// --- 2. XỬ LÝ TÊN (Log của bạn cho thấy key là pdName) ---
+	const displayName = item.product?.pdName || item.product?.name || "Sản phẩm";
 
 	return (
 		<div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 py-4">
-			{/* 1. Tạo một container cho ảnh */}
-			<div className="w-24 h-24 flex-shrink-0 relative bg-gray-200 rounded-lg border border-gray-200">
-				{/* 2. Thẻ img với `onError` */}
+			{/* Ảnh sản phẩm */}
+			<div className="w-24 h-24 flex-shrink-0 relative bg-gray-100 rounded-lg border border-gray-200 overflow-hidden">
 				<img
-					// Dùng clsx để ẩn ảnh khi có lỗi
-					className={clsx("w-full h-full object-cover rounded-lg", {
-						hidden: imageError,
+					className={clsx("w-full h-full object-cover", {
+						"opacity-0": imageError,
 					})}
-					src={buildImageUrl(item.productVariant?.imageUrl)}
-					alt={item.product?.name}
-					// Khi ảnh lỗi, set state imageError thành true
+					src={buildImageUrl(displayImage)}
+					alt={displayName}
 					onError={() => setImageError(true)}
 				/>
-
-				{/* 3. Icon chỉ hiển thị khi có lỗi ảnh */}
 				{imageError && (
-					<div className="absolute inset-0 flex items-center justify-center">
-						<Shirt className="w-10 h-10 text-gray-400" strokeWidth={1.5} />
+					<div className="absolute inset-0 flex items-center justify-center text-gray-400">
+						<Shirt size={32} />
 					</div>
 				)}
 			</div>
+
+			{/* Thông tin chi tiết */}
 			<div className="flex-1">
-				<h3 className="font-semibold text-gray-800">{item.product?.name}</h3>
-				<p className="text-sm text-gray-500">
-					{/* Hiển thị các thuộc tính của variant */}
-					{item.productVariant?.attributes
-						?.map((attr) => `${attr.attribute}: ${attr.value}`)
-						.join(" / ")}
-				</p>
-				<p className="text-sm font-medium text-primary mt-1">
+				<h3 className="font-semibold text-gray-800 text-base">{displayName}</h3>
+
+				{/* --- 3. XỬ LÝ THUỘC TÍNH (QUAN TRỌNG) --- */}
+				<div className="text-sm text-gray-500 mt-1 flex flex-wrap gap-2">
+					{item.productVariant?.attributes?.map((attr: any, index: number) => {
+						// LOGIC DÒ TÌM KEY:
+						// 1. Thử key phẳng (nếu backend đã format): attributeLabel
+						// 2. Thử key lồng nhau (nếu backend populate): attributeId.label
+						// 3. Thử key cũ/khác: attribute, name
+						const label =
+							attr.attributeLabel ||
+							attr.attributeId?.label ||
+							attr.attributeName ||
+							attr.attribute ||
+							"Thuộc tính";
+
+						const value =
+							attr.valueLabel ||
+							attr.valueId?.value ||
+							attr.valueId?.label ||
+							attr.valueName ||
+							attr.value ||
+							"";
+
+						// Nếu không lấy được giá trị thì không in ra
+						if (!value) return null;
+
+						return (
+							<span
+								key={index}
+								className="bg-gray-100 px-2 py-0.5 rounded text-xs border border-gray-200 whitespace-nowrap">
+								{label}:{" "}
+								<span className="font-medium text-gray-700">{value}</span>
+							</span>
+						);
+					})}
+				</div>
+
+				<p className="text-sm font-bold text-primary mt-2">
 					{formatCurrency(item.price)}
 				</p>
 			</div>
-			<div className="flex items-center gap-4">
-				{/* Quantity Selector */}
-				<div className="flex items-center border border-gray-300 rounded-full">
+
+			{/* Nút tăng giảm & Xóa (Giữ nguyên code cũ) */}
+			<div className="flex items-center gap-4 mt-4 sm:mt-0">
+				<div className="flex items-center border border-gray-300 rounded-full h-9 bg-white shadow-sm">
 					<button
 						onClick={() => handleQuantityChange(quantity - 1)}
-						className="p-2 text-gray-600 hover:text-primary disabled:opacity-50"
+						className="px-3 text-gray-600 hover:text-primary disabled:opacity-30 h-full flex items-center transition-colors"
 						disabled={quantity <= 1 || isUpdating}>
-						<Minus size={16} />
+						<Minus size={14} />
 					</button>
-					<span className="px-3 text-center w-12 font-medium">
+					<span className="w-8 text-center font-bold text-sm text-gray-800">
 						{isUpdating ? (
-							<Loader2 className="animate-spin mx-auto" size={16} />
+							<Loader2 className="animate-spin mx-auto" size={14} />
 						) : (
 							quantity
 						)}
 					</span>
 					<button
 						onClick={() => handleQuantityChange(quantity + 1)}
-						className="p-2 text-gray-600 hover:text-primary disabled:opacity-50"
+						className="px-3 text-gray-600 hover:text-primary disabled:opacity-30 h-full flex items-center transition-colors"
 						disabled={isUpdating}>
-						<Plus size={16} />
+						<Plus size={14} />
 					</button>
 				</div>
-				{/* Subtotal */}
-				<div className="w-28 text-right">
-					<p className="font-semibold text-gray-800">
+
+				<div className="w-24 text-right hidden sm:block">
+					<p className="font-bold text-gray-900 text-sm">
 						{formatCurrency(item.price * quantity)}
 					</p>
 				</div>
-				{/* Remove Button */}
+
 				<button
 					onClick={() => onRemove(item.productVariantId)}
-					className="text-gray-400 hover:text-red-500 transition-colors">
-					<Trash2 size={20} />
+					className="text-gray-400 hover:text-red-500 transition-all p-2 rounded-full hover:bg-red-50"
+					title="Xóa sản phẩm">
+					<Trash2 size={18} />
 				</button>
 			</div>
 		</div>
