@@ -143,3 +143,34 @@ export const CART_ENDPOINTS = {
 	// Xóa toàn bộ giỏ hàng
 	CLEAR_CART: "/carts/mine",
 };
+
+export const ORDER_ENDPOINTS = {
+	BASE: "/orders", // Prefix gốc (khai báo ở index.routes.js)
+
+	BUYER: {
+		BASE: "/buyer",
+		GET_MY_ORDERS: "/my-orders",
+		CREATE_FROM_CART: "/create-from-cart",
+		GET_DETAIL: "/:id",
+		CONFIRM: "/:id/confirm",
+		REPORT: "/:id/report",
+		CANCEL: "/:id/cancel",
+	},
+
+	SELLER: {
+		BASE: "/seller",
+		GET_SHOP_ORDERS: "/",
+		MARK_PACKING: "/:id/pack",
+		MARK_SHIPPING: "/:id/ship",
+		MARK_DELIVERED: "/:id/deliver",
+		CANCEL: "/:id/cancel",
+	},
+
+	ADMIN: {
+		BASE: "/admin",
+		COMPLETE: "/:id/complete",
+		CANCEL: "/:id/cancel",
+		REVIEW_REPORT: "/:id/review-report",
+		AUTO_TRANSITION: "/manual/auto-transition",
+	},
+};

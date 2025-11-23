@@ -2,8 +2,8 @@ import express from "express";
 import * as OrderController from "./order.controller.js";
 import { authMiddleware } from "../../middlewares/index.js";
 import {
-  isShopOrAdmin,
-  isAdminOrSuperAdmin,
+	isShopOrAdmin,
+	isAdminOrSuperAdmin,
 } from "../../middlewares/role.middleware.js";
 
 const router = express.Router();
@@ -11,7 +11,7 @@ const router = express.Router();
 const buyerRouter = express.Router();
 buyerRouter.use(authMiddleware);
 
-buyerRouter.get("/", OrderController.getMyOrders);
+buyerRouter.get("/my-orders", OrderController.getMyOrders);
 buyerRouter.post("/create-from-cart", OrderController.createFromCart);
 buyerRouter.get("/:id", OrderController.getMyOrderDetail);
 buyerRouter.patch("/:id/confirm", OrderController.confirmReceived);
@@ -37,7 +37,10 @@ adminRouter.use(authMiddleware, isAdminOrSuperAdmin);
 adminRouter.patch("/:id/complete", OrderController.adminCompleteOrder);
 adminRouter.patch("/:id/cancel", OrderController.adminCancelOrder);
 adminRouter.post("/:id/review-report", OrderController.reviewReportedOrder);
-adminRouter.post("/manual/auto-transition", OrderController.autoTransitionOrders);
+adminRouter.post(
+	"/manual/auto-transition",
+	OrderController.autoTransitionOrders
+);
 
 router.use("/admin", adminRouter);
 
