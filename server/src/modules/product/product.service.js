@@ -29,28 +29,94 @@ export const PRODUCTS_PUBLIC = "/uploads/products";
  * @param {Boolean} [options.includeInactive=false] - true => lấy cả sản phẩm ẩn; false => chỉ lấy isActive=true
  * @returns {Object} { success, message, data }
  */
+// export const getAllProducts = async ({
+// 	shopId,
+// 	accountId,
+// 	includeInactive = false,
+// }) => {
+// 	try {
+// 		const filter = {};
+
+// 		// --- Xác định shopId ---
+// 		let resolvedShopId = null;
+
+// 		if (shopId) {
+// 			if (!mongoose.Types.ObjectId.isValid(shopId)) {
+// 				throw new Error("shopId không hợp lệ");
+// 			}
+// 			resolvedShopId = mongoose.Types.ObjectId(shopId);
+// 		} else if (accountId) {
+// 			// Nếu không truyền shopId, dùng accountId để tra ra shop
+// 			if (!mongoose.Types.ObjectId.isValid(accountId)) {
+// 				throw new Error("accountId không hợp lệ");
+// 			}
+
+// 			const shop = await Shop.findOne({ accountId }).select("_id").lean();
+// 			if (!shop) {
+// 				throw new Error("Không tìm thấy shop tương ứng với accountId này");
+// 			}
+// 			resolvedShopId = shop._id;
+// 		}
+
+// 		if (resolvedShopId) {
+// 			filter.shopId = resolvedShopId;
+// 		}
+
+// 		// --- Lọc theo trạng thái hoạt động ---
+// 		if (!includeInactive) {
+// 			filter.isActive = true;
+// 		}
+
+// 		// --- Truy vấn dữ liệu ---
+// 		const products = await Product.find(filter)
+// 			.sort({ createdAt: -1 }) // mới nhất lên trước
+// 			.select("_id pdName basePrice images isActive shopId createdAt updatedAt") // chọn cột cần thiết
+// 			.lean();
+
+// 		return {
+// 			success: true,
+// 			message: "Lấy danh sách sản phẩm thành công",
+// 			data: products,
+// 		};
+// 	} catch (error) {
+// 		return {
+// 			success: false,
+// 			message: error.message || "Lỗi khi lấy danh sách sản phẩm",
+// 			data: [],
+// 		};
+// 	}
+// };
+/**
+ * Lấy danh sách sản phẩm (Có phân trang)
+ * @param {Object} options
+ * @param {String|ObjectId} [options.shopId]
+ * @param {String|ObjectId} [options.accountId]
+ * @param {Boolean} [options.includeInactive=false]
+ * @param {Number} [options.page=1] - Trang hiện tại
+ * @param {Number} [options.limit=10] - Số lượng item mỗi trang
+ * @returns {Object} { success, message, data: { products, pagination } }
+ */
 export const getAllProducts = async ({
 	shopId,
 	accountId,
 	includeInactive = false,
+	page = 1,
+	limit = 10,
 }) => {
 	try {
 		const filter = {};
 
-		// --- Xác định shopId ---
+		// --- 1. Xử lý logic ShopId (Giữ nguyên) ---
 		let resolvedShopId = null;
-
 		if (shopId) {
 			if (!mongoose.Types.ObjectId.isValid(shopId)) {
 				throw new Error("shopId không hợp lệ");
 			}
-			resolvedShopId = mongoose.Types.ObjectId(shopId);
+			resolvedShopId = new mongoose.Types.ObjectId(shopId); // Thêm new cho chuẩn Mongoose mới
 		} else if (accountId) {
-			// Nếu không truyền shopId, dùng accountId để tra ra shop
 			if (!mongoose.Types.ObjectId.isValid(accountId)) {
 				throw new Error("accountId không hợp lệ");
 			}
-
 			const shop = await Shop.findOne({ accountId }).select("_id").lean();
 			if (!shop) {
 				throw new Error("Không tìm thấy shop tương ứng với accountId này");
@@ -62,27 +128,58 @@ export const getAllProducts = async ({
 			filter.shopId = resolvedShopId;
 		}
 
-		// --- Lọc theo trạng thái hoạt động ---
+		// --- 2. Lọc theo trạng thái ---
 		if (!includeInactive) {
 			filter.isActive = true;
 		}
 
-		// --- Truy vấn dữ liệu ---
-		const products = await Product.find(filter)
-			.sort({ createdAt: -1 }) // mới nhất lên trước
-			.select("_id pdName basePrice images isActive shopId createdAt updatedAt") // chọn cột cần thiết
-			.lean();
+		// --- 3. Xử lý Phân trang ---
+		const pageNumber = parseInt(page) || 1;
+		const limitNumber = parseInt(limit) || 10;
+		const skip = (pageNumber - 1) * limitNumber;
+
+		// --- 4. Truy vấn song song (Lấy data + Đếm tổng) ---
+		const [products, total] = await Promise.all([
+			Product.find(filter)
+				.sort({ createdAt: -1 })
+				.skip(skip) // Bỏ qua số lượng item của các trang trước
+				.limit(limitNumber) // Chỉ lấy số lượng limit
+				.select(
+					"_id pdName basePrice images isActive shopId createdAt updatedAt"
+				)
+				.lean(),
+			Product.countDocuments(filter), // Đếm tổng số lượng thỏa điều kiện
+		]);
+
+		const totalPages = Math.ceil(total / limitNumber);
 
 		return {
 			success: true,
 			message: "Lấy danh sách sản phẩm thành công",
-			data: products,
+			data: {
+				products, // Mảng sản phẩm
+				pagination: {
+					total, // Tổng số sản phẩm
+					page: pageNumber, // Trang hiện tại
+					limit: limitNumber, // Giới hạn mỗi trang
+					totalPages, // Tổng số trang
+				},
+			},
 		};
 	} catch (error) {
+		console.error("Get products error:", error);
 		return {
 			success: false,
 			message: error.message || "Lỗi khi lấy danh sách sản phẩm",
-			data: [],
+			data: {
+				products: [],
+				pagination: {
+					total: 0,
+					page: 1,
+					limit: 10,
+					totalPages: 0,
+				},
+			},
 		};
 	}
 };

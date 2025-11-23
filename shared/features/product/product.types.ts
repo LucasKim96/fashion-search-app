@@ -13,7 +13,21 @@ export interface ProductListItem {
 	name: string; // Tên đã được chuẩn hóa
 	thumbnail?: string; // Ảnh đại diện
 	basePrice: number;
+	totalPages?: number;
 	// slug?: string;    // (Tùy chọn)
+}
+// Interface cho Pagination
+export interface PaginationData {
+	total: number;
+	page: number;
+	limit: number;
+	totalPages: number;
+}
+
+// Interface cho Response trả về từ API getPublicProducts
+export interface ProductListResponse {
+	products: Product[];
+	pagination: PaginationData;
 }
 
 /**
