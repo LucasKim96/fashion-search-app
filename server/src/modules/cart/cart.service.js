@@ -122,27 +122,50 @@ export const removeFromCart = async (accountId, productVariantId) => {
 	return await cart.populate("items.productVariantId");
 };
 
-/**
- * Lấy giỏ hàng chi tiết
- */
 export const getCartWithDetails = async (accountId) => {
 	if (!accountId) throw ApiError.badRequest("Thiếu accountId");
-	let cart = await getOrCreateCart(accountId);
-	cart = await Cart.findOne({ accountId }).populate({
+
+	// Đảm bảo cart tồn tại
+	await getOrCreateCart(accountId);
+
+	// Lấy Cart và Populate sâu
+	let cart = await Cart.findOne({ accountId }).populate({
 		path: "items.productVariantId",
-		populate: {
-			path: "productId",
-			populate: { path: "shopId", select: "shopName status" },
-		},
+		model: "ProductVariant", // Tên model Variant
+		populate: [
+			// 1. Populate Product gốc
+			{
+				path: "productId",
+				select: "pdName basePrice images isActive shopId", // Chọn trường cần thiết
+				populate: { path: "shopId", select: "shopName status" },
+			},
+			// 2. [QUAN TRỌNG] Populate Tên thuộc tính (VD: Màu sắc)
+			{
+				path: "attributes.attributeId",
+				model: "Attribute", // Tên model Attribute
+				select: "label name",
+			},
+			// 3. [QUAN TRỌNG] Populate Giá trị thuộc tính (VD: Đỏ)
+			{
+				path: "attributes.valueId",
+				model: "AttributeValue", // Tên model Attribute Value
+				select: "label value",
+			},
+		],
 	});
 
 	if (!cart) return await Cart.create({ accountId, items: [] });
 
+	// Logic lọc item lỗi (Giữ nguyên)
 	const validItems = cart.items.filter((item) => {
 		const variant = item.productVariantId;
 		const product = variant?.productId;
 		const shop = product?.shopId;
-		return variant && product && shop && shop.status === "active";
+
+		// Check thêm: variant.attributes phải là mảng (đề phòng data cũ lỗi)
+		const isValidVariant = variant && Array.isArray(variant.attributes);
+
+		return isValidVariant && product && shop && shop.status === "active";
 	});
 
 	if (validItems.length !== cart.items.length) {

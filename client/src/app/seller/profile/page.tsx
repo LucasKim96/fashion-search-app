@@ -8,7 +8,7 @@ import { deleteShopApi, getMyShopApi } from "@/features/shop/shop.api";
 import { ShopResponse } from "@/features/shop/shop.types";
 import { Trash2, Calendar } from "lucide-react"; // Thêm icon Calendar
 import { buildImageUrl } from "@shared/core/utils/image.utils";
-import ConfirmationModal from "@/components/ui/ConfirmationModal";
+import ConfirmationModal from "@/components/modals/ConfirmationModal";
 
 // Helper function để định dạng ngày tháng cho đẹp hơn
 const formatDate = (dateString: string) => {
