@@ -119,7 +119,7 @@ export default function ClientHeader() {
 				<div
 					className="font-extrabold text-2xl text-primary cursor-pointer"
 					onClick={() => router.push("/")}>
-					FashionSearch
+					Nera Luna
 				</div>
 			</div>
 			{/* Search */}

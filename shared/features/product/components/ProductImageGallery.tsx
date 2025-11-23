@@ -31,6 +31,7 @@ interface ProductImageGalleryProps {
 	width?: string;
 	height?: string;
 	onImagesUpdated?: () => void;
+	activeImage?: string | null;
 }
 
 type ModalMode = "view" | "add" | "delete" | null;
@@ -42,6 +43,7 @@ export const ProductImageGallery: React.FC<ProductImageGalleryProps> = ({
 	width = "w-full",
 	height = "aspect-square",
 	onImagesUpdated,
+	activeImage,
 }) => {
 	const { updateShopProductImages, getProductDetail } = useProduct();
 	const formContext = createMode ? useFormContext() : null;
@@ -111,19 +113,41 @@ export const ProductImageGallery: React.FC<ProductImageGalleryProps> = ({
 	}, [displayImages.length]);
 
 	useEffect(() => {
-		if (displayImages.length > 1 && !modalMode) {
+		if (displayImages.length > 1 && !modalMode && !activeImage) {
 			timerRef.current = setInterval(nextImage, 5000);
 		}
 		return () => {
 			if (timerRef.current) clearInterval(timerRef.current);
 		};
-	}, [nextImage, displayImages.length, modalMode]);
+	}, [nextImage, displayImages.length, modalMode, activeImage]);
 
 	useEffect(() => {
 		if (currentIndex >= displayImages.length && displayImages.length > 0) {
 			setCurrentIndex(0);
 		}
 	}, [displayImages.length, currentIndex]);
+
+	useEffect(() => {
+		if (activeImage && displayImages.length > 0) {
+			// Tìm index của ảnh này trong list ảnh đang hiển thị
+			// Lưu ý: Cần hàm buildImageUrl hoặc so sánh tương đối nếu url từ server khác format
+			// Ở đây giả định activeImage là full URL hoặc server path khớp với variants
+
+			const index = displayImages.findIndex(
+				(img) =>
+					// So sánh trực tiếp hoặc qua hàm buildUrl
+					img === activeImage || buildImageUrl(img) === activeImage
+			);
+
+			if (index !== -1) {
+				setCurrentIndex(index);
+			} else {
+				// Nếu ảnh variant chưa có trong list displayImages (hiếm gặp),
+				// Bạn có thể push nó vào hoặc chỉ hiển thị tạm thời.
+				// Logic đơn giản nhất ở đây là không làm gì nếu không tìm thấy.
+			}
+		}
+	}, [activeImage, displayImages]);
 
 	const handleOpenModal = (mode: ModalMode) => {
 		setModalMode(mode);
