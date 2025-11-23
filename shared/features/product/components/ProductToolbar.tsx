@@ -13,9 +13,11 @@ import {
 	Filter,
 	Package,
 	CheckCircle,
+	CirclePoundSterling,
 } from "lucide-react";
 import { SearchHeader, GradientButton } from "@shared/core";
 import { ProductSearchRequest } from "@shared/features/product";
+import { i } from "node_modules/framer-motion/dist/types.d-BJcRxCew";
 
 // Danh sách bộ lọc giá (Di chuyển ra ngoài để dùng chung)
 const priceFilters = [
@@ -29,25 +31,25 @@ const priceFilters = [
 		label: "Dưới 100k",
 		value: "<100",
 		color: "from-blue-400 via-blue-500 to-blue-600",
-		icon: <Coins size={16} />,
+		icon: <CirclePoundSterling size={16} />,
 	},
 	{
 		label: "100k - 300k",
 		value: "100-300",
 		color: "from-cyan-400 via-cyan-500 to-cyan-600",
-		icon: <Banknote size={16} />,
+		icon: <Coins size={16} />,
 	},
 	{
 		label: "300k - 500k",
 		value: "300-500",
 		color: "from-teal-400 via-teal-500 to-teal-600",
-		icon: <CreditCard size={16} />,
+		icon: <Banknote size={16} />,
 	},
 	{
 		label: "500k - 1 triệu",
 		value: "500-1000",
 		color: "from-indigo-400 via-indigo-500 to-indigo-600",
-		icon: <Tag size={16} />,
+		icon: <CreditCard size={16} />,
 	},
 	{
 		label: "Trên 1 triệu",
@@ -57,11 +59,11 @@ const priceFilters = [
 	},
 ];
 
-interface SellerProductToolbarProps {
+interface ProductToolbarProps {
 	// Search Props
 	searchQuery: string;
 	onSearchChange: (value: string) => void;
-
+	isAdmin?: boolean;
 	// Filter Props
 	selectedPriceRange: ProductSearchRequest["priceRange"] | undefined;
 	onPriceRangeChange: (
@@ -75,12 +77,13 @@ interface SellerProductToolbarProps {
 	};
 
 	// Action Props
-	onCreateClick: () => void;
+	onCreateClick?: () => void;
 }
 
-export const SellerProductToolbar: React.FC<SellerProductToolbarProps> = ({
+export const ProductToolbar: React.FC<ProductToolbarProps> = ({
 	searchQuery,
 	onSearchChange,
+	isAdmin = false,
 	selectedPriceRange,
 	onPriceRangeChange,
 	stats,
@@ -127,16 +130,18 @@ export const SellerProductToolbar: React.FC<SellerProductToolbarProps> = ({
 				</div>
 
 				{/* Nút tạo */}
-				<div className="flex-shrink-0 pb-1">
-					<GradientButton
-						label="Thêm sản phẩm mới"
-						icon={Plus}
-						gradient="bg-gradient-to-r from-green-500 via-emerald-500 to-emerald-600"
-						hoverGradient="hover:from-green-600 hover:to-emerald-700"
-						onClick={onCreateClick}
-						className="shadow-lg shadow-green-500/30 h-[46px]"
-					/>
-				</div>
+				{!isAdmin && (
+					<div className="flex-shrink-0 pb-1">
+						<GradientButton
+							label="Thêm sản phẩm mới"
+							icon={Plus}
+							gradient="bg-gradient-to-r from-green-500 via-emerald-500 to-emerald-600"
+							hoverGradient="hover:from-green-600 hover:to-emerald-700"
+							onClick={onCreateClick}
+							className="shadow-lg shadow-green-500/30 h-[46px]"
+						/>
+					</div>
+				)}
 			</div>
 
 			{/* 3. Thống kê số lượng */}

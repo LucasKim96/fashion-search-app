@@ -35,7 +35,6 @@ export const ProductDescSection: React.FC<ProductDescSectionProps> = ({
 	const descriptionValue = watch("description");
 	return (
 		<div className="space-y-8">
-			{/* 1. THÔNG TIN SHOP (HEADER CARD) */}
 			{/* Chỉ hiện nếu KHÔNG phải shop (khách xem) */}
 			{!isShop && shopInfo && (
 				<div className="group relative overflow-hidden rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300">
@@ -121,11 +120,11 @@ export const ProductDescSection: React.FC<ProductDescSectionProps> = ({
 							<div className="flex items-center gap-2 mb-3">
 								<FileText size={18} className="text-gray-400" />
 								<span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-									Chi tiết sản phẩm
+									Mô tả sản phẩm
 								</span>
 							</div>
 
-							<div className="p-6 bg-gray-50/50 rounded-2xl border border-gray-100 text-gray-700 leading-relaxed whitespace-pre-line min-h-[120px] relative overflow-hidden">
+							<div className="p-6 rounded-2xl border border-gray-100 text-gray-700 leading-relaxed whitespace-pre-line min-h-[120px] relative overflow-hidden">
 								{/* Watermark Icon */}
 								<AlignLeft
 									className="absolute top-4 right-4 text-gray-200/50 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
@@ -133,10 +132,13 @@ export const ProductDescSection: React.FC<ProductDescSectionProps> = ({
 								/>
 
 								{descriptionValue ? (
-									<div className="relative z-10 prose prose-sm max-w-none text-base">
+									<div className="relative z-10 prose prose-sm max-w-none text-base text-gray-800">
 										{descriptionValue}
 									</div>
 								) : (
+									// <div className="relative z-10 prose prose-sm max-w-none text-base">
+									// 	{descriptionValue}
+									// </div>
 									<span className="text-gray-400 italic flex items-center gap-2">
 										Chưa có mô tả cho sản phẩm này.
 									</span>

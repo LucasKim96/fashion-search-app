@@ -1,2 +1,2 @@
-export * from "./SellerProductToolbar";
 export * from "./SellerProductDetailModal";
+export * from "./CreateProductModal";
