@@ -3,8 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { useUser } from "@shared/features/user";
 import { useAccount } from "@shared/features/account";
-// import { useAuth } from "@shared/features/auth";
-import { UserProfile } from "@shared/core";
+import { UserProfile } from "@shared/core/utils";
 
 // interface UseProfileLogicOptions {
 // 	onUpdate?: () => void; // Callback để refresh profile sau khi save

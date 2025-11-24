@@ -5,12 +5,9 @@ import clsx from "clsx";
 import { Eye, EyeOff, Trash2, Edit, Shirt } from "lucide-react";
 import { Product } from "../product.types"; // Import type Product của bạn
 import { useProduct } from "../index"; // Import hook
-import {
-	SidebarTooltip,
-	buildImageUrl,
-	formatCurrency,
-	useNotification,
-} from "@shared/core"; // Import Tooltip (Giả sử bạn có component này)
+import { buildImageUrl, formatCurrency } from "@shared/core/utils";
+import { SidebarTooltip } from "@shared/core/components/ui";
+import { useNotification } from "@shared/core/ui/NotificationProvider";
 
 interface ProductCardProps {
 	product: Product;

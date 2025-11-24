@@ -4,7 +4,7 @@ import { ShoppingCart, Menu, LogOut, User as UserIcon } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthContext } from "@shared/features/auth/AuthProvider";
-import { parseUserProfile, UserProfile } from "@shared/core";
+import { parseUserProfile, UserProfile } from "@shared/core/utils";
 import { SidebarTooltip } from "@shared/core/components/ui/SidebarTooltip";
 import { SearchInput } from "@shared/core/components/ui/SearchInput";
 

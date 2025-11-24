@@ -1,12 +1,6 @@
 "use client";
-import {
-	Card,
-	CardContent,
-	CardHeader,
-	CardTitle,
-	parseUserProfile,
-	UserProfile,
-} from "@shared/core";
+import { Card, CardContent, CardHeader } from "@shared/core/components/ui";
+import { parseUserProfile, UserProfile } from "@shared/core/utils";
 
 import { ProfileView } from "@shared/features/profile";
 import { useAuthContext } from "@shared/features/auth/AuthProvider";

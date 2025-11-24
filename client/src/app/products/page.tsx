@@ -82,7 +82,7 @@ const Pagination = ({
 const ProductsPageContent = () => {
 	// 1. State quản lý trang
 	const [page, setPage] = useState(1);
-	const LIMIT = 30;
+	const LIMIT = 10;
 
 	// 2. Gọi hook với tham số phân trang
 	// Lưu ý: Hook usePublicProducts của bạn cần trả về `totalPages` hoặc `total` để tính toán

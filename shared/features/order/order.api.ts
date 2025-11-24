@@ -1,4 +1,5 @@
-import { axiosInstance, ORDER_ENDPOINTS } from "@shared/core";
+import { axiosInstance } from "@shared/core/api/axiosInstance";
+import { ORDER_ENDPOINTS } from "@shared/core/constants/api.constants";
 import { ApiResponse } from "@shared/types/common.types";
 import { Order, OrderListResponse, OrderStatus } from "./order.types"; // Đảm bảo bạn đã export các type này
 

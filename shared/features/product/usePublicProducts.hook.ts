@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { getPublicProducts } from "./product.api";
 import { Product, ProductListItem } from "./product.types";
-import { errorUtils, useNotification } from "@shared/core";
+import { errorUtils } from "@shared/core/utils";
+import { useNotification } from "@shared/core/ui/NotificationProvider";
 
 /**
  * Helper: Chuyển đổi dữ liệu Product thô sang ProductListItem cho UI.

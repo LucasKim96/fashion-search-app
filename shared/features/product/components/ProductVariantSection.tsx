@@ -36,11 +36,11 @@ import {
 	SelectItem,
 	Input,
 	GradientButton,
-	formatCurrency,
 	SidebarTooltip,
-} from "@shared/core";
+} from "@shared/core/components/ui";
 import { buildImageUrl } from "@shared/core/utils/image.utils";
-import { useNotification } from "@shared/core";
+import { useNotification } from "@shared/core/ui/NotificationProvider";
+import { formatCurrency } from "@shared/core/utils";
 
 // Hooks & Types
 import {

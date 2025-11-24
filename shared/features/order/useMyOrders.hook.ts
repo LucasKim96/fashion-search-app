@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { getMyOrdersApi } from "./order.api";
 import { Order, OrderStatus } from "./order.types";
-import { useNotification, errorUtils } from "@shared/core";
+import { useNotification } from "@shared/core/ui/NotificationProvider";
+import { errorUtils } from "@shared/core/utils";
 
 export const useMyOrders = () => {
 	const [orders, setOrders] = useState<Order[]>([]);

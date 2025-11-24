@@ -1,5 +1,6 @@
 // shared/features/product/productVariant.api.ts
-import { axiosInstance, PRODUCT_VARIANT_ENDPOINTS } from "@shared/core";
+import { axiosInstance } from "@shared/core/api/axiosInstance";
+import { PRODUCT_VARIANT_ENDPOINTS } from "@shared/core/constants/api.constants";
 import { ApiResponse } from "@shared/types/common.types";
 import {
 	ProductVariant,

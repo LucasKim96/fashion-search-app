@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { Shirt } from "lucide-react";
-import { buildImageUrl, formatCurrency } from "@shared/core";
+import { buildImageUrl, formatCurrency } from "@shared/core/utils";
 import { ProductListItem } from "@shared/features/product";
 
 interface PublicProductCardProps {

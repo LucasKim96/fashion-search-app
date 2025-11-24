@@ -16,7 +16,6 @@ import {
 	ProductInfoSection,
 	ProductDescSection,
 } from "@shared/features/product";
-import { useNotification } from "@shared/core";
 
 interface SellerProductDetailModalProps {
 	isOpen: boolean;

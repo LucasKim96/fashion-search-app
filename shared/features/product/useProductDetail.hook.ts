@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { getProductDetail } from "./product.api";
 import { ProductDetail } from "./product.types";
-import { errorUtils } from "@shared/core";
 
 export const useProductDetail = (productId: string) => {
 	const [product, setProduct] = useState<ProductDetail | null>(null);
