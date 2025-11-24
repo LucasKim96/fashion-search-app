@@ -1,16 +1,21 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useNotification } from "@shared/core/ui/NotificationProvider";
-// Sửa lại đường dẫn nếu cần
-import { deleteShopApi, getMyShopApi } from "@/features/shop/shop.api";
+import {
+	getMyShopForManagementApi,
+	softDeleteMyShopApi,
+	hardDeleteMyShopApi,
+	restoreMyShopApi,
+} from "@/features/shop/shop.api";
 import { ShopResponse } from "@/features/shop/shop.types";
-import { Trash2, Calendar } from "lucide-react"; // Thêm icon Calendar
-import { buildImageUrl } from "@shared/core/utils/image.utils";
+import { Trash2, Calendar, EyeOff, ShieldX, RotateCw } from "lucide-react";
+import { buildImageUrl } from "@shared/core";
 import ConfirmationModal from "@/components/modals/ConfirmationModal";
+import clsx from "clsx";
 
-// Helper function để định dạng ngày tháng cho đẹp hơn
+// Helper để định dạng ngày tháng
 const formatDate = (dateString: string) => {
 	return new Date(dateString).toLocaleDateString("vi-VN", {
 		day: "numeric",
@@ -19,127 +24,190 @@ const formatDate = (dateString: string) => {
 	});
 };
 
+// ===================================================================
+// CÁC COMPONENT CON ĐỂ GIAO DIỆN SẠCH SẼ HƠN
+// ===================================================================
+
+const LoadingState = () => (
+	<div className="p-8 text-center text-gray-500">
+		<p className="animate-pulse">Đang tải thông tin cửa hàng...</p>
+	</div>
+);
+
+const NoShopState = () => {
+	const router = useRouter();
+	return (
+		<div className="p-8 text-center bg-white rounded-2xl shadow-md">
+			<h2 className="text-2xl font-bold text-gray-800">Bạn chưa có cửa hàng</h2>
+			<p className="mt-2 text-gray-500">
+				Hãy đăng ký ngay để bắt đầu hành trình kinh doanh của bạn!
+			</p>
+			<button
+				onClick={() => router.push("/seller/register-shop")}
+				className="mt-6 px-6 py-3 bg-primary text-white font-semibold rounded-lg shadow-md hover:bg-primary-dark transition-transform hover:scale-105">
+				Đăng ký ngay
+			</button>
+		</div>
+	);
+};
+
+const RestoreShopBanner = ({
+	onRestore,
+	loading,
+}: {
+	onRestore: () => void;
+	loading: boolean;
+}) => (
+	<div className="p-6 border-2 border-dashed border-yellow-400 bg-yellow-50 rounded-2xl text-center">
+		<h2 className="text-2xl font-bold text-yellow-800">
+			Cửa hàng của bạn đang bị tạm ẩn
+		</h2>
+		<p className="mt-2 text-yellow-700">
+			Khách hàng sẽ không thể thấy cửa hàng hoặc sản phẩm của bạn. Bạn có muốn
+			kích hoạt lại không?
+		</p>
+		<button
+			onClick={onRestore}
+			disabled={loading}
+			className="mt-4 inline-flex items-center gap-2 px-6 py-3 bg-green-500 text-white font-semibold rounded-lg hover:bg-green-600 transition shadow-md disabled:bg-gray-400">
+			<RotateCw className={loading ? "animate-spin" : ""} size={20} />
+			{loading ? "Đang xử lý..." : "Kích hoạt lại cửa hàng"}
+		</button>
+	</div>
+);
+
+// ===================================================================
+// COMPONENT CHÍNH
+// ===================================================================
 export default function ShopProfilePage() {
 	const router = useRouter();
 	const { showToast } = useNotification();
+
 	const [myShop, setMyShop] = useState<ShopResponse | null>(null);
-	const [isModalOpen, setIsModalOpen] = useState(false);
-	const [loading, setLoading] = useState(false);
 	const [pageLoading, setPageLoading] = useState(true);
+	const [actionLoading, setActionLoading] = useState(false);
+	const [softDeleteModalOpen, setSoftDeleteModalOpen] = useState(false);
+	const [hardDeleteModalOpen, setHardDeleteModalOpen] = useState(false);
+
+	const fetchMyShop = useCallback(async () => {
+		try {
+			const response = await getMyShopForManagementApi();
+			setMyShop(response.data);
+		} catch (error) {
+			setMyShop(null);
+		} finally {
+			setPageLoading(false);
+		}
+	}, []);
 
 	useEffect(() => {
-		const fetchMyShop = async () => {
-			try {
-				const response = await getMyShopApi();
-				setMyShop(response.data);
-			} catch (error) {
-				showToast("Không thể tải thông tin shop", "error");
-				console.error(error);
-			} finally {
-				setPageLoading(false);
-			}
-		};
 		fetchMyShop();
-	}, [showToast]);
+	}, [fetchMyShop]);
 
-	const handleDeleteShop = async () => {
-		if (!myShop?._id) {
-			showToast("Không tìm thấy ID của shop để xóa", "error");
-			return;
-		}
-		setLoading(true);
+	const handleAction = async (
+		apiCall: () => Promise<any>,
+		successMessage: string,
+		errorMessage: string,
+		onFinally?: () => void
+	) => {
+		setActionLoading(true);
 		try {
-			const response = await deleteShopApi(myShop._id);
-			showToast(response.message || "Xóa shop thành công!", "success");
-			router.push("/user/profile");
+			const response = await apiCall();
+			showToast(response.message || successMessage, "success");
+			// Dùng reload để đảm bảo state toàn cục (useAuth) cũng được cập nhật
+			window.location.reload();
+		} catch (err: any) {
+			showToast(err?.response?.data?.message || errorMessage, "error");
+		} finally {
+			setActionLoading(false);
+			if (onFinally) onFinally();
+		}
+	};
+
+	const handleSoftDeleteShop = () =>
+		handleAction(
+			softDeleteMyShopApi,
+			"Ẩn shop thành công!",
+			"Lỗi khi ẩn shop",
+			() => setSoftDeleteModalOpen(false)
+		);
+
+	const handleHardDeleteShop = () =>
+		handleAction(
+			hardDeleteMyShopApi,
+			"Xóa shop vĩnh viễn thành công!",
+			"Lỗi khi xóa shop",
+			() => setHardDeleteModalOpen(false)
+		);
+
+	const handleRestoreShop = async () => {
+		setActionLoading(true);
+		try {
+			const response = await restoreMyShopApi();
+			showToast(response.message || "Khôi phục shop thành công!", "success");
+			await fetchMyShop(); // Tải lại dữ liệu trang này
 		} catch (err: any) {
 			showToast(
-				err?.response?.data?.message || err.message || "Lỗi không xác định",
+				err?.response?.data?.message || "Lỗi khi khôi phục shop",
 				"error"
 			);
 		} finally {
-			setLoading(false);
-			setIsModalOpen(false);
+			setActionLoading(false);
 		}
 	};
 
-	// Xử lý lỗi khi ảnh không tải được
-	const handleImageError = (
-		e: React.SyntheticEvent<HTMLImageElement, Event>
-	) => {
-		const target = e.target as HTMLImageElement;
-
-		// Tạo URL đầy đủ cho ảnh mặc định
-		// Lưu ý: Tôi đã sửa "ahop" thành "shop" vì đó có thể là lỗi đánh máy.
-		const defaultLogoUrl = buildImageUrl("/assets/shop/default-logo.png");
-		const defaultCoverUrl = buildImageUrl("/assets/shop/default-cover.jpg");
-
-		// Ngăn vòng lặp vô hạn nếu chính ảnh mặc định cũng bị lỗi
-		if (target.src === defaultLogoUrl || target.src === defaultCoverUrl) {
-			return;
-		}
-
-		if (target.id === "shop-logo") {
-			target.src = defaultLogoUrl;
-		} else if (target.id === "shop-cover") {
-			target.src = defaultCoverUrl;
-		}
-	};
-
-	if (pageLoading) {
-		return (
-			<div className="p-8 text-center">Đang tải thông tin cửa hàng...</div>
-		);
-	}
-
-	if (!myShop) {
-		return (
-			<div className="p-8">Không tìm thấy thông tin cửa hàng của bạn.</div>
-		);
-	}
+	if (pageLoading) return <LoadingState />;
+	if (!myShop) return <NoShopState />;
 
 	return (
 		<div className="p-4 sm:p-6 lg:p-8 space-y-8">
-			{/* Phần Card thông tin chính của Shop */}
-			<div className="bg-white rounded-lg shadow-md overflow-hidden">
-				{/* --- Ảnh bìa --- */}
-				<div className="relative">
+			{myShop.isDeleted && (
+				<RestoreShopBanner
+					onRestore={handleRestoreShop}
+					loading={actionLoading}
+				/>
+			)}
+
+			<div
+				className={clsx(
+					"bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-500",
+					{ "opacity-60 blur-sm pointer-events-none": myShop.isDeleted }
+				)}>
+				{/* Ảnh bìa */}
+				<div className="relative bg-gray-100 h-64 flex items-center justify-center">
 					<img
-						id="shop-cover"
 						src={buildImageUrl(myShop.coverUrl)}
-						alt="Ảnh bìa cửa hàng"
-						onError={handleImageError}
-						className="w-full h-48 object-cover"
+						alt="Ảnh bìa"
+						className="w-full h-full object-contain"
 					/>
-					{/* --- Logo --- */}
-					{/* Dùng negative margin để kéo logo lên trên ảnh bìa */}
-					<div className="absolute left-6 -bottom-12">
-						<img
-							id="shop-logo"
-							src={buildImageUrl(myShop.logoUrl)}
-							alt="Logo cửa hàng"
-							onError={handleImageError}
-							className="w-24 h-24 rounded-full border-4 border-white bg-gray-200 object-cover shadow-lg"
-						/>
+				</div>
+
+				<div className="relative px-6 pb-6">
+					{/* Logo */}
+					<div className="absolute left-6 -top-14">
+						<div className="w-28 h-28 rounded-full border-4 border-white bg-gray-100 shadow-lg flex items-center justify-center overflow-hidden">
+							<img
+								src={buildImageUrl(myShop.logoUrl)}
+								alt="Logo"
+								className="w-full h-full object-contain"
+							/>
+						</div>
+					</div>
+
+					<div className="pt-16">
+						<h1 className="text-4xl font-bold text-gray-900">
+							{myShop.shopName}
+						</h1>
+						<div className="flex items-center text-sm text-gray-500 mt-2">
+							<Calendar size={16} className="mr-2" />
+							<span>Tham gia vào {formatDate(myShop.createdAt)}</span>
+						</div>
 					</div>
 				</div>
 
-				{/* --- Tên và thông tin cơ bản --- */}
-				{/* Thêm padding-top để tạo khoảng trống cho logo */}
-				<div className="pt-16 px-6 pb-4">
-					<h1 className="text-3xl font-bold text-gray-800">
-						{myShop.shopName}
-					</h1>
-					<div className="flex items-center text-sm text-gray-500 mt-2">
-						<Calendar size={16} className="mr-2" />
-						<span>Tham gia vào {formatDate(myShop.createdAt)}</span>
-					</div>
-				</div>
-
-				{/* --- Mô tả Shop --- */}
-				<div className="px-6 pb-6">
-					<h2 className="text-lg font-semibold text-gray-700 border-b pb-2 mb-3">
-						Mô tả cửa hàng
+				<div className="px-6 pb-6 border-t pt-6">
+					<h2 className="text-xl font-semibold text-gray-800 mb-3">
+						Giới thiệu cửa hàng
 					</h2>
 					<p className="text-gray-600 whitespace-pre-wrap">
 						{myShop.description || "Chưa có mô tả."}
@@ -147,29 +215,65 @@ export default function ShopProfilePage() {
 				</div>
 			</div>
 
-			{/* Phần Vùng nguy hiểm (Xóa shop) */}
-			<div className="p-4 border border-red-300 bg-red-50 rounded-lg">
-				<h2 className="text-lg font-semibold text-red-800">Vùng nguy hiểm</h2>
-				<p className="text-red-700 mt-1">
-					Xóa cửa hàng của bạn là một hành động vĩnh viễn và không thể hoàn tác.
-				</p>
-				<button
-					onClick={() => setIsModalOpen(true)}
-					className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors">
-					<Trash2 size={18} />
-					Xóa cửa hàng
-				</button>
-			</div>
+			{!myShop.isDeleted && (
+				<div className="p-6 border-2 border-dashed border-red-300 bg-red-50 rounded-2xl space-y-6">
+					<div>
+						<h2 className="text-xl font-bold text-red-800 flex items-center gap-2">
+							<EyeOff /> Ẩn cửa hàng
+						</h2>
+						<p className="text-red-700 mt-1">
+							Hành động này sẽ tạm ẩn cửa hàng và sản phẩm. Vai trò "Chủ shop"
+							sẽ được giữ lại để bạn có thể khôi phục sau.
+						</p>
+						<button
+							onClick={() => setSoftDeleteModalOpen(true)}
+							className="mt-4 inline-flex items-center gap-2 px-5 py-2 bg-yellow-500 text-white font-semibold rounded-lg hover:bg-yellow-600 transition shadow-md">
+							Tiến hành Ẩn
+						</button>
+					</div>
+					<hr className="border-red-200" />
+					<div>
+						<h2 className="text-xl font-bold text-red-900 flex items-center gap-2">
+							<ShieldX /> Xóa vĩnh viễn
+						</h2>
+						<p className="text-red-800 mt-1">
+							Hành động này sẽ xóa vĩnh viễn toàn bộ dữ liệu shop và sản phẩm.{" "}
+							<strong className="uppercase">Không thể hoàn tác.</strong>
+						</p>
+						<button
+							onClick={() => setHardDeleteModalOpen(true)}
+							className="mt-4 inline-flex items-center gap-2 px-5 py-2 bg-red-700 text-white font-semibold rounded-lg hover:bg-red-800 transition shadow-md">
+							<Trash2 size={18} /> Tôi hiểu, Xóa vĩnh viễn
+						</button>
+					</div>
+				</div>
+			)}
 
-			{/* Modal xác nhận xóa */}
+			{/* Modals */}
 			<ConfirmationModal
-				isOpen={isModalOpen}
-				onClose={() => setIsModalOpen(false)}
-				onConfirm={handleDeleteShop}
-				loading={loading}
-				title="Xác nhận Xóa Shop"
-				description="Bạn có chắc chắn muốn xóa shop vĩnh viễn không? Tất cả sản phẩm và dữ liệu liên quan sẽ bị mất."
-				confirmButtonText="Đồng ý Xóa"
+				isOpen={softDeleteModalOpen}
+				onClose={() => setSoftDeleteModalOpen(false)}
+				onConfirm={handleSoftDeleteShop}
+				loading={actionLoading}
+				title="Xác nhận Ẩn Shop"
+				description="Cửa hàng và sản phẩm sẽ không còn hiển thị với khách hàng. Bạn có chắc chắn muốn tiếp tục?"
+				confirmButtonText="Đồng ý, Ẩn Shop"
+				variant="warning"
+			/>
+			<ConfirmationModal
+				isOpen={hardDeleteModalOpen}
+				onClose={() => setHardDeleteModalOpen(false)}
+				onConfirm={handleHardDeleteShop}
+				loading={actionLoading}
+				title="HÀNH ĐỘNG KHÔNG THỂ HOÀN TÁC!"
+				description={
+					<span>
+						Bạn sắp xóa vĩnh viễn cửa hàng này. Toàn bộ dữ liệu sẽ bị mất. Vui
+						lòng xác nhận lần cuối.
+					</span>
+				}
+				confirmButtonText="Tôi chắc chắn, Xóa"
+				variant="danger"
 			/>
 		</div>
 	);
