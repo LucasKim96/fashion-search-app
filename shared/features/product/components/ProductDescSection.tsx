@@ -149,7 +149,7 @@ export const ProductDescSection: React.FC<ProductDescSectionProps> = ({
 				) : (
 					// --- EDIT / CREATE MODE ---
 					<div className="relative group/input">
-						<label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2 ml-1">
+						<label className="block text-base font-bold text-indigo-700 uppercase tracking-wider mb-2 ml-1">
 							Mô tả chi tiết
 						</label>
 

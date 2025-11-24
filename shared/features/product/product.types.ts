@@ -76,6 +76,11 @@ export interface Product {
 	createdAt: string;
 	updatedAt: string;
 	variants?: ProductVariantDetail[]; // kèm biến thể nếu chi tiết
+	// (Optional) Để FE biết SP này đang crop kiểu gì
+	aiConfig?: {
+		targetGroup: string;
+		lastIndexedAt: string;
+	};
 }
 export interface ProductDetailShopInfo {
 	_id: string;
@@ -97,6 +102,11 @@ export interface ProductDetail {
 	createdAt: string;
 	updatedAt: string;
 	variants?: ProductVariantDetail[]; // kèm biến thể nếu chi tiết
+	// (Optional) Để FE biết SP này đang crop kiểu gì
+	aiConfig?: {
+		targetGroup: string;
+		lastIndexedAt: string;
+	};
 }
 
 export interface ShopFullInfo {
@@ -128,6 +138,9 @@ export interface CreateProductWithVariantsRequest {
 	pdName: string;
 	basePrice: number;
 	description?: string;
+	// Nhóm đối tượng để AI crop (mặc định 'full_body')
+	// Enum: 'upper_body' | 'lower_body' | 'full_body'
+	targetGroup?: "upper_body" | "lower_body" | "full_body";
 	// Danh sách ảnh sản phẩm (FE gửi file form-data)
 	images?: File[];
 	// Danh sách biến thể (FE gửi JSON string)

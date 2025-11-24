@@ -13,6 +13,9 @@ import {
 	Warehouse,
 	Layers,
 	Check,
+	Sparkles,
+	Shirt,
+	Scissors,
 	ShoppingCart,
 	Box,
 } from "lucide-react";
@@ -266,7 +269,7 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({
 						</div>
 					) : (
 						<div className="relative group/input">
-							<label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2 ml-1">
+							<label className="block text-base font-bold text-indigo-700 uppercase tracking-wider mb-2 ml-1">
 								Tên sản phẩm
 							</label>
 							<div className="relative transition-all duration-300 focus-within:-translate-y-1 focus-within:shadow-lg rounded-xl">
@@ -287,7 +290,7 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({
 										required: "Tên sản phẩm là bắt buộc",
 									})}
 									className={clsx(
-										"w-full pl-12 pr-4 py-3.5 text-lg font-bold text-gray-800 bg-gray-50/50 border-2 rounded-xl outline-none transition-all",
+										"w-full pl-12 pr-4 py-3.5 text-lg font-bold text-gray-700 bg-gray-50/50 border-2 rounded-xl outline-none transition-all",
 										"placeholder:text-gray-300",
 										"focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10",
 										errors.pdName
@@ -329,7 +332,7 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({
 							}}
 							render={({ field: { onChange, value } }) => (
 								<div className="relative group/input">
-									<label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2 ml-1">
+									<label className="block text-base font-bold text-indigo-700 uppercase tracking-wider mb-2 ml-1">
 										Giá bán (VNĐ)
 									</label>
 
@@ -384,57 +387,137 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({
 						/>
 					)}
 				</div>
+				{/* --- 3. AI CROP SELECTION (CHỈ HIỆN KHI CREATE) --- */}
+				{currentMode === "create" && (
+					<div className="mt-2  bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-100 p-4 rounded-2xl relative overflow-hidden group">
+						{/* Background Decoration */}
+						<Sparkles
+							className="absolute -top-2 -right-2 text-indigo-400 opacity-20 rotate-12 group-hover:rotate-45 transition-transform duration-700"
+							size={80}
+						/>
 
-				{/* --- BỔ SUNG: UI HIỂN THỊ THUỘC TÍNH (Ngay dưới giá) --- */}
-				{Object.keys(groupedAttributes).length > 0 && (
-					<div className="relative pl-3 border-l-4 border-blue-400 transition-all hover:border-blue-300 mt-4">
-						<span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 block">
-							Tùy chọn sản phẩm
-						</span>
-
-						<div className="flex flex-col gap-4">
-							{Object.entries(groupedAttributes).map(([label, values]) => (
-								<div key={label} className="flex flex-col gap-2">
-									{/* Tên thuộc tính */}
-									<div className="flex items-center gap-2">
-										<Layers size={14} className="text-gray-400" />
-										<span className="text-sm font-semibold text-gray-700 capitalize">
-											{label}:
-											{/* Hiện giá trị đang chọn bên cạnh label cho dễ nhìn */}
-											{selectedOptions[label] && (
-												<span className="ml-1 text-blue-600 font-bold">
-													{selectedOptions[label]}
-												</span>
-											)}
-										</span>
-									</div>
-
-									{/* Danh sách nút bấm */}
-									<div className="flex flex-wrap gap-2">
-										{values.map((val, idx) => {
-											const isSelected = selectedOptions[label] === val;
-											return (
-												<button
-													key={idx}
-													type="button" // Quan trọng để không submit form
-													onClick={() => handleOptionClick(label, val)}
-													className={clsx(
-														"px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 border select-none flex items-center gap-2",
-														isSelected
-															? "bg-blue-600 border-blue-600 text-white shadow-md scale-105"
-															: "bg-white border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50"
-													)}>
-													{val}
-													{isSelected && <Check size={14} strokeWidth={3} />}
-												</button>
-											);
-										})}
-									</div>
-								</div>
-							))}
+						{/* Intro Text */}
+						<div className="flex items-start gap-3 mb-4 relative z-10 ">
+							{/* <div className="bg-indigo-500 text-white p-2 rounded-full shadow-md shrink-0">
+								<Sparkles size={18} />
+							</div> */}
+							<div className="p-2 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl shadow-lg shadow-blue-500/20 text-white shrink-0">
+								<Sparkles
+									size={18}
+									fill="currentColor"
+									className="opacity-90"
+								/>
+							</div>
+							<div>
+								<h4 className="text-base font-bold text-indigo-700 mb-1">
+									Smart Search Assistant
+								</h4>
+								<p className="text-sm text-indigo-800/80 leading-relaxed">
+									Hệ thống sẽ phân tích hình ảnh để đưa ra những gợi ý tìm kiếm
+									phù hợp nhất về sản phẩm của bạn. Chọn đúng loại trang phục sẽ
+									giúp sản phẩm của bạn nổi bật hơn và dễ đến tay người tiêu
+									dùng hơn.
+								</p>
+							</div>
 						</div>
+
+						{/* Selection Buttons */}
+						<Controller
+							name="targetGroup"
+							control={control}
+							defaultValue="full_body" // Mặc định
+							render={({ field: { onChange, value } }) => (
+								<div className="grid grid-cols-3 gap-3 relative z-10">
+									<button
+										type="button"
+										onClick={() => onChange("upper_body")}
+										className={clsx(
+											"flex flex-col items-center justify-center gap-2 py-3 rounded-xl border-2 transition-all duration-200",
+											value === "upper_body"
+												? "bg-white border-indigo-500 shadow-md -translate-y-0.5"
+												: "bg-white/50 border-transparent hover:bg-white hover:border-indigo-200"
+										)}>
+										<Shirt
+											size={24}
+											className={
+												value === "upper_body"
+													? "text-indigo-600"
+													: "text-indigo-400"
+											}
+										/>
+										<span
+											className={clsx(
+												"text-sm font-bold",
+												value === "upper_body"
+													? "text-indigo-700"
+													: "text-indigo-500"
+											)}>
+											Áo
+										</span>
+									</button>
+
+									<button
+										type="button"
+										onClick={() => onChange("lower_body")}
+										className={clsx(
+											"flex flex-col items-center justify-center gap-2 py-3 rounded-xl border-2 transition-all duration-200",
+											value === "lower_body"
+												? "bg-white border-indigo-500 shadow-md -translate-y-0.5"
+												: "bg-white/50 border-transparent hover:bg-white hover:border-indigo-200"
+										)}>
+										{/* Icon Quần/Váy */}
+										<Scissors
+											size={24}
+											className={
+												value === "lower_body"
+													? "text-indigo-600"
+													: "text-indigo-400"
+											}
+										/>
+										<span
+											className={clsx(
+												"text-sm font-bold",
+												value === "lower_body"
+													? "text-indigo-700"
+													: "text-indigo-500"
+											)}>
+											Quần/Váy
+										</span>
+									</button>
+
+									<button
+										type="button"
+										onClick={() => onChange("full_body")}
+										className={clsx(
+											"flex flex-col items-center justify-center gap-2 py-3 rounded-xl border-2 transition-all duration-200",
+											value === "full_body"
+												? "bg-white border-indigo-500 shadow-md -translate-y-0.5"
+												: "bg-white/50 border-transparent hover:bg-white hover:border-indigo-200"
+										)}>
+										<Layers
+											size={24}
+											className={
+												value === "full_body"
+													? "text-indigo-600"
+													: "text-indigo-400"
+											}
+										/>
+										<span
+											className={clsx(
+												"text-sm font-bold",
+												value === "full_body"
+													? "text-indigo-700"
+													: "text-indigo-500"
+											)}>
+											Cả bộ
+										</span>
+									</button>
+								</div>
+							)}
+						/>
 					</div>
 				)}
+				{/* 4. DASHBOARD INFO (Grid Layout) */}
 
 				{/* --- BỔ SUNG 1: HIỂN THỊ TỒN KHO --- */}
 				<div className="flex items-center gap-3 mt-2 p-3 bg-gray-50 rounded-xl border border-gray-200 w-fit">
@@ -477,113 +560,83 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({
 					</div>
 				)}
 
-				{/* 3. DASHBOARD INFO (Grid Layout) */}
-				{/* Chỉ hiển thị ở chế độ View của Shop để thông tin gọn gàng */}
 				{(isShop || isAdmin) && currentMode === "view" && product && (
-					<div className="grid grid-cols-2 gap-4 mt-4">
-						{/* 1. TRẠNG THÁI */}
-						<div className="group relative overflow-hidden p-4 bg-white rounded-2xl border border-gray-100 shadow-md hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-1">
-							<div
-								className={clsx(
-									"absolute top-0 right-0 w-24 h-24 rounded-full -mr-10 -mt-10 transition-transform duration-500 opacity-20 group-hover:scale-125",
-									product.isActive ? "bg-emerald-400" : "bg-gray-400"
-								)}
-							/>
-
-							<div className="relative flex items-center gap-4">
-								<div
-									className={clsx(
-										"w-14 h-14 rounded-2xl flex items-center justify-center shadow-inner transition-colors duration-300",
-										product.isActive
-											? "bg-gradient-to-br from-emerald-50 to-emerald-100 text-emerald-600"
-											: "bg-gradient-to-br from-gray-50 to-gray-100 text-gray-500"
-									)}>
-									<Tag size={24} strokeWidth={2} className="drop-shadow-sm" />
-								</div>
-								<div className="flex flex-col">
-									<span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest mb-0.5">
-										Trạng thái
-									</span>
-									<span
-										className={clsx(
-											"text-base font-black tracking-tight",
-											product.isActive ? "text-emerald-600" : "text-gray-500"
-										)}>
-										{product.isActive ? "Đang bán" : "Đang ẩn"}
-									</span>
-								</div>
-							</div>
-						</div>
-
-						{/* 2. TỔNG TỒN KHO */}
-						<div className="group relative overflow-hidden p-4 bg-white rounded-2xl border border-gray-100 shadow-md hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-1">
-							<div className="absolute top-0 right-0 w-24 h-24 bg-blue-400 rounded-full -mr-10 -mt-10 opacity-20 transition-transform duration-500 group-hover:scale-125" />
-
-							<div className="relative flex items-center gap-4">
-								<div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100 text-blue-600 flex items-center justify-center shadow-inner">
-									<Warehouse
-										size={24}
-										strokeWidth={2}
-										className="drop-shadow-sm"
-									/>
-								</div>
-								<div className="flex flex-col min-w-0">
-									<span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest mb-0.5">
-										Tổng tồn kho
-									</span>
-									<span className="text-base font-black text-gray-800 truncate tracking-tight">
-										{new Intl.NumberFormat("vi-VN").format(totalStock)}{" "}
-										<span className="text-xs font-medium text-gray-400 font-sans">
-											SP
-										</span>
-									</span>
-								</div>
-							</div>
-						</div>
-
-						{/* 3. NGÀY TẠO */}
-						<div className="group relative overflow-hidden p-4 bg-white rounded-2xl border border-gray-100 shadow-md hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-1">
-							<div className="absolute top-0 right-0 w-24 h-24 bg-orange-400 rounded-full -mr-10 -mt-10 opacity-20 transition-transform duration-500 group-hover:scale-125" />
-
-							<div className="relative flex items-center gap-4">
-								<div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-50 to-orange-100 text-orange-600 flex items-center justify-center shadow-inner">
-									<Calendar
-										size={24}
-										strokeWidth={2}
-										className="drop-shadow-sm"
-									/>
-								</div>
-								<div className="flex flex-col">
-									<span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest mb-0.5">
-										Ngày tạo
-									</span>
-									<span className="text-base font-black text-gray-800 tracking-tight font-mono">
-										{new Date(product.createdAt).toLocaleDateString("vi-VN")}
-									</span>
-								</div>
-							</div>
-						</div>
-
-						{/* 4. CẬP NHẬT CUỐI */}
-						<div className="group relative overflow-hidden p-4 bg-white rounded-2xl border border-gray-100 shadow-md hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-1">
-							<div className="absolute top-0 right-0 w-24 h-24 bg-purple-400 rounded-full -mr-10 -mt-10 opacity-20 transition-transform duration-500 group-hover:scale-125" />
-
-							<div className="relative flex items-center gap-4">
-								<div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-50 to-purple-100 text-purple-600 flex items-center justify-center shadow-inner">
-									<Clock size={24} strokeWidth={2} className="drop-shadow-sm" />
-								</div>
-								<div className="flex flex-col">
-									<span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest mb-0.5">
-										Cập nhật cuối
-									</span>
-									<span className="text-base font-black text-gray-800 tracking-tight font-mono">
-										{new Date(product.updatedAt).toLocaleDateString("vi-VN")}
-									</span>
-								</div>
-							</div>
-						</div>
+					<div className="grid grid-cols-2 gap-4 mt-2">
+						{/* Box 1: Trạng thái */}
+						<DashboardBox
+							color="emerald"
+							icon={Tag}
+							label="Trạng thái"
+							value={product.isActive ? "Đang bán" : "Đang ẩn"}
+						/>
+						{/* Box 2: Tồn kho */}
+						<DashboardBox
+							color="blue"
+							icon={Warehouse}
+							label="Tổng tồn kho"
+							value={`${totalStock} SP`}
+						/>
+						{/* Box 3: Ngày tạo */}
+						<DashboardBox
+							color="orange"
+							icon={Calendar}
+							label="Ngày tạo"
+							value={new Date(product.createdAt).toLocaleDateString("vi-VN")}
+						/>
+						{/* Box 4: Cập nhật */}
+						<DashboardBox
+							color="purple"
+							icon={Clock}
+							label="Cập nhật cuối"
+							value={new Date(product.updatedAt).toLocaleDateString("vi-VN")}
+						/>
 					</div>
 				)}
+			</div>
+		</div>
+	);
+};
+// Component phụ cho đẹp code Dashboard
+const DashboardBox: React.FC<{
+	color: string;
+	icon: any;
+	label: React.ReactNode;
+	value: React.ReactNode;
+}> = ({ color, icon: Icon, label, value }) => {
+	const outerClass =
+		"group relative overflow-hidden p-4 bg-white rounded-2xl border border-gray-100 shadow-md hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-1";
+
+	const circleClass =
+		"absolute top-0 right-0 w-24 h-24 " +
+		"bg-" +
+		color +
+		"-400 rounded-full -mr-10 -mt-10 opacity-20 transition-transform duration-500 group-hover:scale-125";
+
+	const boxInnerClass =
+		"w-14 h-14 rounded-2xl bg-gradient-to-br " +
+		"from-" +
+		color +
+		"-50 to-" +
+		color +
+		"-100 text-" +
+		color +
+		"-600 flex items-center justify-center shadow-inner";
+
+	return (
+		<div className={outerClass}>
+			<div className={circleClass} />
+			<div className="relative flex items-center gap-4">
+				<div className={boxInnerClass}>
+					<Icon size={24} strokeWidth={2} className="drop-shadow-sm" />
+				</div>
+				<div className="flex flex-col">
+					<span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest mb-0.5">
+						{label}
+					</span>
+					<span className="text-base font-black text-gray-800 tracking-tight">
+						{value}
+					</span>
+				</div>
 			</div>
 		</div>
 	);

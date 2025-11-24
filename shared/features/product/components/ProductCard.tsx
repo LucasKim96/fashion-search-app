@@ -153,7 +153,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 				<div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-500" />
 				{/* Badge trạng thái */}
 				{shouldShowBadge && (
-					<span className="absolute top-2 right-2 z-10 px-2 py-1 bg-black/60 text-white text-[10px] font-bold uppercase tracking-wider rounded backdrop-blur-sm">
+					<span className="absolute top-2 right-2 z-10 px-2 py-1 bg-red-50 text-red-600 border border-red-100 text-[10px] font-bold uppercase tracking-wider rounded backdrop-blur-sm">
 						Đang ẩn
 					</span>
 				)}

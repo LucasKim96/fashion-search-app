@@ -92,7 +92,7 @@ export default function AdminProductPage() {
 	}, [fetchAdminCount, refreshKey]);
 
 	return (
-		<div className="p-6 space-y-4 h-screen flex flex-col bg-gray-50/50">
+		<div className="p-6 space-y-4 h-[1000px] flex flex-col bg-gray-50/50">
 			{/* 1. Toolbar (Header, Filter, Stats) */}
 			<ProductToolbar
 				isAdmin={true}
