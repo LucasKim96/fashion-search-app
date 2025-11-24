@@ -27,15 +27,18 @@ export const useProduct = () => {
 	const [loadingDetail, setLoadingDetail] = useState(false);
 	const [errorDetail, setErrorDetail] = useState<string | null>(null);
 
-	const getPublicProducts = useCallback(async (): Promise<
-		ApiResponse<Product[]>
-	> => {
+	const getPublicProducts = useCallback(async (): Promise<ApiResponse<any>> => {
 		setLoadingPublic(true);
 		setErrorPublic(null);
 		try {
 			const res = await ProductApi.getPublicProducts();
-			if (res.success) setPublicProducts(res.data);
-			else setErrorPublic(res.message || "Lỗi API");
+			if (res.success && res.data) {
+				// `res.data` là một object ProductListResponse
+				// Chúng ta cần lấy mảng `products` bên trong nó.
+				setPublicProducts(res.data.products); // <-- Bóc tách mảng `products`
+			} else {
+				setErrorPublic(res.message || "Lỗi API");
+			}
 			return res;
 		} catch (err) {
 			const msg = errorUtils.parseApiError(err);
