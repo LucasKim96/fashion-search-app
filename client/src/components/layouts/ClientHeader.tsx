@@ -93,7 +93,7 @@ export default function ClientHeader() {
 	};
 
 	const handleCameraSearch = () => {
-		router.push("/search");
+		router.push("/search-image");
 	};
 
 	useEffect(() => {

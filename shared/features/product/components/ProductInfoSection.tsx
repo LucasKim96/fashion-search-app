@@ -255,7 +255,7 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({
 						</div>
 					) : (
 						<div className="relative group/input">
-							<label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2 ml-1">
+							<label className="block text-base font-bold text-indigo-700 uppercase tracking-wider mb-2 ml-1">
 								Tên sản phẩm
 							</label>
 							<div className="relative transition-all duration-300 focus-within:-translate-y-1 focus-within:shadow-lg rounded-xl">
@@ -276,7 +276,7 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({
 										required: "Tên sản phẩm là bắt buộc",
 									})}
 									className={clsx(
-										"w-full pl-12 pr-4 py-3.5 text-lg font-bold text-gray-800 bg-gray-50/50 border-2 rounded-xl outline-none transition-all",
+										"w-full pl-12 pr-4 py-3.5 text-lg font-bold text-gray-700 bg-gray-50/50 border-2 rounded-xl outline-none transition-all",
 										"placeholder:text-gray-300",
 										"focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10",
 										errors.pdName
@@ -318,7 +318,7 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({
 							}}
 							render={({ field: { onChange, value } }) => (
 								<div className="relative group/input">
-									<label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2 ml-1">
+									<label className="block text-base font-bold text-indigo-700 uppercase tracking-wider mb-2 ml-1">
 										Giá bán (VNĐ)
 									</label>
 
@@ -375,26 +375,34 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({
 				</div>
 				{/* --- 3. AI CROP SELECTION (CHỈ HIỆN KHI CREATE) --- */}
 				{currentMode === "create" && (
-					<div className="mt-2 bg-gradient-to-br from-indigo-50 to-purple-50 p-4 rounded-2xl border border-indigo-100 relative overflow-hidden group">
+					<div className="mt-2  bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-100 p-4 rounded-2xl relative overflow-hidden group">
 						{/* Background Decoration */}
 						<Sparkles
-							className="absolute -top-2 -right-2 text-indigo-200 opacity-20 rotate-12 group-hover:rotate-45 transition-transform duration-700"
+							className="absolute -top-2 -right-2 text-indigo-400 opacity-20 rotate-12 group-hover:rotate-45 transition-transform duration-700"
 							size={80}
 						/>
 
 						{/* Intro Text */}
-						<div className="flex items-start gap-3 mb-4 relative z-10">
-							<div className="bg-indigo-500 text-white p-2 rounded-lg shadow-md shrink-0">
+						<div className="flex items-start gap-3 mb-4 relative z-10 ">
+							{/* <div className="bg-indigo-500 text-white p-2 rounded-full shadow-md shrink-0">
 								<Sparkles size={18} />
+							</div> */}
+							<div className="p-2 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl shadow-lg shadow-blue-500/20 text-white shrink-0">
+								<Sparkles
+									size={18}
+									fill="currentColor"
+									className="opacity-90"
+								/>
 							</div>
 							<div>
-								<h4 className="text-sm font-bold text-indigo-700 mb-1">
-									AI Smart Crop & Search
+								<h4 className="text-base font-bold text-indigo-700 mb-1">
+									Smart Search Assistant
 								</h4>
-								<p className="text-xs text-gray-600 leading-relaxed">
-									Hệ thống AI của chúng tôi sẽ tự động cắt (crop) ảnh sản phẩm
-									để tối ưu hóa việc tìm kiếm. Vui lòng chọn loại trang phục
-									chính để AI học chính xác nhất nhé!
+								<p className="text-sm text-indigo-800/80 leading-relaxed">
+									Hệ thống sẽ phân tích hình ảnh để đưa ra những gợi ý tìm kiếm
+									phù hợp nhất về sản phẩm của bạn. Chọn đúng loại trang phục sẽ
+									giúp sản phẩm của bạn nổi bật hơn và dễ đến tay người tiêu
+									dùng hơn.
 								</p>
 							</div>
 						</div>
@@ -420,17 +428,17 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({
 											className={
 												value === "upper_body"
 													? "text-indigo-600"
-													: "text-gray-400"
+													: "text-indigo-400"
 											}
 										/>
 										<span
 											className={clsx(
-												"text-xs font-bold",
+												"text-sm font-bold",
 												value === "upper_body"
 													? "text-indigo-700"
-													: "text-gray-500"
+													: "text-indigo-500"
 											)}>
-											Áo (Upper)
+											Áo
 										</span>
 									</button>
 
@@ -449,15 +457,15 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({
 											className={
 												value === "lower_body"
 													? "text-indigo-600"
-													: "text-gray-400"
+													: "text-indigo-400"
 											}
 										/>
 										<span
 											className={clsx(
-												"text-xs font-bold",
+												"text-sm font-bold",
 												value === "lower_body"
 													? "text-indigo-700"
-													: "text-gray-500"
+													: "text-indigo-500"
 											)}>
 											Quần/Váy
 										</span>
@@ -477,17 +485,17 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({
 											className={
 												value === "full_body"
 													? "text-indigo-600"
-													: "text-gray-400"
+													: "text-indigo-400"
 											}
 										/>
 										<span
 											className={clsx(
-												"text-xs font-bold",
+												"text-sm font-bold",
 												value === "full_body"
 													? "text-indigo-700"
-													: "text-gray-500"
+													: "text-indigo-500"
 											)}>
-											Cả bộ (Full)
+											Cả bộ
 										</span>
 									</button>
 								</div>
