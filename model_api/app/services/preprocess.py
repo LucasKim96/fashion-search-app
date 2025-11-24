@@ -118,12 +118,90 @@ def _crop_by_box(img, box):
     return img[y1:y2, x1:x2]
 
 # --- 3. LOGIC CHO KHÁCH HÀNG (BUYER - SEARCH) ---
-
 def detect_candidates_for_buyer(yolo_model, img_np):
     """
     Logic cho Client chọn vùng tìm kiếm:
-    1. Detect tất cả box (Upper, Lower, Full, etc).
-    2. Logic Merge: Nếu có Upper + Lower gần nhau -> Tạo thêm box FullBody ảo.
+    1. Detect tất cả box.
+    2. Lọc: Mỗi nhóm (Upper, Lower, Full) chỉ giữ lại 1 box có CONFIDENCE CAO NHẤT.
+    3. Logic Merge: Nếu có Upper + Lower (đã lọc) nhưng thiếu Full -> Tạo thêm box FullBody ảo.
+    
+    Trả về: List các box candidates để Frontend vẽ.
+    """
+    results = yolo_model(img_np, conf=0.25, verbose=False)
+    
+    # 1. Dictionary lưu box tốt nhất cho mỗi nhóm
+    best_matches = {
+        "upper_body": {"score": -1, "box": None},
+        "lower_body": {"score": -1, "box": None},
+        "full_body":  {"score": -1, "box": None}
+    }
+
+    # 2. Duyệt qua tất cả các box để tìm Best Match cho từng nhóm
+    for r in results:
+        for box in r.boxes:
+            cls_id = int(box.cls[0].item())
+            conf = float(box.conf[0].item())
+            coords = list(map(int, box.xyxy[0].tolist())) # [x1, y1, x2, y2]
+            
+            # Xác định nhóm
+            label = None
+            if cls_id in YOLO_CLASS_GROUPS["upper_body"]:
+                label = "upper_body"
+            elif cls_id in YOLO_CLASS_GROUPS["lower_body"]:
+                label = "lower_body"
+            elif cls_id in YOLO_CLASS_GROUPS["full_body"]:
+                label = "full_body"
+            
+            # Nếu thuộc nhóm quan tâm -> So sánh Score
+            if label:
+                if conf > best_matches[label]["score"]:
+                    best_matches[label]["score"] = conf
+                    best_matches[label]["box"] = coords
+
+    # 3. Đưa các box tốt nhất vào danh sách candidates & chuẩn bị cho Merge logic
+    candidates = []
+    
+    # Biến cờ để hỗ trợ logic Merge bên dưới
+    has_upper = best_matches["upper_body"]["box"]
+    has_lower = best_matches["lower_body"]["box"]
+    has_full  = best_matches["full_body"]["box"]
+
+    # Add vào candidates
+    for label, data in best_matches.items():
+        if data["box"]:
+            candidates.append({
+                "label": label,
+                "box": data["box"],
+                "type": "detected"
+            })
+
+    # --- Logic Merge: Nếu có Upper + Lower nhưng thiếu Full -> Merge lại ---
+    # Lúc này has_upper và has_lower chính là box xịn nhất đã lọc ở trên
+    if not has_full and has_upper and has_lower:
+        u_box = has_upper
+        l_box = has_lower
+        
+        # Tạo box bao trùm cả 2
+        merged_box = [
+            min(u_box[0], l_box[0]), # min x1
+            min(u_box[1], l_box[1]), # min y1
+            max(u_box[2], l_box[2]), # max x2
+            max(u_box[3], l_box[3])  # max y2
+        ]
+        
+        candidates.append({
+            "label": "full_body",
+            "box": merged_box,
+            "type": "merged"
+        })
+        
+    return candidates
+# def detect_candidates_for_buyer(yolo_model, img_np):
+    """
+    Logic cho Client chọn vùng tìm kiếm:
+    1. Detect tất cả box.
+    2. Lọc: Mỗi nhóm (Upper, Lower, Full) chỉ giữ lại 1 box có CONFIDENCE CAO NHẤT.
+    3. Logic Merge: Nếu có Upper + Lower (đã lọc) nhưng thiếu Full -> Tạo thêm box FullBody ảo.
     
     Trả về: List các box candidates để Frontend vẽ.
     Format: [{'label': 'upper', 'box': [x1,y1,x2,y2]}, ...]
