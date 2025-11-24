@@ -44,6 +44,7 @@ export const closeMyShopApi = () =>
 
 export const reopenMyShopApi = () =>
 	axiosInstance.patch("/shops/owner/reopen/mine").then((res) => res.data);
+
 // Thay đổi trạng thái shop
 export const changeShopStatusApi = (id: string, status: string) =>
 	axiosInstance

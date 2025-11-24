@@ -451,7 +451,6 @@ export const createAttribute = async (
 		if (accountId) {
 			const shop = await Shop.findOne({
 				accountId: toObjectId(accountId),
-				isDeleted: false,
 			}).session(session);
 
 			if (!shop) throw new Error("Không tìm thấy cửa hàng cho tài khoản này");
@@ -521,7 +520,7 @@ export const createAttribute = async (
 //     if (accountId) {
 //       const shop = await Shop.findOne({
 //         accountId: toObjectId(accountId),
-//         isDeleted: false,
+//
 //       }).session(session);
 //       if (!shop) throw new Error("Không tìm thấy cửa hàng cho tài khoản này");
 //       currentShopId = shop._id;
@@ -677,7 +676,6 @@ export const updateAttributeOnly = async (id, body, accountId = null) => {
 			// --- Shop ---
 			const shop = await Shop.findOne({
 				accountId: toObjectId(accountId),
-				isDeleted: false,
 			}).session(session);
 
 			if (!shop) throw new Error("Không tìm thấy cửa hàng cho tài khoản này");
@@ -731,7 +729,6 @@ export const deleteAttribute = async (id, accountId = null) => {
 			// Shop
 			const shop = await Shop.findOne({
 				accountId: toObjectId(accountId),
-				isDeleted: false,
 			}).session(session);
 			if (!shop) throw new Error("Không tìm thấy cửa hàng cho tài khoản này");
 
@@ -862,7 +859,6 @@ export const toggleActiveAttribute = async (
 			// Shop
 			const shop = await Shop.findOne({
 				accountId: toObjectId(accountId),
-				isDeleted: false,
 			}).session(session);
 			if (!shop) throw new Error("Không tìm thấy cửa hàng cho tài khoản này");
 
@@ -939,7 +935,6 @@ export const searchAttributes = async ({
 		if (!isAdmin && accountId) {
 			const shop = await Shop.findOne({
 				accountId: toObjectId(accountId),
-				isDeleted: false,
 			}).lean();
 			if (!shop) throw new Error("Không tìm thấy cửa hàng cho tài khoản này");
 			shopId = shop._id;
@@ -1036,7 +1031,7 @@ export const searchAttributes = async ({
 //     if (accountId) {
 //       const shop = await Shop.findOne({
 //         accountId: toObjectId(accountId),
-//         isDeleted: false,
+//
 //       }).lean();
 
 //       if (!shop) throw new Error("Không tìm thấy cửa hàng cho tài khoản này");
@@ -1095,7 +1090,7 @@ export const searchAttributes = async ({
 //     if (accountId) {
 //       const shop = await Shop.findOne({
 //         accountId: toObjectId(accountId),
-//         isDeleted: false,
+//
 //       }).lean();
 
 //       if (!shop) throw new Error("Không tìm thấy cửa hàng cho tài khoản này");

@@ -70,43 +70,8 @@ export const getMyShopDetails = async (req, res, next) => {
  */
 export const createShop = async (req, res, next) => {
 	try {
-		// --- BẮT ĐẦU DEBUG TOÀN DIỆN ---
-		console.log("\n=============================================");
-		console.log("--- Bắt đầu xử lý Request tạo Shop ---");
-		console.log("Thời gian:", new Date().toISOString());
-
-		// 1. In Headers của Request
-		// Quan trọng: Tìm 'content-type'. Nó phải là 'multipart/form-data; boundary=...'
-		console.log("\n[1] HEADERS:");
-		console.log(req.headers);
-
-		// 2. In Body của Request
-		// Đây là các trường text mà middleware đã phân tích được.
-		console.log("\n[2] BODY (Dữ liệu text):");
-		console.log(req.body);
-
-		// 3. In Files của Request (Đây là mục tiêu chính)
-		// Đây là các file mà multer đã xử lý.
-		console.log("\n[3] FILES (Dữ liệu file từ multer):");
-		console.log(req.files);
-
-		// 4. In các thông tin khác nếu cần
-		console.log("\n[4] PARAMS (Từ URL):");
-		console.log(req.params);
-		console.log("\n[5] QUERY (Từ URL):");
-		console.log(req.query);
-		console.log("\n[6] USER (Từ Auth Middleware):");
-		console.log(req.user);
-
-		console.log("\n--- Kết thúc phần Logging ---");
-		console.log("=============================================\n");
-		// --- KẾT THÚC DEBUG TOÀN DIỆN ---
-
-		// 1. Lấy dữ liệu text từ req.body
 		const { shopName, description } = req.body;
-		const accountId = req.user?.id; // Từ authMiddleware
-
-		console.log("Request Files:", req.files);
+		const accountId = req.user?.id;
 
 		// 3. Xử lý đường dẫn file (Phần quan trọng nhất)
 		let logoUrl = null; // Khởi tạo là null
@@ -139,9 +104,39 @@ export const createShop = async (req, res, next) => {
 			coverUrl, // Truyền URL đã được xử lý (hoặc null)
 		};
 
-		const newShop = await ShopService.createShop(shopData);
+		const result = await ShopService.createShop(shopData);
 
-		return successResponse(res, newShop, "Tạo shop thành công");
+		return successResponse(res, result, "Tạo shop thành công");
+	} catch (error) {
+		next(error);
+	}
+};
+
+/**
+ * Chủ shop tự đóng cửa hàng
+ */
+export const closeMyShop = async (req, res, next) => {
+	try {
+		const accountId = req.user?.id;
+		if (!accountId) throw ApiError.unauthorized("Chưa đăng nhập");
+
+		const result = await ShopService.closeMyShopByAccount(accountId);
+		return successResponse(res, result, result.message);
+	} catch (error) {
+		next(error);
+	}
+};
+
+/**
+ * Chủ shop mở lại cửa hàng
+ */
+export const reopenMyShop = async (req, res, next) => {
+	try {
+		const accountId = req.user?.id;
+		if (!accountId) throw ApiError.unauthorized("Chưa đăng nhập");
+
+		const result = await ShopService.reopenMyShopByAccount(accountId);
+		return successResponse(res, result, result.message);
 	} catch (error) {
 		next(error);
 	}
