@@ -145,6 +145,6 @@ export const CART_ENDPOINTS = {
 };
 
 export const SEARCH_ENDPOINTS = {
-	SEARCH: "/search",
+	SEARCH: "/search/search-image",
 	DETECT_SEARCH: "/search/detect",
 };

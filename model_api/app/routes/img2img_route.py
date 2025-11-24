@@ -118,7 +118,7 @@ async def search_product(
             
             # Nếu dùng Cosine Similarity (IndexFlatIP): Score càng cao càng tốt
             # Lọc bỏ các kết quả quá thấp (ví dụ < 0.5)
-            if score < 0.5: 
+            if score < 0.1: 
                 continue
 
             formatted_results.append(SearchResultItem(

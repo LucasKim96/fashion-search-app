@@ -48,7 +48,6 @@ export const useImageSearch = () => {
 				const res = await detectObjects(file);
 
 				if (res.success && res.data) {
-					// SỬA: Type DetectResponseData đã có key candidates nên gọi res.data.candidates là an toàn
 					const boxes = res.data.candidates || [];
 					setCandidates(boxes);
 
@@ -60,6 +59,7 @@ export const useImageSearch = () => {
 							"Không nhận diện được vật thể, vui lòng chọn vùng thủ công.",
 							"info"
 						);
+						setSelectedBox(null);
 					}
 				}
 			} catch (error: any) {

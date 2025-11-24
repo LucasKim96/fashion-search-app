@@ -115,56 +115,15 @@ class IndexService:
         except Exception as e:
             logger.error(f"Failed to save index: {e}")
 
-    def search(self, query_emb, top_k=20):
-        if self.index.ntotal == 0: return []
-
-        query_emb = np.array([query_emb]).astype('float32')
-        
-        # Lấy nhiều hơn top_k ( gấp 10 lần) để lọc trùng
-        # Vì FAISS trả về từng ảnh, 1 sản phẩm có nhiều ảnh nên dễ bị trùng SP
-        fetch_k = min(top_k * 10, self.index.ntotal)
-        
-        # FAISS search: Trả về Distance (D) và Index (I) đã sorted từ thấp -> cao (L2)
-        D, I = self.index.search(query_emb, fetch_k)
-        
-        unique_results = []
-        seen_product_ids = set() # Dùng Set để kiểm tra trùng cực nhanh
-        
-        for rank, (idx, score) in enumerate(zip(I[0], D[0])):
-            if idx == -1: continue # Bỏ qua kết quả rác
-            
-            info = self.id_map.get(idx)
-            if not info: continue
-            
-            p_id = info['product_id']
-            
-            # --- LOGIC QUAN TRỌNG: CHỈ LẤY ĐẠI DIỆN TỐT NHẤT ---
-            if p_id not in seen_product_ids:
-                # Đây là lần đầu tiên gặp SP này -> Nghĩa là tấm ảnh này có score tốt nhất của SP đó
-                seen_product_ids.add(p_id)
-                
-                unique_results.append({
-                    "product_id": p_id,
-                    "image_id": info['image_id'], # Tấm ảnh đại diện (giống nhất)
-                    "score": float(score),        # Điểm tương đồng (L2 Distance)
-                    "rank": len(unique_results) + 1
-                })
-            
-            # Nếu đã đủ số lượng user cần thì dừng ngay
-            if len(unique_results) >= top_k:
-                break
-                
-        return unique_results
-    def search(self, query_emb, top_k=20):
+    def search(self, query_emb, k=20):
         if self.index.ntotal == 0: return []
 
         query_emb = np.array([query_emb]).astype('float32')
         
         # Lấy gấp 10 lần k để lọc trùng sản phẩm
-        fetch_k = min(top_k * 10, self.index.ntotal)
+        fetch_k = min(k * 10, self.index.ntotal)
         
         # Search (Cosine Similarity dùng IndexFlatIP)
-        # Score càng cao (gần 1) càng tốt
         D, I = self.index.search(query_emb, fetch_k)
         
         unique_results = []
@@ -189,7 +148,8 @@ class IndexService:
                     "rank": len(unique_results) + 1
                 })
             
-            if len(unique_results) >= top_k:
+            # Kiểm tra điều kiện dừng với biến k
+            if len(unique_results) >= k:
                 break
                 
         return unique_results
