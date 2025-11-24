@@ -1,0 +1,29 @@
+# --- Python & Môi trường ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+venv/
+env/
+.env
+
+# --- Model Weights ---
+weights/
+models/
+*.pt
+*.pth
+*.onnx
+*.bin
+
+# --- Index & Mapping---
+
+index/*
+!index/.gitkeep
+
+# --- Logs & System ---
+*.log
+.DS_Store
+.vscode/
+.idea/
+
+requirements.txt.bak

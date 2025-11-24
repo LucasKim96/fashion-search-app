@@ -94,7 +94,7 @@ export const createProductWithVariants = async (req, res) => {
 				.status(401)
 				.json({ success: false, message: "Token không hợp lệ hoặc hết hạn" });
 
-		const { pdName, basePrice, description = "" } = req.body;
+		const { pdName, basePrice, description = "", targetGroup } = req.body;
 		if (!pdName || !basePrice)
 			return res
 				.status(400)
@@ -120,12 +120,10 @@ export const createProductWithVariants = async (req, res) => {
 			try {
 				variantsPayload = JSON.parse(variantsPayload);
 			} catch {
-				return res
-					.status(400)
-					.json({
-						success: false,
-						message: "variantsPayload không phải JSON hợp lệ",
-					});
+				return res.status(400).json({
+					success: false,
+					message: "variantsPayload không phải JSON hợp lệ",
+				});
 			}
 		}
 
@@ -148,6 +146,7 @@ export const createProductWithVariants = async (req, res) => {
 			images: productImages,
 			accountId,
 			variantsPayload: variantsWithImages,
+			targetGroup: targetGroup,
 		};
 
 		const result = await ProductService.createProductWithVariantsService(
@@ -158,7 +157,7 @@ export const createProductWithVariants = async (req, res) => {
 
 		return res.status(result.success ? 201 : 400).json(result);
 	} catch (error) {
-		console.error("handleCreateProductWithVariants error:", error);
+		console.error("Create Error:", error);
 		rollbackFiles(tempFiles);
 		return res.status(500).json({ success: false, message: error.message });
 	}
@@ -190,12 +189,10 @@ export const updateProductImages = async (req, res) => {
 			try {
 				keepImages = JSON.parse(req.body.keepImages);
 			} catch {
-				return res
-					.status(400)
-					.json({
-						success: false,
-						message: "keepImages không phải JSON hợp lệ",
-					});
+				return res.status(400).json({
+					success: false,
+					message: "keepImages không phải JSON hợp lệ",
+				});
 			}
 		}
 
@@ -239,9 +236,12 @@ export const updateProductImages = async (req, res) => {
 			newImages
 		);
 
-		if (!result.success) rollbackFiles(tempFiles);
+		if (!result.success) {
+			rollbackFiles(tempFiles);
+			return res.status(400).json(result);
+		}
 
-		return res.status(result.success ? 200 : 400).json(result);
+		return res.status(200).json(result);
 	} catch (error) {
 		rollbackFiles(tempFiles);
 		return res.status(500).json({ success: false, message: error.message });
@@ -404,3 +404,5 @@ export const countAllProducts = (req, res) => {
 
 export const searchProductsShop = (req, res) =>
 	handleSearchProducts(req, res, false);
+
+//--------------AI search -----------------

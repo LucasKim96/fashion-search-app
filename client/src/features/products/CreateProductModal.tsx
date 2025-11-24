@@ -13,7 +13,7 @@ import {
 	useProduct,
 	CreateProductWithVariantsRequest,
 } from "@shared/features/product";
-import { buildFormDataForCreateProduct } from "@shared/core/utils/product.utils";
+import { useNotification, buildFormDataForCreateProduct } from "@shared/core";
 
 interface CreateProductModalProps {
 	isOpen: boolean;
@@ -27,6 +27,8 @@ export const CreateProductModal: React.FC<CreateProductModalProps> = ({
 	onRefresh,
 }) => {
 	const { createShopProduct } = useProduct();
+	const { showToast } = useNotification();
+
 	// --- Local States ---
 	const [isDataChanged, setIsDataChanged] = useState(false); // Theo dõi có thay đổi dữ liệu không để reload khi đóng
 	// --- Form ---
@@ -38,13 +40,17 @@ export const CreateProductModal: React.FC<CreateProductModalProps> = ({
 			description: "",
 			images: [], // Chứa File[] từ ProductImageGallery
 			variantsPayload: [], // Chứa danh sách biến thể từ ProductVariantSection
+			targetGroup: "full_body", // Mặc định targetGroup là 'full_body'
 		},
 		mode: "onSubmit",
 	});
 
 	const onSubmit = async (data: CreateProductWithVariantsRequest) => {
 		// console.log("Creating Product with Data:", data);
-
+		if (!data.variantsPayload || data.variantsPayload.length === 0) {
+			showToast("Vui lòng tạo ít nhất một biến thể cho sản phẩm.", "error");
+			return; // Dừng hàm lại, không gửi API
+		}
 		// 1. Build FormData chuẩn (sử dụng util đã có)
 		// Lưu ý: buildFormDataForCreateProduct đã xử lý việc map fileKey cho variant
 		const formData = buildFormDataForCreateProduct(data);

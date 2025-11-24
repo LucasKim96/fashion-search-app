@@ -1,5 +1,19 @@
 import { createUploader } from "../utils/index.js";
 
+//Upload search image
+export const uploadDisk = createUploader({
+	destinationGenerator: (req) => {
+		// Lưu vào thư mục 'uploads/temp'
+		// Ảnh search chỉ cần tồn tại trong vài giây để xử lý,
+		// sau đó controller sẽ xóa đi. Để trong temp giúp dễ phân biệt với ảnh sản phẩm thật.
+		return "temp";
+	},
+	useAssets: false, // Lưu vào uploads/temp
+
+	// (Tùy chọn) Có thể tăng giới hạn lên 10MB nếu muốn hỗ trợ ảnh search chất lượng cao
+	// customLimits: { fileSize: 10 * 1024 * 1024 }
+});
+
 // Upload avatar user
 export const uploadUserAvatar = createUploader({
 	destinationGenerator: (req) => {

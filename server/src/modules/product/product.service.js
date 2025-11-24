@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import ProductVariant from "./productVariant.model.js";
 import Product from "./product.model.js";
+import ProductAIConfig from "./productAIConfig.model.js";
 import { getLastActiveString } from "../../utils/index.js";
 import Attribute from "./attribute.model.js";
 import AttributeValue from "./attributeValue.model.js";
@@ -8,6 +9,8 @@ import { createProductVariantsBulk } from "./productVariant.service.js";
 import Shop from "../shop/shop.model.js";
 import fs from "fs";
 import path from "path";
+import axios from "axios";
+import FormData from "form-data";
 import {
 	rollbackFiles,
 	backupFile,
@@ -17,9 +20,63 @@ import {
 	toObjectId,
 } from "../../utils/index.js";
 
+const MODEL_API_URL = "http://localhost:8000/img2img";
+
 const UPLOADS_ROOT = path.join(process.cwd(), "uploads");
 export const PRODUCT_FOLDER = path.join(UPLOADS_ROOT, "products");
 export const PRODUCTS_PUBLIC = "/uploads/products";
+
+// -------------------HELPER SERVICES -------------------
+/**
+ * Hàm chạy ngầm gửi ảnh sang AI Model để Index
+ */
+const indexImagesInBackground = async (productId, imagePaths, targetGroup) => {
+	if (!imagePaths || imagePaths.length === 0) return;
+
+	// Chạy async background
+	(async () => {
+		for (const imgRelPath of imagePaths) {
+			try {
+				// 1. Lấy tên file chuẩn (bỏ phần /uploads/products/ đi)
+				const fileName = path.basename(imgRelPath);
+
+				// 2. Tạo đường dẫn tuyệt đối trên ổ cứng
+				// Đảm bảo PRODUCT_FOLDER đã được define đúng như bước 1
+				const absolutePath = path.join(PRODUCT_FOLDER, fileName);
+
+				// 3. Kiểm tra file có tồn tại không trước khi gửi
+				if (fs.existsSync(absolutePath)) {
+					const form = new FormData();
+					form.append("product_id", productId.toString());
+
+					// Quan trọng: image_id phải là tên file để sau này tìm xóa cho dễ
+					form.append("image_id", fileName);
+
+					form.append("group", targetGroup);
+
+					// Tạo stream đọc file
+					form.append("file", fs.createReadStream(absolutePath));
+
+					// Gửi sang Python API
+					await axios.post(`${MODEL_API_URL}/index`, form, {
+						headers: form.getHeaders(),
+					});
+
+					console.log(`[AI] Indexed Success: ${fileName}`);
+				} else {
+					console.warn(`[AI] File not found on disk: ${absolutePath}`);
+				}
+			} catch (err) {
+				// Log lỗi chi tiết nhưng không làm crash server
+				console.error(
+					`[AI] Index Failed [${path.basename(imgRelPath)}]:`,
+					err.message
+				);
+			}
+		}
+	})();
+};
+//--------------------------------------------------------------------------------------
 
 /**
  * Lấy danh sách sản phẩm
@@ -349,6 +406,8 @@ export const createProductWithVariantsService = async (
 ) => {
 	let createdProduct = null;
 	let createdVariants = [];
+	// Lấy targetGroup từ payload (FE gửi lên)
+	const { targetGroup = "full_body" } = payload;
 	try {
 		const {
 			pdName,
@@ -372,7 +431,7 @@ export const createProductWithVariantsService = async (
 		// --- Transaction để tạo sản phẩm và các biến thể ---
 		await withTransaction(async (session) => {
 			// Tạo sản phẩm
-			createdProduct = await Product.create(
+			const products = await Product.create(
 				[
 					{
 						pdName,
@@ -388,7 +447,18 @@ export const createProductWithVariantsService = async (
 				{ session }
 			);
 
-			createdProduct = createdProduct[0]; // vì insertMany trả về mảng
+			createdProduct = products[0]; // vì insertMany trả về mảng
+
+			// Tạo cấu hình AI cho sản phẩm này
+			await ProductAIConfig.create(
+				[
+					{
+						productId: createdProduct._id,
+						targetGroup: targetGroup, // Giá trị FE chọn (upper/lower/full)
+					},
+				],
+				{ session }
+			);
 
 			// Tạo biến thể nếu có variantsPayload
 			if (variantsPayload?.length) {
@@ -403,6 +473,14 @@ export const createProductWithVariantsService = async (
 				createdVariants = result.data;
 			}
 		});
+		// Gọi AI Index (Chạy ngầm sau khi Transaction commit thành công)
+		if (createdProduct && createdProduct.images?.length > 0) {
+			indexImagesInBackground(
+				createdProduct._id,
+				createdProduct.images,
+				targetGroup
+			);
+		}
 
 		return {
 			success: true,
@@ -458,6 +536,7 @@ export const updateProductImagesService = async (productId, newImages = []) => {
 		const oldImages = product.images || [];
 
 		// --- Backup và xác định ảnh cũ cần xóa ---
+		const imagesToDeleteForAI = [];
 		for (const old of oldImages) {
 			if (!newImages.includes(old)) {
 				const filePath = path.join(PRODUCT_FOLDER, path.basename(old));
@@ -465,7 +544,28 @@ export const updateProductImagesService = async (productId, newImages = []) => {
 					const backup = backupFile(filePath);
 					if (backup) backups.push({ original: filePath, backup });
 				}
+				// Lấy tên file để gửi sang AI xóa
+				imagesToDeleteForAI.push(path.basename(old));
 			}
+		}
+		// --- 2. GỌI MODEL API ĐỂ XÓA BATCH (CODE MỚI) ---
+		if (imagesToDeleteForAI.length > 0) {
+			(async () => {
+				try {
+					const form = new FormData();
+					form.append("product_id", productId.toString());
+					form.append("image_ids", JSON.stringify(imagesToDeleteForAI));
+
+					await axios.post(`${MODEL_API_URL}/delete-batch`, form, {
+						headers: form.getHeaders(),
+					});
+					console.log(
+						`[AI] Deleted batch: ${imagesToDeleteForAI.length} images`
+					);
+				} catch (e) {
+					console.error("[AI] Delete Batch Error:", e.message);
+				}
+			})();
 		}
 
 		// --- Xác định file mới cần rollback nếu lỗi ---
@@ -485,6 +585,28 @@ export const updateProductImagesService = async (productId, newImages = []) => {
 			removeBackup(b.backup);
 		}
 
+		// --- GỌI AI INDEX (ẢNH MỚI) ---
+		const imagesToAddForAI = newImages.filter(
+			(img) => !oldImages.includes(img)
+		);
+
+		if (imagesToAddForAI.length > 0) {
+			// Lấy targetGroup từ DB
+			let aiConfig = await ProductAIConfig.findOne({ productId });
+			if (!aiConfig) {
+				aiConfig = await ProductAIConfig.create({
+					productId,
+					targetGroup: "full_body",
+				});
+			}
+
+			// Gọi index background
+			indexImagesInBackground(
+				productId,
+				imagesToAddForAI,
+				aiConfig.targetGroup
+			);
+		}
 		return {
 			success: true,
 			message: "Cập nhật ảnh thành công",
@@ -500,41 +622,6 @@ export const updateProductImagesService = async (productId, newImages = []) => {
 		return { success: false, message: error.message };
 	}
 };
-
-// export const updateProductImagesService = async (productId, newImages = []) => {
-//   const backups = [];
-//   try {
-//     if (!mongoose.Types.ObjectId.isValid(productId)) throw new Error("ID không hợp lệ");
-//     if (!Array.isArray(newImages)) throw new Error("Danh sách ảnh không hợp lệ");
-
-//     const product = await Product.findById(productId);
-//     if (!product) throw new Error("Không tìm thấy sản phẩm");
-
-//     const oldImages = product.images || [];
-
-//     // Backup ảnh cũ không còn dùng
-//     for (const old of oldImages) {
-//       if (!newImages.includes(old)) {
-//         const filePath = path.join(PRODUCT_FOLDER, path.basename(old));
-//         const backup = backupFile(filePath);
-//         if (backup) backups.push({ original: filePath, backup });
-//       }
-//     }
-
-//     // Cập nhật DB
-//     product.images = newImages;
-//     await product.save();
-
-//     // Xóa bản backup (commit thành công)
-//     for (const b of backups) removeBackup(b.backup);
-
-//     return { success: true, message: "Cập nhật ảnh thành công", data: product.toObject() };
-//   } catch (error) {
-//     // Khôi phục nếu lỗi
-//     for (const b of backups) restoreFile(b.backup, b.original);
-//     return { success: false, message: error.message };
-//   }
-// };
 
 /**
  * Cập nhật thông tin cơ bản của sản phẩm
@@ -641,6 +728,22 @@ export const deleteProductWithVariantsService = async (productId) => {
 
 		// Xóa backup (commit thành công)
 		for (const b of backups) removeBackup(b.backup);
+
+		// --- GỌI AI XÓA SẢN PHẨM ---
+		try {
+			const form = new FormData();
+			form.append("product_id", productId.toString());
+
+			// Gọi background
+			axios
+				.delete(`${MODEL_API_URL}/delete-product`, {
+					data: form, // Axios delete gửi body qua data
+					headers: form.getHeaders(),
+				})
+				.catch((err) => console.error("AI Delete Product Error:", err.message));
+		} catch (e) {
+			console.error("Lỗi gọi AI delete product:", e);
+		}
 		return { success: true, message: "Đã xóa sản phẩm và biến thể liên quan" };
 	} catch (error) {
 		// Rollback file nếu lỗi

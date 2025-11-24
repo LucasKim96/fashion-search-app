@@ -92,6 +92,10 @@ export default function ClientHeader() {
 		router.push(`/search?q=${encodeURIComponent(searchValue.trim())}`);
 	};
 
+	const handleCameraSearch = () => {
+		router.push("/search-image");
+	};
+
 	useEffect(() => {
 		if (account) {
 			setUserProfile(parseUserProfile(account));
@@ -129,6 +133,7 @@ export default function ClientHeader() {
 					value={searchValue}
 					onChange={setSearchValue}
 					onEnterPress={handleSearch}
+					onCameraClick={handleCameraSearch}
 				/>
 			</div>
 			{/* Action Icons */}
