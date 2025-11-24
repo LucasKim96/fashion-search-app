@@ -224,7 +224,7 @@ export const CardAttributeValue: React.FC<CardAttributeValueProps> = ({
 						</span>
 					)}
 
-					{!compact && !mini && showStatus && !editing && (
+					{/* {!compact && !mini && showStatus && !editing && (
 						<div className="relative flex-shrink-0 ml-auto">
 							<span
 								className={clsx(
@@ -239,7 +239,7 @@ export const CardAttributeValue: React.FC<CardAttributeValueProps> = ({
 								position="right"
 							/>
 						</div>
-					)}
+					)} */}
 				</div>
 				{/* Nút action */}
 				{!compact && !mini && showActions && (
