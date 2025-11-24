@@ -12,6 +12,7 @@ import {
 	ProductSearchResponseDataAdmin,
 	ProductSearchResponseDataShop,
 	ProductCountResponse,
+	ProductListResponse,
 } from "./product.types";
 
 /** ========================= PUBLIC API ========================= */
@@ -19,8 +20,8 @@ import {
 // Lấy danh sách sản phẩm public
 export const getPublicProducts = async (
 	params?: { page?: number; limit?: number } // <-- Thêm tham số `params`
-): Promise<ApiResponse<Product[]>> => {
-	const res = await axiosInstance.get<ApiResponse<Product[]>>(
+): Promise<ApiResponse<ProductListResponse>> => {
+	const res = await axiosInstance.get<ApiResponse<ProductListResponse>>(
 		PRODUCT_ENDPOINTS.PUBLIC_LIST,
 		{ params } // <-- Truyền `params` vào request của axios
 	);

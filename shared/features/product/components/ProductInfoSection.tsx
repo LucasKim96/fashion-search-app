@@ -11,9 +11,14 @@ import {
 	Clock,
 	Tag,
 	Warehouse,
+	Layers,
+	Check,
+	Sparkles,
+	Shirt,
+	Scissors,
 } from "lucide-react";
 import clsx from "clsx";
-import { useProduct, ProductDetail } from "../index";
+import { useProduct, ProductDetail, ProductVariantDetail } from "../index";
 import { GradientButton, Input, formatCurrency } from "@shared/core";
 
 interface ProductInfoSectionProps {
@@ -26,6 +31,8 @@ interface ProductInfoSectionProps {
 	// onVariantClick?: () => void;
 	onCancelEdit?: () => void;
 	onEditClick?: () => void;
+	// BỔ SUNG CALLBACK
+	onVariantSelect?: (variant: ProductVariantDetail | null) => void;
 }
 
 export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({
@@ -38,6 +45,7 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({
 	// onVariantClick,
 	onCancelEdit,
 	onEditClick,
+	onVariantSelect,
 }) => {
 	// Dùng form context của cha
 	const {
@@ -73,6 +81,88 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({
 			0
 		);
 	}, [product]);
+
+	const [selectedOptions, setSelectedOptions] = useState<
+		Record<string, string>
+	>({});
+
+	// --- BỔ SUNG: Logic gom nhóm thuộc tính từ variants ---
+	const groupedAttributes = useMemo(() => {
+		if (!product || !product.variants) return {};
+
+		// Dùng Set để loại bỏ các giá trị trùng lặp (VD: nhiều size cùng màu Đỏ)
+		const groups: Record<string, Set<string>> = {};
+
+		product.variants.forEach((variant) => {
+			variant.attributes.forEach((attr) => {
+				const label = attr.attributeLabel;
+				const value = attr.valueLabel;
+
+				// Chỉ lấy khi có đủ tên và giá trị
+				if (label && value) {
+					if (!groups[label]) {
+						groups[label] = new Set();
+					}
+					groups[label].add(value);
+				}
+			});
+		});
+
+		// Chuyển Set thành Array để hiển thị
+		const result: Record<string, string[]> = {};
+		Object.keys(groups).forEach((key) => {
+			result[key] = Array.from(groups[key]);
+		});
+
+		return result;
+	}, [product]);
+
+	const handleOptionClick = (label: string, value: string) => {
+		const newOptions = { ...selectedOptions };
+
+		// Nếu đang chọn cái này rồi -> Click lại thì bỏ chọn (toggle)
+		if (newOptions[label] === value) {
+			delete newOptions[label];
+		} else {
+			// Nếu chưa chọn -> Chọn nó (sẽ tự đè value cũ của label này)
+			newOptions[label] = value;
+		}
+
+		setSelectedOptions(newOptions);
+
+		// --- TÌM BIẾN THỂ KHỚP (MATCHING VARIANT) ---
+		if (product?.variants && onVariantSelect) {
+			// Logic tìm: Variant phải chứa TẤT CẢ các cặp (label, value) đang chọn
+			// Và số lượng attribute của variant phải bằng số lượng attribute user đã chọn
+			// (Để tránh trường hợp user mới chọn "Màu" mà đã match variant có "Màu + Size")
+
+			// Tuy nhiên, logic phổ biến là: Tìm variant khớp nhất.
+			// Ở đây ta tìm variant khớp hoàn toàn với các key đã chọn.
+
+			const matchedVariant = product.variants.find((variant) => {
+				// Kiểm tra xem variant này có thỏa mãn tất cả option đang chọn không
+				const isMatch = Object.entries(newOptions).every(
+					([selLabel, selValue]) => {
+						return variant.attributes.some(
+							(attr) =>
+								attr.attributeLabel === selLabel && attr.valueLabel === selValue
+						);
+					}
+				);
+
+				// Kiểm tra chiều ngược lại: Variant này có bao nhiêu attribute?
+				// Nếu user chọn full attributes thì mới trả về variant cuối cùng
+				const variantAttrCount = variant.attributes.filter(
+					(a) => a.attributeLabel && a.valueLabel
+				).length;
+				const selectedCount = Object.keys(newOptions).length;
+
+				return isMatch && variantAttrCount === selectedCount;
+			});
+
+			onVariantSelect(matchedVariant || null);
+		}
+	};
 
 	if (!product && mode !== "create")
 		return <div className="h-32 animate-pulse bg-gray-100 rounded-xl" />;
@@ -283,12 +373,132 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({
 						/>
 					)}
 				</div>
+				{/* --- 3. AI CROP SELECTION (CHỈ HIỆN KHI CREATE) --- */}
+				{currentMode === "create" && (
+					<div className="mt-2 bg-gradient-to-br from-indigo-50 to-purple-50 p-4 rounded-2xl border border-indigo-100 relative overflow-hidden group">
+						{/* Background Decoration */}
+						<Sparkles
+							className="absolute -top-2 -right-2 text-indigo-200 opacity-20 rotate-12 group-hover:rotate-45 transition-transform duration-700"
+							size={80}
+						/>
 
-				{/* 3. DASHBOARD INFO (Grid Layout) */}
+						{/* Intro Text */}
+						<div className="flex items-start gap-3 mb-4 relative z-10">
+							<div className="bg-indigo-500 text-white p-2 rounded-lg shadow-md shrink-0">
+								<Sparkles size={18} />
+							</div>
+							<div>
+								<h4 className="text-sm font-bold text-indigo-700 mb-1">
+									AI Smart Crop & Search
+								</h4>
+								<p className="text-xs text-gray-600 leading-relaxed">
+									Hệ thống AI của chúng tôi sẽ tự động cắt (crop) ảnh sản phẩm
+									để tối ưu hóa việc tìm kiếm. Vui lòng chọn loại trang phục
+									chính để AI học chính xác nhất nhé!
+								</p>
+							</div>
+						</div>
+
+						{/* Selection Buttons */}
+						<Controller
+							name="targetGroup"
+							control={control}
+							defaultValue="full_body" // Mặc định
+							render={({ field: { onChange, value } }) => (
+								<div className="grid grid-cols-3 gap-3 relative z-10">
+									<button
+										type="button"
+										onClick={() => onChange("upper_body")}
+										className={clsx(
+											"flex flex-col items-center justify-center gap-2 py-3 rounded-xl border-2 transition-all duration-200",
+											value === "upper_body"
+												? "bg-white border-indigo-500 shadow-md -translate-y-0.5"
+												: "bg-white/50 border-transparent hover:bg-white hover:border-indigo-200"
+										)}>
+										<Shirt
+											size={24}
+											className={
+												value === "upper_body"
+													? "text-indigo-600"
+													: "text-gray-400"
+											}
+										/>
+										<span
+											className={clsx(
+												"text-xs font-bold",
+												value === "upper_body"
+													? "text-indigo-700"
+													: "text-gray-500"
+											)}>
+											Áo (Upper)
+										</span>
+									</button>
+
+									<button
+										type="button"
+										onClick={() => onChange("lower_body")}
+										className={clsx(
+											"flex flex-col items-center justify-center gap-2 py-3 rounded-xl border-2 transition-all duration-200",
+											value === "lower_body"
+												? "bg-white border-indigo-500 shadow-md -translate-y-0.5"
+												: "bg-white/50 border-transparent hover:bg-white hover:border-indigo-200"
+										)}>
+										{/* Icon Quần/Váy */}
+										<Scissors
+											size={24}
+											className={
+												value === "lower_body"
+													? "text-indigo-600"
+													: "text-gray-400"
+											}
+										/>
+										<span
+											className={clsx(
+												"text-xs font-bold",
+												value === "lower_body"
+													? "text-indigo-700"
+													: "text-gray-500"
+											)}>
+											Quần/Váy
+										</span>
+									</button>
+
+									<button
+										type="button"
+										onClick={() => onChange("full_body")}
+										className={clsx(
+											"flex flex-col items-center justify-center gap-2 py-3 rounded-xl border-2 transition-all duration-200",
+											value === "full_body"
+												? "bg-white border-indigo-500 shadow-md -translate-y-0.5"
+												: "bg-white/50 border-transparent hover:bg-white hover:border-indigo-200"
+										)}>
+										<Layers
+											size={24}
+											className={
+												value === "full_body"
+													? "text-indigo-600"
+													: "text-gray-400"
+											}
+										/>
+										<span
+											className={clsx(
+												"text-xs font-bold",
+												value === "full_body"
+													? "text-indigo-700"
+													: "text-gray-500"
+											)}>
+											Cả bộ (Full)
+										</span>
+									</button>
+								</div>
+							)}
+						/>
+					</div>
+				)}
+				{/* 4. DASHBOARD INFO (Grid Layout) */}
 				{/* Chỉ hiển thị ở chế độ View của Shop để thông tin gọn gàng */}
-				{(isShop || isAdmin) && currentMode === "view" && product && (
+				{/* {(isShop || isAdmin) && currentMode === "view" && product && (
 					<div className="grid grid-cols-2 gap-4 mt-4">
-						{/* 1. TRẠNG THÁI */}
 						<div className="group relative overflow-hidden p-4 bg-white rounded-2xl border border-gray-100 shadow-md hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-1">
 							<div
 								className={clsx(
@@ -322,7 +532,6 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({
 							</div>
 						</div>
 
-						{/* 2. TỔNG TỒN KHO */}
 						<div className="group relative overflow-hidden p-4 bg-white rounded-2xl border border-gray-100 shadow-md hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-1">
 							<div className="absolute top-0 right-0 w-24 h-24 bg-blue-400 rounded-full -mr-10 -mt-10 opacity-20 transition-transform duration-500 group-hover:scale-125" />
 
@@ -348,7 +557,6 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({
 							</div>
 						</div>
 
-						{/* 3. NGÀY TẠO */}
 						<div className="group relative overflow-hidden p-4 bg-white rounded-2xl border border-gray-100 shadow-md hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-1">
 							<div className="absolute top-0 right-0 w-24 h-24 bg-orange-400 rounded-full -mr-10 -mt-10 opacity-20 transition-transform duration-500 group-hover:scale-125" />
 
@@ -371,7 +579,6 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({
 							</div>
 						</div>
 
-						{/* 4. CẬP NHẬT CUỐI */}
 						<div className="group relative overflow-hidden p-4 bg-white rounded-2xl border border-gray-100 shadow-md hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-1">
 							<div className="absolute top-0 right-0 w-24 h-24 bg-purple-400 rounded-full -mr-10 -mt-10 opacity-20 transition-transform duration-500 group-hover:scale-125" />
 
@@ -390,7 +597,84 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({
 							</div>
 						</div>
 					</div>
+				)} */}
+				{(isShop || isAdmin) && currentMode === "view" && product && (
+					<div className="grid grid-cols-2 gap-4 mt-2">
+						{/* Box 1: Trạng thái */}
+						<DashboardBox
+							color="emerald"
+							icon={Tag}
+							label="Trạng thái"
+							value={product.isActive ? "Đang bán" : "Đang ẩn"}
+						/>
+						{/* Box 2: Tồn kho */}
+						<DashboardBox
+							color="blue"
+							icon={Warehouse}
+							label="Tổng tồn kho"
+							value={`${totalStock} SP`}
+						/>
+						{/* Box 3: Ngày tạo */}
+						<DashboardBox
+							color="orange"
+							icon={Calendar}
+							label="Ngày tạo"
+							value={new Date(product.createdAt).toLocaleDateString("vi-VN")}
+						/>
+						{/* Box 4: Cập nhật */}
+						<DashboardBox
+							color="purple"
+							icon={Clock}
+							label="Cập nhật cuối"
+							value={new Date(product.updatedAt).toLocaleDateString("vi-VN")}
+						/>
+					</div>
 				)}
+			</div>
+		</div>
+	);
+};
+// Component phụ cho đẹp code Dashboard
+const DashboardBox: React.FC<{
+	color: string;
+	icon: any;
+	label: React.ReactNode;
+	value: React.ReactNode;
+}> = ({ color, icon: Icon, label, value }) => {
+	const outerClass =
+		"group relative overflow-hidden p-4 bg-white rounded-2xl border border-gray-100 shadow-md hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-1";
+
+	const circleClass =
+		"absolute top-0 right-0 w-24 h-24 " +
+		"bg-" +
+		color +
+		"-400 rounded-full -mr-10 -mt-10 opacity-20 transition-transform duration-500 group-hover:scale-125";
+
+	const boxInnerClass =
+		"w-14 h-14 rounded-2xl bg-gradient-to-br " +
+		"from-" +
+		color +
+		"-50 to-" +
+		color +
+		"-100 text-" +
+		color +
+		"-600 flex items-center justify-center shadow-inner";
+
+	return (
+		<div className={outerClass}>
+			<div className={circleClass} />
+			<div className="relative flex items-center gap-4">
+				<div className={boxInnerClass}>
+					<Icon size={24} strokeWidth={2} className="drop-shadow-sm" />
+				</div>
+				<div className="flex flex-col">
+					<span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest mb-0.5">
+						{label}
+					</span>
+					<span className="text-base font-black text-gray-800 tracking-tight">
+						{value}
+					</span>
+				</div>
 			</div>
 		</div>
 	);

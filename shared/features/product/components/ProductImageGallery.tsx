@@ -17,6 +17,7 @@ import {
 	Check,
 	Trash2,
 	UploadCloud,
+	Sparkles,
 	Image as ImageIcon,
 } from "lucide-react";
 import clsx from "clsx";
@@ -31,6 +32,7 @@ interface ProductImageGalleryProps {
 	width?: string;
 	height?: string;
 	onImagesUpdated?: () => void;
+	activeImage?: string | null;
 }
 
 type ModalMode = "view" | "add" | "delete" | null;
@@ -42,6 +44,7 @@ export const ProductImageGallery: React.FC<ProductImageGalleryProps> = ({
 	width = "w-full",
 	height = "aspect-square",
 	onImagesUpdated,
+	activeImage,
 }) => {
 	const { updateShopProductImages, getProductDetail } = useProduct();
 	const formContext = createMode ? useFormContext() : null;
@@ -111,19 +114,41 @@ export const ProductImageGallery: React.FC<ProductImageGalleryProps> = ({
 	}, [displayImages.length]);
 
 	useEffect(() => {
-		if (displayImages.length > 1 && !modalMode) {
+		if (displayImages.length > 1 && !modalMode && !activeImage) {
 			timerRef.current = setInterval(nextImage, 5000);
 		}
 		return () => {
 			if (timerRef.current) clearInterval(timerRef.current);
 		};
-	}, [nextImage, displayImages.length, modalMode]);
+	}, [nextImage, displayImages.length, modalMode, activeImage]);
 
 	useEffect(() => {
 		if (currentIndex >= displayImages.length && displayImages.length > 0) {
 			setCurrentIndex(0);
 		}
 	}, [displayImages.length, currentIndex]);
+
+	useEffect(() => {
+		if (activeImage && displayImages.length > 0) {
+			// Tìm index của ảnh này trong list ảnh đang hiển thị
+			// Lưu ý: Cần hàm buildImageUrl hoặc so sánh tương đối nếu url từ server khác format
+			// Ở đây giả định activeImage là full URL hoặc server path khớp với variants
+
+			const index = displayImages.findIndex(
+				(img) =>
+					// So sánh trực tiếp hoặc qua hàm buildUrl
+					img === activeImage || buildImageUrl(img) === activeImage
+			);
+
+			if (index !== -1) {
+				setCurrentIndex(index);
+			} else {
+				// Nếu ảnh variant chưa có trong list displayImages (hiếm gặp),
+				// Bạn có thể push nó vào hoặc chỉ hiển thị tạm thời.
+				// Logic đơn giản nhất ở đây là không làm gì nếu không tìm thấy.
+			}
+		}
+	}, [activeImage, displayImages]);
 
 	const handleOpenModal = (mode: ModalMode) => {
 		setModalMode(mode);
@@ -356,6 +381,23 @@ export const ProductImageGallery: React.FC<ProductImageGalleryProps> = ({
 						</div>
 
 						<div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
+							{!createMode && (
+								<div className="mb-5 p-3.5 bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-100 rounded-xl flex items-start gap-3 shadow-sm">
+									<div className="p-1.5 bg-white rounded-lg shadow-sm text-indigo-500 mt-0.5">
+										{/* Đảm bảo bạn đã import Sparkles từ lucide-react */}
+										<Sparkles size={16} strokeWidth={2} />
+									</div>
+									<div className="text-sm text-indigo-800/80 leading-relaxed">
+										<span className="font-bold text-indigo-700 block mb-0.5">
+											AI Smart Processing
+										</span>
+										Ảnh mới sẽ được tự động xử lý theo loại trang phục
+										(Áo/Quần/Bộ) của sản phẩm này để khách hàng dễ dàng tìm thấy
+										hơn.
+									</div>
+								</div>
+							)}
+
 							<label className="group flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-blue-200 rounded-2xl cursor-pointer bg-blue-50/50 hover:bg-blue-50 hover:border-blue-400 transition-all duration-300 mb-8 relative overflow-hidden">
 								<div className="absolute inset-0 bg-blue-100/0 group-hover:bg-blue-100/20 transition-colors" />
 								<div className="flex flex-col items-center justify-center pt-5 pb-6 text-blue-500 z-10 transform group-hover:scale-110 transition-transform duration-300">

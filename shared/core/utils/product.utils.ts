@@ -48,6 +48,13 @@ export const buildFormDataForCreateProduct = (
 	formData.append("basePrice", String(formValues.basePrice));
 	if (formValues.description)
 		formData.append("description", formValues.description);
+	// Append targetGroup nếu có
+	if (formValues.targetGroup) {
+		formData.append("targetGroup", formValues.targetGroup);
+	} else {
+		// Nếu bạn muốn FE luôn có giá trị mặc định an toàn
+		formData.append("targetGroup", "full_body");
+	}
 
 	// Append ảnh sản phẩm
 	formValues.images?.forEach((file) => formData.append("images", file));
