@@ -33,10 +33,17 @@ export const updateShopApi = (id: string, data: Partial<CreateShopRequest>) =>
 		.then((res) => res.data);
 
 // Xóa shop
-export const deleteShopApi = (id: string) =>
-	axiosInstance
-		.delete<ApiResponse>(SHOP_ENDPOINTS.DELETE(id))
-		.then((res) => res.data);
+export const softDeleteMyShopApi = () =>
+	axiosInstance.delete("/shops/owner/soft-delete/mine").then((res) => res.data);
+
+export const hardDeleteMyShopApi = () =>
+	axiosInstance.delete("/shops/owner/hard-delete/mine").then((res) => res.data);
+
+export const getMyShopForManagementApi = () =>
+	axiosInstance.get("/shops/owner/management").then((res) => res.data);
+
+export const restoreMyShopApi = () =>
+	axiosInstance.patch("/shops/owner/restore/mine").then((res) => res.data);
 
 // Thay đổi trạng thái shop
 export const changeShopStatusApi = (id: string, status: string) =>

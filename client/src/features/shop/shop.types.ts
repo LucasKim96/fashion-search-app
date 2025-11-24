@@ -1,6 +1,6 @@
-// client/features/shop/shop.types.ts
+// file: client/features/shop/shop.types.ts
 
-// Kiểu dữ liệu trả về shop từ server
+// Kiểu dữ liệu trả về của một shop từ server
 export interface ShopResponse {
 	_id: string;
 	shopName: string;
@@ -8,9 +8,11 @@ export interface ShopResponse {
 	coverUrl: string;
 	description: string;
 	accountId: string;
-	status: "active" | "inactive" | "pending" | "banned"; // tuỳ backend
+	status: "active" | "closed" | "suspended"; // Cập nhật cho khớp với backend service
 	createdAt: string;
 	updatedAt: string;
+	isDeleted: boolean; // Bắt buộc, để kiểm tra trạng thái ẩn/hiện
+	deletedAt: string | null; // Tùy chọn, để biết thời điểm bị ẩn
 }
 
 // Kiểu dữ liệu gửi lên server khi tạo shop
@@ -23,6 +25,8 @@ export interface CreateShopRequest {
 }
 
 // Kiểu dữ liệu cập nhật shop (partial)
-export type UpdateShopRequest = Partial<CreateShopRequest> & {
-	status?: "active" | "inactive" | "pending" | "banned";
+export type UpdateShopRequest = Partial<
+	Omit<CreateShopRequest, "accountId">
+> & {
+	status?: "active" | "closed" | "suspended";
 };

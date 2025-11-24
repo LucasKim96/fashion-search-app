@@ -273,20 +273,54 @@ export const updateDefaultCover = async (req, res, next) => {
 };
 
 /**
- * Xóa shop (chỉ chủ shop)
+ * Ẩn shop (soft delete) của user đang đăng nhập
  */
-export const removeShop = async (req, res, next) => {
+export const softRemoveMyShop = async (req, res, next) => {
 	try {
-		const { id } = req.params;
-		const accountId = req.user?.id; // || req.body.accountId;
+		const accountId = req.user?.id;
+		if (!accountId) throw ApiError.unauthorized("Chưa đăng nhập");
 
-		validateObjectId(id, "ID shop");
-		validateObjectId(accountId, "accID");
-
-		const result = await ShopService.deleteShop(id, accountId);
-		return successResponse(res, result, "Xóa shop thành công");
+		const result = await ShopService.softDeleteShopByAccount(accountId);
+		return successResponse(res, result, result.message);
 	} catch (error) {
-		// ApiError sẽ được xử lý bởi errorHandler middleware
+		next(error);
+	}
+};
+
+/**
+ * Xóa vĩnh viễn shop (hard delete) của user đang đăng nhập
+ */
+export const hardRemoveMyShop = async (req, res, next) => {
+	try {
+		const accountId = req.user?.id;
+		if (!accountId) throw ApiError.unauthorized("Chưa đăng nhập");
+
+		const result = await ShopService.hardDeleteShopByAccount(accountId);
+		return successResponse(res, result, result.message);
+	} catch (error) {
+		next(error);
+	}
+};
+
+export const getMyShopForManagement = async (req, res, next) => {
+	try {
+		const accountId = req.user?.id;
+		const shop = await ShopService.getMyShopForManagement(accountId);
+		return successResponse(res, shop, "Lấy thông tin quản lý shop thành công");
+	} catch (error) {
+		next(error);
+	}
+};
+
+/**
+ * Chủ shop tự khôi phục shop
+ */
+export const restoreMyShop = async (req, res, next) => {
+	try {
+		const accountId = req.user?.id;
+		const result = await ShopService.restoreMyShopByAccount(accountId);
+		return successResponse(res, result, result.message);
+	} catch (error) {
 		next(error);
 	}
 };
