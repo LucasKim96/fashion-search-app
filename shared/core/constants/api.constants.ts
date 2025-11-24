@@ -143,3 +143,8 @@ export const CART_ENDPOINTS = {
 	// Xóa toàn bộ giỏ hàng
 	CLEAR_CART: "/carts/mine",
 };
+
+export const SEARCH_ENDPOINTS = {
+	SEARCH: "/search",
+	DETECT_SEARCH: "/search/detect",
+};
