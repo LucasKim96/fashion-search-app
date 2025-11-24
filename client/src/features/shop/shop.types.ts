@@ -11,8 +11,6 @@ export interface ShopResponse {
 	status: "active" | "closed" | "suspended"; // Cập nhật cho khớp với backend service
 	createdAt: string;
 	updatedAt: string;
-	isDeleted: boolean; // Bắt buộc, để kiểm tra trạng thái ẩn/hiện
-	deletedAt: string | null; // Tùy chọn, để biết thời điểm bị ẩn
 }
 
 // Kiểu dữ liệu gửi lên server khi tạo shop
