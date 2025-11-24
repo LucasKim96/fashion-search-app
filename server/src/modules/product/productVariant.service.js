@@ -312,7 +312,6 @@ export const updateProductVariant = async (
 			if (accountId) {
 				const shop = await Shop.findOne({
 					accountId: toObjectId(accountId),
-					isDeleted: false,
 				}).session(session);
 				if (!shop) throw new Error("Không tìm thấy shop");
 				if (product.shopId?.toString() !== shop._id.toString())

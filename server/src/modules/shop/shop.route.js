@@ -45,12 +45,12 @@ ownerRouter.put(
 	uploadShopImage.single("cover"),
 	ShopController.updateCover
 );
-ownerRouter.delete("/soft-delete/mine", ShopController.softRemoveMyShop);
 ownerRouter.delete("/hard-delete/mine", ShopController.hardRemoveMyShop);
 // Route để lấy thông tin quản lý
 ownerRouter.get("/management", ShopController.getMyShopForManagement);
-// Route để chủ shop tự khôi phục
-ownerRouter.patch("/restore/mine", ShopController.restoreMyShop);
+// Route để chủ shop tự đóng cửa hàng
+ownerRouter.patch("/close/mine", ShopController.closeMyShop);
+ownerRouter.patch("/reopen/mine", ShopController.reopenMyShop);
 
 // Mount owner routes under prefix
 router.use("/owner", ownerRouter);
