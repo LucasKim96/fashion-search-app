@@ -11,3 +11,4 @@ export * from "./components/ProductInfoSection";
 export * from "./components/ProductDescSection";
 export * from "./components/ProductVariantSection";
 export * from "./components/ProductToolbar";
+export * from "./components/PublicProductCard";

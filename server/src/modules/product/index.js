@@ -5,7 +5,7 @@ import * as productService from "./product.service.js";
 import ProductRoutes from "./product.route.js";
 import Product from "./product.model.js";
 import ProductVariant from "./productVariant.model.js";
-
+import productAIConfigModel from "./productAIConfig.model.js";
 // Attribute-related imports
 import * as attributeController from "./attribute.controller.js";
 import * as attributeService from "./attribute.service.js";
@@ -28,22 +28,22 @@ import ProductVariantRoutes from "./productVariant.route.js";
 import * as productValidate from "./product.validate.js";
 
 export {
-  productController,
-  productService,
-  ProductRoutes,
-  Product,
-  ProductVariant,
-  productVariantService,
-  productVariantController,
-  ProductVariantRoutes,
-  attributeController,
-  attributeService,
-  AttributeRoutes,
-  Attribute,
-  attributeValidate,
-  productValidate,
-  attributeValueController,
-  AttributeValue,
-  attributeValueService,
-  AttributeValueRoutes,
+	productController,
+	productService,
+	ProductRoutes,
+	Product,
+	ProductVariant,
+	productVariantService,
+	productVariantController,
+	ProductVariantRoutes,
+	attributeController,
+	attributeService,
+	AttributeRoutes,
+	Attribute,
+	attributeValidate,
+	productValidate,
+	attributeValueController,
+	AttributeValue,
+	attributeValueService,
+	AttributeValueRoutes,
 };

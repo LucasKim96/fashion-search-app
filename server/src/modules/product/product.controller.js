@@ -404,3 +404,5 @@ export const countAllProducts = (req, res) => {
 
 export const searchProductsShop = (req, res) =>
 	handleSearchProducts(req, res, false);
+
+//--------------AI search -----------------
