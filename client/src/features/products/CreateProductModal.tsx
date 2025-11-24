@@ -38,6 +38,7 @@ export const CreateProductModal: React.FC<CreateProductModalProps> = ({
 			description: "",
 			images: [], // Chứa File[] từ ProductImageGallery
 			variantsPayload: [], // Chứa danh sách biến thể từ ProductVariantSection
+			targetGroup: "full_body", // Mặc định targetGroup là 'full_body'
 		},
 		mode: "onSubmit",
 	});

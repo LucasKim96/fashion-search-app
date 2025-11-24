@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+# from pydantic import BaseModel
 
-class Txt2ImgRequest(BaseModel):
-    text: str
+# class Txt2ImgRequest(BaseModel):
+#     text: str

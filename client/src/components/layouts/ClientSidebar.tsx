@@ -53,7 +53,7 @@ export default function ClientSidebar({
 							className={clsx(
 								"flex items-center gap-3 px-4 py-2 rounded-lg cursor-pointer transition-all duration-300",
 								isActive
-									? "bg-primary-light text-primary font-semibold shadow-inner"
+									? "bg-primary-dark text-primary font-semibold shadow-inner"
 									: "text-text hover:text-primary hover:bg-primary-light/30"
 							)}>
 							<Icon

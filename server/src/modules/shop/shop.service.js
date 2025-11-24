@@ -8,7 +8,7 @@ import path from "path";
 import fs from "fs";
 import { console } from "inspector";
 
-const DEFAULT_LOGO = "assets/shop/default-logo.png";
+const DEFAULT_LOGO = "/assets/shop/default-logo.png";
 const DEFAULT_COVER = "/assets/shop/default-cover.jpg";
 const ASSETS_ROOT = path.join(process.cwd(), "assets");
 export const DEFAULT_FOLDER = path.join(ASSETS_ROOT, "shop");

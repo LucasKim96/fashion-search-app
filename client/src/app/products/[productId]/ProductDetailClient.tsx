@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { useForm, FormProvider } from "react-hook-form";
 import { ProductDetailLayout } from "@shared/features/product/components/ProductDetailLayout";
 import { ProductImageGallery } from "@shared/features/product/components/ProductImageGallery";
@@ -61,6 +61,44 @@ export default function ProductDetailClient({
 		</div>
 	);
 
+	const [selectedVariantImage, setSelectedVariantImage] = useState<
+		string | null
+	>(null);
+	// Có thể lưu thêm selectedVariantPrice nếu muốn đổi giá tiền khi chọn variant
+	const [selectedVariantPrice, setSelectedVariantPrice] = useState<
+		number | null
+	>(null);
+
+	// --- BỔ SUNG: Hàm xử lý khi ProductInfoSection báo lên ---
+	const handleVariantSelect = (variant: any) => {
+		if (variant) {
+			// Nếu tìm thấy biến thể khớp
+			// 1. Cập nhật ảnh
+			if (variant.image) {
+				setSelectedVariantImage(variant.image);
+			}
+			// 2. Cập nhật giá (nếu biến thể có giá khác - logic priceAdjustment)
+			// Giả sử priceAdjustment là số tiền cộng thêm/trừ đi
+			if (variant.priceAdjustment !== undefined) {
+				setSelectedVariantPrice(product.basePrice + variant.priceAdjustment);
+			} else {
+				setSelectedVariantPrice(product.basePrice);
+			}
+		} else {
+			// Nếu user bỏ chọn hoặc chọn chưa đủ -> Reset về mặc định
+			setSelectedVariantImage(null);
+			setSelectedVariantPrice(null);
+		}
+	};
+
+	const displayProduct = useMemo(() => {
+		if (selectedVariantPrice !== null) {
+			// Clone product và đè lại giá mới
+			return { ...product, basePrice: selectedVariantPrice };
+		}
+		return product;
+	}, [product, selectedVariantPrice]);
+
 	return (
 		<FormProvider {...methods}>
 			<div className="flex flex-col min-h-screen bg-gray-50">
@@ -76,14 +114,16 @@ export default function ProductDetailClient({
 									productId={product._id}
 									mode="client"
 									width="w-full"
+									activeImage={selectedVariantImage}
 								/>
 							}
 							// Cột Phải: Thông tin
 							headerContent={
 								<ProductInfoSection
-									product={product}
+									product={displayProduct}
 									mode="view"
 									isShop={false}
+									onVariantSelect={handleVariantSelect}
 								/>
 							}
 							// Bên dưới: Shop + Mô tả
