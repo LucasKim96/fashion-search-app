@@ -42,7 +42,6 @@ export const createAttributeValues = async (
 			// Shop
 			const shop = await Shop.findOne({
 				accountId: toObjectId(accountId),
-				isDeleted: false,
 			}).session(session);
 			if (!shop) throw new Error("Không tìm thấy cửa hàng cho tài khoản này");
 			shopId = shop._id;
@@ -127,7 +126,6 @@ export const updateAttributeValue = async (
 			if (accountId) {
 				const shop = await Shop.findOne({
 					accountId: toObjectId(accountId),
-					isDeleted: false,
 				}).session(session);
 				if (!shop) throw new Error("Không tìm thấy cửa hàng cho tài khoản này");
 				if (
@@ -220,7 +218,6 @@ export const toggleAttributeValueStatus = async (
 		if (accountId) {
 			const shop = await Shop.findOne({
 				accountId: toObjectId(accountId),
-				isDeleted: false,
 			}).session(session);
 			if (!shop) throw new Error("Không tìm thấy cửa hàng cho tài khoản này");
 			if (
@@ -267,7 +264,6 @@ export const deleteAttributeValue = async (valueId, accountId = null) => {
 			if (accountId) {
 				const shop = await Shop.findOne({
 					accountId: toObjectId(accountId),
-					isDeleted: false,
 				}).session(session);
 
 				if (!shop) throw new Error("Không tìm thấy cửa hàng cho tài khoản này");

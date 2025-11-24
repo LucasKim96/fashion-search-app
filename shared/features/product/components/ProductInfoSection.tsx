@@ -16,6 +16,8 @@ import {
 	Sparkles,
 	Shirt,
 	Scissors,
+	ShoppingCart,
+	Box,
 } from "lucide-react";
 import clsx from "clsx";
 import { useProduct, ProductDetail, ProductVariantDetail } from "../index";
@@ -31,8 +33,9 @@ interface ProductInfoSectionProps {
 	// onVariantClick?: () => void;
 	onCancelEdit?: () => void;
 	onEditClick?: () => void;
-	// BỔ SUNG CALLBACK
 	onVariantSelect?: (variant: ProductVariantDetail | null) => void;
+	currentStock?: number | null;
+	onAddToCart?: () => void;
 }
 
 export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({
@@ -46,6 +49,8 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({
 	onCancelEdit,
 	onEditClick,
 	onVariantSelect,
+	currentStock,
+	onAddToCart,
 }) => {
 	// Dùng form context của cha
 	const {
@@ -163,6 +168,15 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({
 			onVariantSelect(matchedVariant || null);
 		}
 	};
+	// --- LOGIC HIỂN THỊ TỒN KHO ---
+	// Nếu cha truyền currentStock -> dùng nó (đã chọn variant)
+	// Nếu không -> Tính tổng (chưa chọn variant)
+	const displayStock = useMemo(() => {
+		if (currentStock !== undefined && currentStock !== null)
+			return currentStock;
+		if (!product || !product.variants) return 0;
+		return product.variants.reduce((sum, v) => sum + (v.stock || 0), 0);
+	}, [product, currentStock]);
 
 	if (!product && mode !== "create")
 		return <div className="h-32 animate-pulse bg-gray-100 rounded-xl" />;
@@ -504,108 +518,48 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({
 					</div>
 				)}
 				{/* 4. DASHBOARD INFO (Grid Layout) */}
-				{/* Chỉ hiển thị ở chế độ View của Shop để thông tin gọn gàng */}
-				{/* {(isShop || isAdmin) && currentMode === "view" && product && (
-					<div className="grid grid-cols-2 gap-4 mt-4">
-						<div className="group relative overflow-hidden p-4 bg-white rounded-2xl border border-gray-100 shadow-md hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-1">
-							<div
-								className={clsx(
-									"absolute top-0 right-0 w-24 h-24 rounded-full -mr-10 -mt-10 transition-transform duration-500 opacity-20 group-hover:scale-125",
-									product.isActive ? "bg-emerald-400" : "bg-gray-400"
-								)}
-							/>
 
-							<div className="relative flex items-center gap-4">
-								<div
-									className={clsx(
-										"w-14 h-14 rounded-2xl flex items-center justify-center shadow-inner transition-colors duration-300",
-										product.isActive
-											? "bg-gradient-to-br from-emerald-50 to-emerald-100 text-emerald-600"
-											: "bg-gradient-to-br from-gray-50 to-gray-100 text-gray-500"
-									)}>
-									<Tag size={24} strokeWidth={2} className="drop-shadow-sm" />
-								</div>
-								<div className="flex flex-col">
-									<span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest mb-0.5">
-										Trạng thái
-									</span>
-									<span
-										className={clsx(
-											"text-base font-black tracking-tight",
-											product.isActive ? "text-emerald-600" : "text-gray-500"
-										)}>
-										{product.isActive ? "Đang bán" : "Đang ẩn"}
-									</span>
-								</div>
-							</div>
-						</div>
-
-						<div className="group relative overflow-hidden p-4 bg-white rounded-2xl border border-gray-100 shadow-md hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-1">
-							<div className="absolute top-0 right-0 w-24 h-24 bg-blue-400 rounded-full -mr-10 -mt-10 opacity-20 transition-transform duration-500 group-hover:scale-125" />
-
-							<div className="relative flex items-center gap-4">
-								<div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100 text-blue-600 flex items-center justify-center shadow-inner">
-									<Warehouse
-										size={24}
-										strokeWidth={2}
-										className="drop-shadow-sm"
-									/>
-								</div>
-								<div className="flex flex-col min-w-0">
-									<span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest mb-0.5">
-										Tổng tồn kho
-									</span>
-									<span className="text-base font-black text-gray-800 truncate tracking-tight">
-										{new Intl.NumberFormat("vi-VN").format(totalStock)}{" "}
-										<span className="text-xs font-medium text-gray-400 font-sans">
-											SP
-										</span>
-									</span>
-								</div>
-							</div>
-						</div>
-
-						<div className="group relative overflow-hidden p-4 bg-white rounded-2xl border border-gray-100 shadow-md hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-1">
-							<div className="absolute top-0 right-0 w-24 h-24 bg-orange-400 rounded-full -mr-10 -mt-10 opacity-20 transition-transform duration-500 group-hover:scale-125" />
-
-							<div className="relative flex items-center gap-4">
-								<div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-50 to-orange-100 text-orange-600 flex items-center justify-center shadow-inner">
-									<Calendar
-										size={24}
-										strokeWidth={2}
-										className="drop-shadow-sm"
-									/>
-								</div>
-								<div className="flex flex-col">
-									<span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest mb-0.5">
-										Ngày tạo
-									</span>
-									<span className="text-base font-black text-gray-800 tracking-tight font-mono">
-										{new Date(product.createdAt).toLocaleDateString("vi-VN")}
-									</span>
-								</div>
-							</div>
-						</div>
-
-						<div className="group relative overflow-hidden p-4 bg-white rounded-2xl border border-gray-100 shadow-md hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-1">
-							<div className="absolute top-0 right-0 w-24 h-24 bg-purple-400 rounded-full -mr-10 -mt-10 opacity-20 transition-transform duration-500 group-hover:scale-125" />
-
-							<div className="relative flex items-center gap-4">
-								<div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-50 to-purple-100 text-purple-600 flex items-center justify-center shadow-inner">
-									<Clock size={24} strokeWidth={2} className="drop-shadow-sm" />
-								</div>
-								<div className="flex flex-col">
-									<span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest mb-0.5">
-										Cập nhật cuối
-									</span>
-									<span className="text-base font-black text-gray-800 tracking-tight font-mono">
-										{new Date(product.updatedAt).toLocaleDateString("vi-VN")}
-									</span>
-								</div>
-							</div>
-						</div>
+				{/* --- BỔ SUNG 1: HIỂN THỊ TỒN KHO --- */}
+				<div className="flex items-center gap-3 mt-2 p-3 bg-gray-50 rounded-xl border border-gray-200 w-fit">
+					<div className="p-2 bg-white rounded-lg shadow-sm text-blue-500">
+						<Box size={20} />
 					</div>
-				)} */}
+					<div>
+						<p className="text-xs text-gray-400 font-bold uppercase tracking-wider">
+							{/* Logic đổi text: Đã chọn đủ option chưa? */}
+							{Object.keys(selectedOptions).length > 0 &&
+							Object.keys(selectedOptions).length ===
+								Object.keys(groupedAttributes).length
+								? "Tồn kho phiên bản này"
+								: "Tổng tồn kho"}
+						</p>
+						<p className="text-lg font-bold text-gray-800">
+							{new Intl.NumberFormat("vi-VN").format(displayStock)}{" "}
+							<span className="text-sm font-normal text-gray-500">
+								sản phẩm
+							</span>
+						</p>
+					</div>
+				</div>
+				{/* GIỎ HÀNG */}
+				{/* Chỉ hiện khi: KHÔNG phải Shop, KHÔNG phải Admin, và đang ở chế độ View */}
+				{!isShop && !isAdmin && currentMode === "view" && (
+					<div className="mt-6 pt-6 border-t border-gray-100">
+						<button
+							onClick={onAddToCart}
+							disabled={displayStock === 0} // Hết hàng thì disable
+							className={clsx(
+								"w-full py-4 font-bold text-lg rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all flex items-center justify-center gap-3",
+								"disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0",
+								// Style: Màu vàng (Primary) chữ đen
+								"bg-primary hover:bg-primary-light text-black"
+							)}>
+							<ShoppingCart size={24} />
+							{displayStock === 0 ? "Hết hàng" : "Thêm vào giỏ hàng"}
+						</button>
+					</div>
+				)}
+
 				{(isShop || isAdmin) && currentMode === "view" && product && (
 					<div className="grid grid-cols-2 gap-4 mt-2">
 						{/* Box 1: Trạng thái */}

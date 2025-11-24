@@ -3,24 +3,47 @@ import { apiResponse, ApiError } from "../../utils/index.js";
 
 const { successResponse } = apiResponse;
 
-/**
- * HÀM HELPER: Định dạng lại dữ liệu giỏ hàng để trả về cho client.
- * Hàm này nhận kết quả từ calculateCartTotal và chuyển đổi nó.
- * @param {object} cartData - { totalAmount, itemCount, itemsWithFinalPrice }
- * @param {string} accountId - ID tài khoản của người dùng
- * @returns {object} - Dữ liệu giỏ hàng đã được định dạng theo chuẩn frontend.
- */
 const formatCartForResponse = (cartData, accountId) => {
 	const { totalAmount, itemCount, itemsWithFinalPrice } = cartData;
+
 	return {
 		accountId: accountId,
-		items: itemsWithFinalPrice.map((i) => ({
-			product: i.product,
-			productVariant: i.productVariant,
-			productVariantId: i.productVariant._id.toString(), // Đảm bảo là string
-			quantity: i.quantity,
-			price: i.finalPrice,
-		})),
+		items: itemsWithFinalPrice.map((i) => {
+			// --- XỬ LÝ ATTRIBUTES ---
+			// Chuyển từ Object lồng nhau của Mongoose sang dạng phẳng cho Frontend
+			const formattedAttributes =
+				i.productVariant?.attributes?.map((attr) => {
+					// Kiểm tra null safety (vì có thể populate thất bại nếu ID sai)
+					const attrDef = attr.attributeId || {};
+					const attrVal = attr.valueId || {};
+
+					return {
+						// Các trường này khớp với Frontend đang gọi
+						attributeLabel: attrDef.label || attrDef.name || "Thuộc tính",
+						valueLabel: attrVal.label || attrVal.value || "Giá trị",
+
+						// Giữ lại ID gốc nếu cần
+						attributeId: attrDef._id,
+						valueId: attrVal._id,
+					};
+				}) || [];
+
+			// Tạo object variant mới với attributes đã format
+			const formattedVariant = {
+				...(i.productVariant.toObject
+					? i.productVariant.toObject()
+					: i.productVariant), // Chuyển sang plain object nếu cần
+				attributes: formattedAttributes,
+			};
+
+			return {
+				product: i.product,
+				productVariant: formattedVariant,
+				productVariantId: i.productVariant._id.toString(),
+				quantity: i.quantity,
+				price: i.finalPrice,
+			};
+		}),
 		subtotal: totalAmount,
 		totalQuantity: itemCount,
 	};

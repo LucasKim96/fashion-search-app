@@ -1,12 +1,33 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
 
 export default function NotFoundPage() {
 	const router = useRouter();
 	const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+	const [countdown, setCountdown] = useState(4);
+
+	useEffect(() => {
+		// Tạo một interval chạy mỗi giây để cập nhật bộ đếm
+		const interval = setInterval(() => {
+			setCountdown((prevCount) => prevCount - 1);
+		}, 1000);
+
+		// Tạo một timeout để chuyển hướng sau 5 giây
+		const timeout = setTimeout(() => {
+			router.push("/");
+		}, 4000);
+
+		// Hàm dọn dẹp: Rất quan trọng!
+		// Nó sẽ được gọi khi component unmount (ví dụ: khi người dùng tự click nút quay về)
+		// để ngăn không cho timeout/interval chạy ngầm.
+		return () => {
+			clearInterval(interval);
+			clearTimeout(timeout);
+		};
+	}, [router]);
 
 	return (
 		<div
@@ -39,7 +60,11 @@ export default function NotFoundPage() {
 				<p className="text-3xl sm:text-4xl font-semibold text-white/90 drop-shadow-md">
 					Oops! Trang bạn tìm kiếm không tồn tại.
 				</p>
-
+				<p className="mt-4 text-lg text-white/70">
+					Tự động quay về trang chủ sau{" "}
+					<span className="font-bold text-white text-xl">{countdown}</span>{" "}
+					giây...
+				</p>
 				{/* Interactive Button */}
 				<button
 					onClick={() => router.push("/")}

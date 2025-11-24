@@ -34,7 +34,6 @@ ownerRouter.post(
 	ShopController.createShop
 );
 ownerRouter.put("/:id", validateShop, ShopController.editShop);
-ownerRouter.delete("/:id", ShopController.removeShop);
 ownerRouter.patch("/:id/status", ShopController.changeStatus);
 ownerRouter.put(
 	"/:id/logo",
@@ -46,6 +45,12 @@ ownerRouter.put(
 	uploadShopImage.single("cover"),
 	ShopController.updateCover
 );
+ownerRouter.delete("/hard-delete/mine", ShopController.hardRemoveMyShop);
+// Route để lấy thông tin quản lý
+ownerRouter.get("/management", ShopController.getMyShopForManagement);
+// Route để chủ shop tự đóng cửa hàng
+ownerRouter.patch("/close/mine", ShopController.closeMyShop);
+ownerRouter.patch("/reopen/mine", ShopController.reopenMyShop);
 
 // Mount owner routes under prefix
 router.use("/owner", ownerRouter);
