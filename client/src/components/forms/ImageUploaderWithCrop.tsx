@@ -3,7 +3,8 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { UploadCloud, X, Check, Crop, Camera, ZoomIn } from "lucide-react";
 import Cropper from "react-easy-crop";
-import { getCroppedImg, ImagePreviewModal } from "@shared/core";
+import { getCroppedImg } from "@shared/core/utils";
+import { ImagePreviewModal } from "@shared/core/components/ui";
 import clsx from "clsx";
 
 interface Props {

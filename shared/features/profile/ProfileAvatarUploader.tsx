@@ -3,10 +3,9 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Camera, X, Check, ZoomIn, Crop, Focus } from "lucide-react";
 import { useUser } from "@shared/features/user";
-import { UserProfile, getCroppedImg, ImagePreviewModal } from "@shared/core";
+import { UserProfile, getCroppedImg } from "@shared/core/utils";
+import { ImagePreviewModal } from "@shared/core/components/ui";
 import Cropper from "react-easy-crop";
-import { motion, AnimatePresence } from "framer-motion";
-import { useAuthContext } from "../auth/AuthProvider";
 
 interface Props {
 	profile: UserProfile;

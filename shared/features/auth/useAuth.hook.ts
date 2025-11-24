@@ -2,13 +2,9 @@
 
 import { useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import {
-	useNotification,
-	tokenUtils,
-	errorUtils,
-	mapBackendRoles,
-	RoleKey,
-} from "@shared/core";
+import { tokenUtils, errorUtils, mapBackendRoles } from "@shared/core/utils";
+import { useNotification } from "@shared/core/ui/NotificationProvider";
+import { RoleKey } from "@shared/core/constants/role.constants";
 import { useAuthCore } from "./useAuthCore.hook"; // Hook cốt lõi để quản lý state
 import {
 	loginApi,

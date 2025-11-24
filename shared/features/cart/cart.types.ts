@@ -1,22 +1,35 @@
 // file: shared/features/cart/cart.types.ts
-
-// Kiểu dữ liệu rút gọn cho Product, được populate trong item
-interface CartItemProduct {
+/**
+ * Kiểu dữ liệu cho Product trong giỏ hàng
+ * Cần khai báo đủ các trường có thể trả về để tránh lỗi TypeScript
+ */
+export interface CartItemProduct {
 	_id: string;
-	name: string;
-	// Bạn có thể thêm các trường khác nếu backend populate, ví dụ: slug
+	// Hỗ trợ cả 2 kiểu tên (mapped hoặc raw)
+	name?: string;
+	pdName?: string;
+	// Hỗ trợ cả ảnh thumbnail hoặc mảng ảnh gốc
+	thumbnail?: string;
+	images?: string[];
+	slug?: string;
 }
 
-// Kiểu dữ liệu rút gọn cho ProductVariant, được populate trong item
-interface CartItemVariant {
+/**
+ * Kiểu dữ liệu cho ProductVariant trong giỏ hàng
+ */
+export interface CartItemVariant {
 	_id: string;
-	imageUrl?: string;
+	imageUrl?: string; // Cũ
+	image?: string; // Mới
 	attributes: {
-		attribute: string;
-		value: string;
-		// Thêm các trường khác nếu backend populate, ví dụ: color, hex
+		attributeLabel?: string; // Chuẩn format mới
+		valueLabel?: string; // Chuẩn format mới
+		attribute?: string; // Fallback cũ
+		value?: string; // Fallback cũ
+		name?: string;
 	}[];
-	// Bạn có thể thêm các trường khác nếu backend populate, ví dụ: sku, stock
+	stock?: number;
+	priceAdjustment?: number;
 }
 
 /**
@@ -51,6 +64,37 @@ export interface AddToCartRequest {
 /**
  * Dữ liệu cần gửi lên khi cập nhật số lượng của một item.
  */
+export interface UpdateCartItemRequest {
+	quantity: number;
+}
+
+/**
+ * Kiểu dữ liệu cho MỘT item trong mảng `items` của giỏ hàng.
+ */
+export interface CartItem {
+	product: CartItemProduct;
+	productVariant: CartItemVariant;
+	productVariantId: string;
+	quantity: number;
+	price: number;
+}
+
+/**
+ * Cấu trúc đầy đủ của object Giỏ hàng mà API trả về.
+ */
+export interface Cart {
+	accountId: string;
+	items: CartItem[];
+	subtotal: number;
+	totalQuantity: number;
+}
+
+// ... (Các interface Request giữ nguyên)
+export interface AddToCartRequest {
+	productVariantId: string;
+	quantity: number;
+}
+
 export interface UpdateCartItemRequest {
 	quantity: number;
 }

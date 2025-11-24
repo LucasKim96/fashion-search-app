@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@shared/features/cart/useCart.hook"; // Giả định bạn có hook này
-import { buildImageUrl, formatCurrency } from "@shared/core";
+import { buildImageUrl, formatCurrency } from "@shared/core/utils";
 import { Loader2, Trash2, ShoppingBag, Plus, Minus, Shirt } from "lucide-react";
 import { clsx } from "clsx";
 

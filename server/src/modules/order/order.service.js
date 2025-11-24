@@ -8,473 +8,510 @@ import { calculateCartTotal } from "../cart/cart.service.js"; // hoặc đúng p
  */
 
 export const createOrderFromCart = async (accountId, data) => {
-  const { addressLine, receiverName, phone, note } = data;
+	const { addressLine, receiverName, phone, note } = data;
 
-  // Lấy giỏ hàng + populate đầy đủ
-  const cart = await Cart.findOne({ accountId }).populate({
-    path: "cartItems.productVariantId",
-    populate: { path: "productId", select: "shopId productName imageUrl" },  options: { strictPopulate: false } 
-  });
+	// 1. Lấy giỏ hàng (giữ nguyên logic check giỏ hàng trống)
+	const cart = await Cart.findOne({ accountId });
+	if (!cart || cart.items.length === 0)
+		throw ApiError.badRequest("Giỏ hàng trống");
 
-  if (!cart || cart.cartItems.length === 0)
-    throw ApiError.badRequest("Giỏ hàng trống bro 🛒");
+	// 2. Tính toán giá (Giả sử hàm này đã chuẩn)
+	const { itemsWithFinalPrice } = await calculateCartTotal(accountId);
 
-  // Tính lại giá chính xác từng variant bằng service
-  const { itemsWithFinalPrice, totalAmount: cartTotal } =
-    await calculateCartTotal(accountId);
+	if (!itemsWithFinalPrice || itemsWithFinalPrice.length === 0) {
+		throw ApiError.badRequest("Không có sản phẩm hợp lệ để thanh toán");
+	}
 
-  return await withTransaction(async (session) => {
-    const shopOrders = {};
+	try {
+		const shopOrders = {};
 
-    // Gộp theo shop
-    for (const item of itemsWithFinalPrice) {
-      const { productVariant, quantity, finalPrice } = item;
-      const product = productVariant.productId;
-      const shopId =
-        typeof product.shopId === "object"
-          ? product.shopId._id.toString()
-          : product.shopId.toString();
-    
-      if (!shopOrders[shopId]) shopOrders[shopId] = [];
-    
-      shopOrders[shopId].push({
-        productId: product._id,
-        productVariantId: productVariant._id,
-        quantity,
-        finalPriceAtOrder: finalPrice,
-        pdNameAtOrder: product.pdName, // đổi cho đúng schema
-        imageAtOrder: product.imageUrl,
-        attributesAtOrder: productVariant.attributes,
-      });
-    }
-    
+		// 3. Gom nhóm sản phẩm theo Shop (Thêm logic Check Null an toàn)
+		for (const item of itemsWithFinalPrice) {
+			const { productVariant, quantity, finalPrice } = item;
 
-    const createdOrders = [];
-    for (const [shopId, orderItems] of Object.entries(shopOrders)) {
-      const totalAmount = orderItems.reduce(
-        (sum, i) => sum + i.finalPriceAtOrder * i.quantity,
-        0
-      );
+			// [FIX LỖI 500] Kiểm tra kỹ dữ liệu trước khi truy cập
+			if (!productVariant) continue; // Variant bị xóa thì bỏ qua
 
-      const order = await Order.create(
-        [
-          {
-            accountId,
-            shopId,
-            orderItems,
-            totalAmount,
-            addressLine,
-            receiverName,
-            phone,
-            note,
-            status: "pending",
-            statusHistory: [
-              { status: "pending", note: "Đơn hàng vừa được tạo" },
-            ],
-          },
-        ],
-        { session }
-      );
-      createdOrders.push(order[0]);
-    }
+			const product = productVariant.productId; // Do populate lồng nhau
+			if (!product) continue; // Product bị xóa thì bỏ qua
 
-    // Xoá giỏ hàng sau khi đặt
-    await Cart.deleteOne({ _id: cart._id }, { session });
+			// Xử lý ShopID an toàn (chấp nhận cả string hoặc object populate)
+			let shopIdString = "";
+			if (product.shopId && typeof product.shopId === "object") {
+				shopIdString = product.shopId._id.toString();
+			} else if (product.shopId) {
+				shopIdString = product.shopId.toString();
+			} else {
+				console.error("Product missing shopId:", product._id);
+				continue;
+			}
 
-    return createdOrders;
-  });
+			if (!shopOrders[shopIdString]) shopOrders[shopIdString] = [];
+
+			shopOrders[shopIdString].push({
+				productId: product._id,
+				productVariantId: productVariant._id,
+				quantity,
+				finalPriceAtOrder: finalPrice,
+				// Map đúng trường Schema yêu cầu
+				pdNameAtOrder: product.pdName || product.name || "Sản phẩm",
+				imageAtOrder:
+					productVariant.image || (product.images && product.images[0]) || "",
+				// Lưu attributes snapshot để lịch sử đơn hàng không bị mất khi sửa variant
+				attributesAtOrder:
+					productVariant.attributes?.map((attr) => ({
+						attributeName:
+							attr.attributeId?.label || attr.attributeId?.name || "Thuộc tính",
+						valueName: attr.valueId?.label || attr.valueId?.value || "Giá trị",
+					})) || [],
+			});
+		}
+
+		const createdOrders = [];
+
+		// 4. Tạo đơn hàng cho từng Shop
+		for (const [shopId, orderItems] of Object.entries(shopOrders)) {
+			if (orderItems.length === 0) continue;
+
+			const totalAmount = orderItems.reduce(
+				(sum, i) => sum + i.finalPriceAtOrder * i.quantity,
+				0
+			);
+
+			// Tạo đơn hàng
+			const newOrder = await Order.create({
+				accountId,
+				shopId,
+				orderItems,
+				totalAmount,
+				addressLine,
+				receiverName,
+				phone,
+				note,
+				status: "pending",
+				statusHistory: [
+					{ status: "pending", note: "Đơn hàng được tạo thành công" },
+				],
+			});
+
+			createdOrders.push(newOrder);
+		}
+
+		if (createdOrders.length === 0) {
+			throw ApiError.badRequest(
+				"Không thể tạo đơn hàng (Dữ liệu sản phẩm lỗi)"
+			);
+		}
+
+		// 5. Xóa giỏ hàng sau khi tạo đơn thành công
+		cart.items = [];
+		await cart.save();
+
+		return createdOrders;
+	} catch (error) {
+		// Log lỗi ra terminal server để debug
+		console.error("Create Order Error:", error);
+		throw error; // Ném tiếp lỗi để controller bắt
+	}
 };
-
 
 /**
  * Buyer: Lấy đơn của chính mình
  */
-export const getOrdersByBuyer = async (accountId, { page = 1, limit = 10, status = "all" }) => {
-  page = Math.max(Number(page) || 1, 1);
-  limit = Math.min(Math.max(Number(limit) || 10, 1), 50);
+export const getOrdersByBuyer = async (
+	accountId,
+	{ page = 1, limit = 10, status = "all" }
+) => {
+	page = Math.max(Number(page) || 1, 1);
+	limit = Math.min(Math.max(Number(limit) || 10, 1), 50);
 
-  const filter = { accountId };
-  if (status && status !== "all") filter.status = status;
+	const filter = { accountId };
+	if (status && status !== "all") filter.status = status;
 
-  const total = await Order.countDocuments(filter);
-  const orders = await Order.find(filter)
-    .populate("shopId", "shopName logoUrl")
-    .sort({ createdAt: -1 })
-    .skip((page - 1) * limit)
-    .limit(limit);
+	const total = await Order.countDocuments(filter);
+	const orders = await Order.find(filter)
+		.populate("shopId", "shopName logoUrl")
+		.sort({ createdAt: -1 })
+		.skip((page - 1) * limit)
+		.limit(limit);
 
-  return {
-    data: orders,
-    pagination: {
-      currentPage: page,
-      totalItems: total,
-      totalPages: Math.ceil(total / limit),
-    },
-  };
+	return {
+		data: orders,
+		pagination: {
+			currentPage: page,
+			totalItems: total,
+			totalPages: Math.ceil(total / limit),
+		},
+	};
 };
 
 /**
  * Buyer: Chi tiết đơn
  */
 export const getOrderDetailForBuyer = async (orderId, accountId) => {
-  const order = await Order.findOne({ _id: orderId, accountId }).populate(
-    "shopId",
-    "shopName logoUrl"
-  );
-  if (!order) throw ApiError.notFound("Không tìm thấy đơn hàng");
-  return order;
+	const order = await Order.findOne({ _id: orderId, accountId }).populate(
+		"shopId",
+		"shopName logoUrl"
+	);
+	if (!order) throw ApiError.notFound("Không tìm thấy đơn hàng");
+	return order;
 };
 
 /**
  * Buyer confirm nhận hàng
  */
 export const confirmOrderReceived = async (orderId, accountId) => {
-  const order = await Order.findOne({ _id: orderId, accountId });
-  if (!order) throw ApiError.notFound("Không tìm thấy đơn hàng");
-  if (order.status !== "delivered")
-    throw ApiError.badRequest("Chưa thể xác nhận vì đơn chưa giao xong");
+	const order = await Order.findOne({ _id: orderId, accountId });
+	if (!order) throw ApiError.notFound("Không tìm thấy đơn hàng");
+	if (order.status !== "delivered")
+		throw ApiError.badRequest("Chưa thể xác nhận vì đơn chưa giao xong");
 
-  order.status = "confirmed";
-  order.statusHistory.push({
-    status: "confirmed",
-    note: "Người mua xác nhận đã nhận hàng",
-  });
-  await order.save();
-  return order;
+	order.status = "confirmed";
+	order.statusHistory.push({
+		status: "confirmed",
+		note: "Người mua xác nhận đã nhận hàng",
+	});
+	await order.save();
+	return order;
 };
 
 /**
  * Buyer báo cáo sự cố
  */
 export const reportOrderIssue = async (orderId, accountId, note) => {
-  const order = await Order.findOne({ _id: orderId, accountId });
-  if (!order) throw ApiError.notFound("Không tìm thấy đơn hàng");
+	const order = await Order.findOne({ _id: orderId, accountId });
+	if (!order) throw ApiError.notFound("Không tìm thấy đơn hàng");
 
-  order.statusHistory.push({
-    status: order.status,
-    note: note || "Người mua gửi báo cáo sự cố",
-  });
-  await order.save();
-  return { message: "Đã báo cáo sự cố, admin sẽ xem xét sớm!" };
+	order.statusHistory.push({
+		status: order.status,
+		note: note || "Người mua gửi báo cáo sự cố",
+	});
+	await order.save();
+	return { message: "Đã báo cáo sự cố, admin sẽ xem xét sớm!" };
 };
 
 /**
  * Buyer hủy đơn khi pending
  */
 export const cancelOrderByBuyer = async (orderId, accountId) => {
-  const order = await Order.findOne({ _id: orderId, accountId });
-  if (!order) throw ApiError.notFound("Không tìm thấy đơn hàng");
-  if (order.status !== "pending")
-    throw ApiError.badRequest("Chỉ có thể hủy khi đơn đang chờ xử lý");
+	const order = await Order.findOne({ _id: orderId, accountId });
+	if (!order) throw ApiError.notFound("Không tìm thấy đơn hàng");
+	if (order.status !== "pending")
+		throw ApiError.badRequest("Chỉ có thể hủy khi đơn đang chờ xử lý");
 
-  order.status = "cancelled";
-  order.statusHistory.push({
-    status: "cancelled",
-    note: "Người mua tự hủy đơn",
-  });
-  await order.save();
-  return order;
+	order.status = "cancelled";
+	order.statusHistory.push({
+		status: "cancelled",
+		note: "Người mua tự hủy đơn",
+	});
+	await order.save();
+	return order;
 };
 
 /**
  * Seller: Lấy danh sách đơn của shop
  */
-  export const getOrdersByShop = async (shopId, { page = 1, limit = 10, status = "all"}) => {
-    page = Math.max(Number(page) || 1, 1);
-    limit = Math.min(Math.max(Number(limit) || 10, 1), 50);
-  
-    const filter = { shopId };
-    if (status && status !== "all") filter.status = status;
+export const getOrdersByShop = async (
+	shopId,
+	{ page = 1, limit = 10, status = "all" }
+) => {
+	page = Math.max(Number(page) || 1, 1);
+	limit = Math.min(Math.max(Number(limit) || 10, 1), 50);
 
-    const total = await Order.countDocuments(filter);
-    const orders = await Order.find(filter)
-      .populate("shopId", "shopName logoUrl")
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit);
-  
-    return {
-      data: orders,
-      pagination: {
-        currentPage: page,
-        totalItems: total,
-        totalPages: Math.ceil(total / limit),
-      },
-    };
-  };
+	const filter = { shopId };
+	if (status && status !== "all") filter.status = status;
+
+	const total = await Order.countDocuments(filter);
+	const orders = await Order.find(filter)
+		.populate("shopId", "shopName logoUrl")
+		.sort({ createdAt: -1 })
+		.skip((page - 1) * limit)
+		.limit(limit);
+
+	return {
+		data: orders,
+		pagination: {
+			currentPage: page,
+			totalItems: total,
+			totalPages: Math.ceil(total / limit),
+		},
+	};
+};
 
 /**
  * Seller huỷ đơn hàng
  */
 export const cancelBySeller = async (orderId, sellerId, reason = "") => {
-  // Tìm đơn
-  const order = await Order.findById(orderId)
-    .populate("shopId", "accountId shopName")
-    .populate("orderItems.productVariantId");
+	// Tìm đơn
+	const order = await Order.findById(orderId)
+		.populate("shopId", "accountId shopName")
+		.populate("orderItems.productVariantId");
 
-  if (!order) throw ApiError.notFound("Không tìm thấy đơn hàng");
-  if (order.status === "cancelled")
-    throw ApiError.badRequest("Đơn này đã bị huỷ rồi");
-  if (["delivered", "completed"].includes(order.status))
-    throw ApiError.badRequest("Không thể huỷ đơn đã giao hoặc hoàn tất");
-  if (order.status !== "pending") {
-    throw ApiError.badRequest("Chỉ được hủy đơn khi đang ở trạng thái 'pending'");
-  }
-  
-  // Check quyền: phải là chủ shop của đơn hoặc admin
-  const sellerAccount = await Account.findById(sellerId).populate(
-    "roles",
-    "roleName level"
-  );
-  if (!sellerAccount) throw ApiError.notFound("Tài khoản không tồn tại");
+	if (!order) throw ApiError.notFound("Không tìm thấy đơn hàng");
+	if (order.status === "cancelled")
+		throw ApiError.badRequest("Đơn này đã bị huỷ rồi");
+	if (["delivered", "completed"].includes(order.status))
+		throw ApiError.badRequest("Không thể huỷ đơn đã giao hoặc hoàn tất");
+	if (order.status !== "pending") {
+		throw ApiError.badRequest(
+			"Chỉ được hủy đơn khi đang ở trạng thái 'pending'"
+		);
+	}
 
-  const isOwner = order.shopId?.accountId?.toString() === sellerId.toString();
-  const isAdmin = sellerAccount.roles.some(
-    (r) => r.roleName === "Super Admin" || r.level >= 3
-  );
+	// Check quyền: phải là chủ shop của đơn hoặc admin
+	const sellerAccount = await Account.findById(sellerId).populate(
+		"roles",
+		"roleName level"
+	);
+	if (!sellerAccount) throw ApiError.notFound("Tài khoản không tồn tại");
 
-  if (!isOwner && !isAdmin)
-    throw ApiError.forbidden("Không có quyền huỷ đơn hàng này");
+	const isOwner = order.shopId?.accountId?.toString() === sellerId.toString();
+	const isAdmin = sellerAccount.roles.some(
+		(r) => r.roleName === "Super Admin" || r.level >= 3
+	);
 
-  // Transaction: rollback stock + update status
-  return await withTransaction(async (session) => {
-    // Rollback stock cho từng biến thể
-    for (const item of order.orderItems) {
-      await ProductVariant.updateOne(
-        { _id: item.productVariantId },
-        { $inc: { stock: item.quantity } },
-        { session }
-      );
-    }
+	if (!isOwner && !isAdmin)
+		throw ApiError.forbidden("Không có quyền huỷ đơn hàng này");
 
-    // Update trạng thái
-    order.status = "cancelled";
-    order.statusHistory.push({
-      status: "cancelled",
-      note: reason || "Người bán đã huỷ đơn hàng",
-      changedAt: new Date(),
-    });
-    await order.save({ session });
+	// Transaction: rollback stock + update status
+	return await withTransaction(async (session) => {
+		// Rollback stock cho từng biến thể
+		for (const item of order.orderItems) {
+			await ProductVariant.updateOne(
+				{ _id: item.productVariantId },
+				{ $inc: { stock: item.quantity } },
+				{ session }
+			);
+		}
 
-    return {
-      message: "Đơn hàng đã được huỷ thành công",
-      orderId: order._id,
-      rollbackItems: order.orderItems.length,
-    };
-  });
+		// Update trạng thái
+		order.status = "cancelled";
+		order.statusHistory.push({
+			status: "cancelled",
+			note: reason || "Người bán đã huỷ đơn hàng",
+			changedAt: new Date(),
+		});
+		await order.save({ session });
+
+		return {
+			message: "Đơn hàng đã được huỷ thành công",
+			orderId: order._id,
+			rollbackItems: order.orderItems.length,
+		};
+	});
 };
 
 /**
  * Seller cập nhật trạng thái
  */
 export const updateStatusPacking = async (orderId, shopId) => {
-  const order = await Order.findOne({ _id: orderId, shopId });
-  if (!order) throw ApiError.notFound("Không tìm thấy đơn hàng");
-  if (order.status !== "pending")
-    throw ApiError.badRequest("Đơn hàng phải ở trạng thái pending");
+	const order = await Order.findOne({ _id: orderId, shopId });
+	if (!order) throw ApiError.notFound("Không tìm thấy đơn hàng");
+	if (order.status !== "pending")
+		throw ApiError.badRequest("Đơn hàng phải ở trạng thái pending");
 
-  order.status = "packing";
-  order.statusHistory.push({
-    status: "packing",
-    note: "Shop đang chuẩn bị hàng",
-  });
-  await order.save();
-  return order;
+	order.status = "packing";
+	order.statusHistory.push({
+		status: "packing",
+		note: "Shop đang chuẩn bị hàng",
+	});
+	await order.save();
+	return order;
 };
 
 export const updateStatusShipping = async (orderId, shopId) => {
-  const order = await Order.findOne({ _id: orderId, shopId });
-  if (!order) throw ApiError.notFound("Không tìm thấy đơn hàng");
-  if (order.status !== "packing")
-    throw ApiError.badRequest("Chỉ có thể chuyển sang shipping từ packing");
+	const order = await Order.findOne({ _id: orderId, shopId });
+	if (!order) throw ApiError.notFound("Không tìm thấy đơn hàng");
+	if (order.status !== "packing")
+		throw ApiError.badRequest("Chỉ có thể chuyển sang shipping từ packing");
 
-  order.status = "shipping";
-  order.statusHistory.push({
-    status: "shipping",
-    note: "Shop đã giao cho đơn vị vận chuyển",
-  });
-  await order.save();
-  return order;
+	order.status = "shipping";
+	order.statusHistory.push({
+		status: "shipping",
+		note: "Shop đã giao cho đơn vị vận chuyển",
+	});
+	await order.save();
+	return order;
 };
 
 export const updateStatusDelivered = async (orderId, shopId) => {
-  const order = await Order.findOne({ _id: orderId, shopId });
-  if (!order) throw ApiError.notFound("Không tìm thấy đơn hàng");
-  if (order.status !== "shipping")
-    throw ApiError.badRequest("Chỉ có thể đánh dấu delivered từ shipping");
+	const order = await Order.findOne({ _id: orderId, shopId });
+	if (!order) throw ApiError.notFound("Không tìm thấy đơn hàng");
+	if (order.status !== "shipping")
+		throw ApiError.badRequest("Chỉ có thể đánh dấu delivered từ shipping");
 
-  order.status = "delivered";
-  order.deliverAt = new Date();
-  order.statusHistory.push({
-    status: "delivered",
-    note: "Shop đánh dấu đã giao",
-  });
-  await order.save();
-  return order;
+	order.status = "delivered";
+	order.deliverAt = new Date();
+	order.statusHistory.push({
+		status: "delivered",
+		note: "Shop đánh dấu đã giao",
+	});
+	await order.save();
+	return order;
 };
 
 /**
  * Admin force complete
  */
 export const forceCompleteOrder = async (orderId, adminId) => {
-  const admin = await Account.findById(adminId);
-  if (!admin) throw ApiError.notFound("Admin không tồn tại");
+	const admin = await Account.findById(adminId);
+	if (!admin) throw ApiError.notFound("Admin không tồn tại");
 
-  const order = await Order.findById(orderId);
-  if (!order) throw ApiError.notFound("Không tìm thấy đơn hàng");
+	const order = await Order.findById(orderId);
+	if (!order) throw ApiError.notFound("Không tìm thấy đơn hàng");
 
-  order.status = "completed";
-  order.statusHistory.push({
-    status: "completed",
-    note: "Admin hoàn tất đơn thủ công",
-  });
-  await order.save();
-  return order;
+	order.status = "completed";
+	order.statusHistory.push({
+		status: "completed",
+		note: "Admin hoàn tất đơn thủ công",
+	});
+	await order.save();
+	return order;
 };
 
 /** ADMIN CANCEL ORDER */
 export const adminCancelOrder = async (
-  orderId,
-  adminId,
-  reason = "Admin huỷ đơn"
+	orderId,
+	adminId,
+	reason = "Admin huỷ đơn"
 ) => {
-  const order = await Order.findById(orderId).populate(
-    "orderItems.productVariantId"
-  );
-  if (!order) throw ApiError.notFound("Không tìm thấy đơn hàng");
-  if (order.status === "cancelled")
-    throw ApiError.badRequest("Đơn này đã bị huỷ rồi");
+	const order = await Order.findById(orderId).populate(
+		"orderItems.productVariantId"
+	);
+	if (!order) throw ApiError.notFound("Không tìm thấy đơn hàng");
+	if (order.status === "cancelled")
+		throw ApiError.badRequest("Đơn này đã bị huỷ rồi");
 
-  return await withTransaction(async (session) => {
-    // Rollback stock
-    for (const item of order.orderItems) {
-      await ProductVariant.updateOne(
-        { _id: item.productVariantId },
-        { $inc: { stock: item.quantity } },
-        { session }
-      );
-    }
+	return await withTransaction(async (session) => {
+		// Rollback stock
+		for (const item of order.orderItems) {
+			await ProductVariant.updateOne(
+				{ _id: item.productVariantId },
+				{ $inc: { stock: item.quantity } },
+				{ session }
+			);
+		}
 
-    order.status = "cancelled";
-    order.statusHistory.push({
-      status: "cancelled",
-      note: reason,
-      changedAt: new Date(),
-    });
-    await order.save({ session });
+		order.status = "cancelled";
+		order.statusHistory.push({
+			status: "cancelled",
+			note: reason,
+			changedAt: new Date(),
+		});
+		await order.save({ session });
 
-    return {
-      orderId: order._id,
-      message: "Admin huỷ đơn hàng thành công",
-      rollbackItems: order.orderItems.length,
-    };
-  });
+		return {
+			orderId: order._id,
+			message: "Admin huỷ đơn hàng thành công",
+			rollbackItems: order.orderItems.length,
+		};
+	});
 };
 
 /** REVIEW REPORTED ORDER */
 export const reviewReportedOrder = async (
-  orderId,
-  adminId,
-  action,
-  note = ""
+	orderId,
+	adminId,
+	action,
+	note = ""
 ) => {
-  const order = await Order.findById(orderId);
-  if (!order) throw ApiError.notFound("Không tìm thấy đơn hàng");
+	const order = await Order.findById(orderId);
+	if (!order) throw ApiError.notFound("Không tìm thấy đơn hàng");
 
-  if (order.status !== "shipping" && order.status !== "delivered") {
-    throw ApiError.badRequest("Chỉ xử lý được đơn đang giao hoặc vừa giao");
-  }
+	if (order.status !== "shipping" && order.status !== "delivered") {
+		throw ApiError.badRequest("Chỉ xử lý được đơn đang giao hoặc vừa giao");
+	}
 
-  let resultNote = "";
-  switch (action) {
-    case "approve_buyer":
-      order.status = "cancelled";
-      resultNote = "Admin phê duyệt huỷ cho người mua";
-      break;
-    case "approve_seller":
-      order.status = "completed";
-      resultNote = "Admin phê duyệt hoàn tất cho người bán";
-      break;
-    case "cancel_both":
-      order.status = "cancelled";
-      resultNote = "Admin huỷ cả 2 bên do tranh chấp";
-      break;
-    default:
-      throw ApiError.badRequest("Hành động không hợp lệ");
-  }
+	let resultNote = "";
+	switch (action) {
+		case "approve_buyer":
+			order.status = "cancelled";
+			resultNote = "Admin phê duyệt huỷ cho người mua";
+			break;
+		case "approve_seller":
+			order.status = "completed";
+			resultNote = "Admin phê duyệt hoàn tất cho người bán";
+			break;
+		case "cancel_both":
+			order.status = "cancelled";
+			resultNote = "Admin huỷ cả 2 bên do tranh chấp";
+			break;
+		default:
+			throw ApiError.badRequest("Hành động không hợp lệ");
+	}
 
-  order.statusHistory.push({
-    status: order.status,
-    note: `${resultNote}${note ? ` - ${note}` : ""}`,
-    changedAt: new Date(),
-  });
+	order.statusHistory.push({
+		status: order.status,
+		note: `${resultNote}${note ? ` - ${note}` : ""}`,
+		changedAt: new Date(),
+	});
 
-  await order.save();
+	await order.save();
 
-  return {
-    orderId: order._id,
-    status: order.status,
-    message: resultNote,
-  };
+	return {
+		orderId: order._id,
+		status: order.status,
+		message: resultNote,
+	};
 };
 
 /** AUTO TRANSITION ORDERS */
 export const autoTransitionOrders = async () => {
-  const now = new Date();
-  const oneDay = 24 * 60 * 60 * 1000;
+	const now = new Date();
+	const oneDay = 24 * 60 * 60 * 1000;
 
-  const updatedOrders = [];
+	const updatedOrders = [];
 
-  // PENDING → PACKING (quá 1 ngày)
-  const pendingOrders = await Order.find({
-    status: "pending",
-    createdAt: { $lte: new Date(now - oneDay) },
-  });
-  for (const o of pendingOrders) {
-    o.status = "packing";
-    o.statusHistory.push({
-      status: "packing",
-      note: "Auto chuyển sau 1 ngày",
-      changedAt: now,
-    });
-    await o.save();
-    updatedOrders.push(o._id);
-  }
+	// PENDING → PACKING (quá 1 ngày)
+	const pendingOrders = await Order.find({
+		status: "pending",
+		createdAt: { $lte: new Date(now - oneDay) },
+	});
+	for (const o of pendingOrders) {
+		o.status = "packing";
+		o.statusHistory.push({
+			status: "packing",
+			note: "Auto chuyển sau 1 ngày",
+			changedAt: now,
+		});
+		await o.save();
+		updatedOrders.push(o._id);
+	}
 
-  // PACKING → SHIPPING (quá 3 ngày)
-  const packingOrders = await Order.find({
-    status: "packing",
-    updatedAt: { $lte: new Date(now - 3 * oneDay) },
-  });
-  for (const o of packingOrders) {
-    o.status = "shipping";
-    o.statusHistory.push({
-      status: "shipping",
-      note: "Auto chuyển sau 3 ngày",
-      changedAt: now,
-    });
-    await o.save();
-    updatedOrders.push(o._id);
-  }
+	// PACKING → SHIPPING (quá 3 ngày)
+	const packingOrders = await Order.find({
+		status: "packing",
+		updatedAt: { $lte: new Date(now - 3 * oneDay) },
+	});
+	for (const o of packingOrders) {
+		o.status = "shipping";
+		o.statusHistory.push({
+			status: "shipping",
+			note: "Auto chuyển sau 3 ngày",
+			changedAt: now,
+		});
+		await o.save();
+		updatedOrders.push(o._id);
+	}
 
-  // SHIPPING → COMPLETED (auto sau 7 ngày)
-  const shippingOrders = await Order.find({
-    status: "shipping",
-    updatedAt: { $lte: new Date(now - 7 * oneDay) },
-  });
-  for (const o of shippingOrders) {
-    o.status = "completed";
-    o.statusHistory.push({
-      status: "completed",
-      note: "Auto hoàn tất sau 7 ngày",
-      changedAt: now,
-    });
-    await o.save();
-    updatedOrders.push(o._id);
-  }
+	// SHIPPING → COMPLETED (auto sau 7 ngày)
+	const shippingOrders = await Order.find({
+		status: "shipping",
+		updatedAt: { $lte: new Date(now - 7 * oneDay) },
+	});
+	for (const o of shippingOrders) {
+		o.status = "completed";
+		o.statusHistory.push({
+			status: "completed",
+			note: "Auto hoàn tất sau 7 ngày",
+			changedAt: now,
+		});
+		await o.save();
+		updatedOrders.push(o._id);
+	}
 
-  return {
-    updatedCount: updatedOrders.length,
-    updatedOrders,
-  };
+	return {
+		updatedCount: updatedOrders.length,
+		updatedOrders,
+	};
 };

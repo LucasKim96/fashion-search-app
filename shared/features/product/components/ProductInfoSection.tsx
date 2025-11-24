@@ -17,8 +17,9 @@ import {
 	Box,
 } from "lucide-react";
 import clsx from "clsx";
-import { useProduct, ProductDetail, ProductVariantDetail } from "../index";
-import { GradientButton, Input, formatCurrency } from "@shared/core";
+import { ProductDetail, ProductVariantDetail } from "../index";
+import { formatCurrency } from "@shared/core/utils";
+import { GradientButton } from "@shared/core/components/ui";
 
 interface ProductInfoSectionProps {
 	formId?: string;

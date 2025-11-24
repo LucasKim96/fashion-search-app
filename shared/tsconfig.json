@@ -23,7 +23,7 @@
 		"../admin/src/features/attributes/CardAttributeValue.tsx",
 		"../admin/src/features/attributes/CreateAttributePanel.tsx",
 		"../admin/src/features/attributes/CreateAttributeValue.tsx",
-		"../admin/src/features/attributes/index.ts"
+		"../admin/src/features/attributes/**/*.ts"
 	],
 	"exclude": ["node_modules", "dist"]
 }

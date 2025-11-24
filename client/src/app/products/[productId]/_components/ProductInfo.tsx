@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { ProductDetail, ProductVariantDetail } from "@shared/features/product";
-import { formatCurrency, buildImageUrl } from "@shared/core";
+import { formatCurrency, buildImageUrl } from "@shared/core/utils";
 import { ShieldCheck, Store } from "lucide-react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
