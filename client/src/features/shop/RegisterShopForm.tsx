@@ -268,7 +268,7 @@ export default function RegisterShopForm({
 	};
 
 	return (
-		<div className="bg-white p-8 rounded-2xl shadow-lg max-w-3xl mx-auto">
+		<div className="bg-white p-6 sm:p-8 rounded-2xl shadow-lg max-w-4xl mx-auto">
 			<form onSubmit={handleSubmit} className="space-y-6">
 				<div className="text-center">
 					<h2 className="text-3xl font-bold text-gray-800">

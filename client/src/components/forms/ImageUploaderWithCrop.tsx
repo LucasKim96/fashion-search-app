@@ -106,7 +106,7 @@ export const ImageUploaderWithCrop: React.FC<Props> = ({
 					) : (
 						<div className="text-center text-gray-500">
 							<UploadCloud size={40} strokeWidth={1.5} className="mx-auto" />
-							<p className="mt-2 text-sm">Tải lên hoặc kéo thả</p>
+							<p className="mt-2 text-sm">Nhấn nút để tải ảnh lên</p>
 						</div>
 					)}
 				</div>
