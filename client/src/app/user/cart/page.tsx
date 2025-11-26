@@ -1,10 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@shared/features/cart/useCart.hook"; // Giả định bạn có hook này
 import { buildImageUrl, formatCurrency } from "@shared/core/utils";
-import { Loader2, Trash2, ShoppingBag, Plus, Minus, Shirt } from "lucide-react";
+import {
+	Loader2,
+	Trash2,
+	ShoppingBag,
+	Plus,
+	Minus,
+	Shirt,
+	Store,
+} from "lucide-react";
 import { clsx } from "clsx";
 
 // ===================================================================
@@ -248,6 +256,43 @@ const CartSummary = ({ subtotal }) => {
 export default function CartPage() {
 	// Giả định bạn có một hook `useCart` để quản lý state giỏ hàng
 	const { cart, loading, error, updateItemQuantity, removeItem } = useCart();
+	const router = useRouter();
+	const groupedItems = useMemo(() => {
+		if (!cart || !cart.items || cart.items.length === 0) return [];
+
+		// Object tạm để gom nhóm: { "shopId_123": { shopName: "ABC", items: [...] } }
+		const groups: Record<
+			string,
+			{ shopId: string; shopName: string; items: any[] }
+		> = {};
+
+		cart.items.forEach((item) => {
+			// Lấy thông tin Shop từ item.product.shopId (do backend populate)
+			// Có thể là object (nếu populate) hoặc string (nếu chưa populate)
+			const rawShop = item.product?.shopId;
+
+			let shopId = "unknown";
+			let shopName = "Shop khác";
+
+			if (rawShop && typeof rawShop === "object" && "_id" in rawShop) {
+				shopId = (rawShop as any)._id;
+				shopName = (rawShop as any).shopName || "Shop";
+			} else if (typeof rawShop === "string") {
+				shopId = rawShop;
+			}
+
+			if (!groups[shopId]) {
+				groups[shopId] = {
+					shopId,
+					shopName,
+					items: [],
+				};
+			}
+			groups[shopId].items.push(item);
+		});
+
+		return Object.values(groups);
+	}, [cart]);
 
 	if (loading) return <CartLoadingSkeleton />;
 	if (error)
@@ -260,25 +305,44 @@ export default function CartPage() {
 
 	return (
 		<div className="container mx-auto px-4 py-8">
-			<h1 className="text-4xl font-bold text-gray-800 mb-6">
+			<h1 className="text-3xl font-bold text-gray-800 mb-6">
 				Giỏ hàng của bạn
 			</h1>
 			<div className="grid grid-cols-1 lg:grid-cols-3 lg:gap-8">
-				{/* Danh sách sản phẩm */}
-				<div className="lg:col-span-2 bg-white rounded-xl shadow-lg p-6">
-					<div className="divide-y divide-gray-200">
-						{cart.items.map((item) => (
-							<CartItemRow
-								key={item.productVariantId}
-								item={item}
-								onUpdateQuantity={updateItemQuantity}
-								onRemove={removeItem}
-							/>
-						))}
-					</div>
+				{/* CỘT TRÁI: DANH SÁCH SẢN PHẨM (GROUP THEO SHOP) */}
+				<div className="lg:col-span-2 space-y-6">
+					{groupedItems.map((group) => (
+						<div
+							key={group.shopId}
+							className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+							{/* SHOP HEADER */}
+							<div className="px-6 py-3 bg-gray-50 border-b border-gray-200 flex items-center gap-3">
+								<div className="bg-white p-1.5 rounded-full shadow-sm text-primary border border-gray-200">
+									<Store size={18} />
+								</div>
+								<span
+									className="font-bold text-gray-800 hover:text-primary transition-colors cursor-pointer"
+									onClick={() => router.push(`/shop/${group.shopId}`)}>
+									{group.shopName}
+								</span>
+							</div>
+
+							{/* LIST ITEM CỦA SHOP ĐÓ */}
+							<div className="px-6 py-2">
+								{group.items.map((item) => (
+									<CartItemRow
+										key={item.productVariantId}
+										item={item}
+										onUpdateQuantity={updateItemQuantity}
+										onRemove={removeItem}
+									/>
+								))}
+							</div>
+						</div>
+					))}
 				</div>
 
-				{/* Tóm tắt đơn hàng */}
+				{/* CỘT PHẢI: TÓM TẮT ĐƠN HÀNG */}
 				<div className="lg:col-span-1 mt-8 lg:mt-0">
 					<CartSummary subtotal={cart.subtotal} />
 				</div>
