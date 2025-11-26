@@ -95,6 +95,14 @@ export const getShopOrdersApi = async (params: GetShopOrdersParams) => {
 	return res.data;
 };
 
+// Lấy chi tiết đơn hàng (Góc nhìn của Shop)
+export const getShopOrderDetailApi = async (orderId: string) => {
+	const url = `${SELLER_ROOT}/${orderId}`;
+
+	const res = await axiosInstance.get<ApiResponse<Order>>(url);
+	return res.data;
+};
+
 // Đánh dấu đang đóng gói
 export const markPackingApi = async (orderId: string) => {
 	const url = `${SELLER_ROOT}${ORDER_ENDPOINTS.SELLER.MARK_PACKING}`.replace(

@@ -224,6 +224,21 @@ export const getOrdersByShop = async (
 	};
 };
 
+export const getOrderDetailForShop = async (orderId, shopId) => {
+	// Tìm đơn hàng khớp cả ID và ShopID
+	const order = await Order.findOne({ _id: orderId, shopId })
+		.populate("accountId", "username phoneNumber avatar") // Populate thông tin người mua
+		.populate("orderItems.productVariantId"); // Populate biến thể (nếu cần check tồn kho realtime)
+
+	if (!order) {
+		throw ApiError.notFound(
+			"Không tìm thấy đơn hàng hoặc đơn hàng không thuộc về shop của bạn"
+		);
+	}
+
+	return order;
+};
+
 /*Seller huỷ đơn hàng*/
 export const cancelBySeller = async (orderId, sellerId, reason = "") => {
 	// Tìm đơn

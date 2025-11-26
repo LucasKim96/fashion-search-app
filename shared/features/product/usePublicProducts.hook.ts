@@ -20,7 +20,7 @@ const mapProductToListItem = (product: Product): ProductListItem => ({
  * Hook chuyên dụng để lấy danh sách sản phẩm cho các trang public.
  */
 export const usePublicProducts = (
-	options: { page?: number; limit?: number } = {}
+	options: { page?: number; limit?: number; shopId?: string } = {}
 ) => {
 	const [products, setProducts] = useState<ProductListItem[]>([]);
 	const [loading, setLoading] = useState(true);
@@ -35,7 +35,8 @@ export const usePublicProducts = (
 			const res = await getPublicProducts({
 				page: options.page,
 				limit: options.limit,
-			}); // {limit: options.limit}
+				shopId: options.shopId,
+			});
 			if (res.success && res.data && res.data.products) {
 				// Map mảng products bên trong object data
 				setProducts(res.data.products.map(mapProductToListItem));
@@ -55,7 +56,7 @@ export const usePublicProducts = (
 		} finally {
 			setLoading(false);
 		}
-	}, [options.page, options.limit, showToast]);
+	}, [options.page, options.limit, options.shopId, showToast]);
 
 	useEffect(() => {
 		fetchProducts();

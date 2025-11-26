@@ -3,7 +3,7 @@ import { ApiError, withTransaction } from "../../utils/index.js";
 import { Account, Role } from "../account/index.js";
 import { Product, ProductVariant } from "../product/index.js";
 import { removeProductsFromAllCarts } from "../cart/cart.service.js";
-import fs from "fs/promises";
+import fs from "fs";
 import path from "path";
 
 const DEFAULT_LOGO = "/assets/shop/default-logo.png";
@@ -294,7 +294,7 @@ const deletePhysicalFiles = async (urls) => {
 		const filePath = path.join(process.cwd(), url.substring(1));
 
 		try {
-			await fs.unlink(filePath);
+			await fs.promises.unlink(filePath);
 			console.log(`🗑️ Đã xóa file: ${filePath}`);
 		} catch (error) {
 			// Bỏ qua lỗi "file not found" (ENOENT) vì có thể file đã bị xóa trước đó

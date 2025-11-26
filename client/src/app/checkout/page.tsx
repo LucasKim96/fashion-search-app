@@ -52,7 +52,7 @@ export default function CheckoutPage() {
 		if (cartLoading || isSuccess) return;
 
 		if (!cart || cart.items.length === 0) {
-			showToast("Giỏ hàng trống, vui lòng mua sắm thêm", "error"); // Đổi thành warning cho nhẹ nhàng
+			showToast("Giỏ hàng trống, vui lòng mua sắm thêm", "warning"); // Đổi thành warning cho nhẹ nhàng
 			router.push("/cart");
 		}
 	}, [cart, cartLoading, router, showToast, isSuccess]);
