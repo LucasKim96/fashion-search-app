@@ -19,6 +19,8 @@ import {
 	UploadCloud,
 	Sparkles,
 	Image as ImageIcon,
+	Shirt,
+	ImageOff,
 } from "lucide-react";
 import clsx from "clsx";
 import { createPortal } from "react-dom";
@@ -66,6 +68,17 @@ export const ProductImageGallery: React.FC<ProductImageGalleryProps> = ({
 
 	const timerRef = useRef<NodeJS.Timeout | null>(null);
 
+	const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
+
+	// --- BỔ SUNG: Hàm xử lý khi ảnh lỗi ---
+	const handleImageError = (url: string) => {
+		setFailedImages((prev) => {
+			const newSet = new Set(prev);
+			newSet.add(url);
+			return newSet;
+		});
+	};
+
 	const fetchProductData = useCallback(async () => {
 		if (createMode || !productId) {
 			setIsLoadingProduct(false);
@@ -85,23 +98,32 @@ export const ProductImageGallery: React.FC<ProductImageGalleryProps> = ({
 
 	// --- DATA AGGREGATION ---
 	const displayImages = useMemo(() => {
+		// 1. Trường hợp tạo mới (Giữ nguyên)
 		if (createMode) return createPreviewUrls;
 
+		// 2. Kiểm tra dữ liệu
 		if (!product) return [];
 		const mainImages = product.images || [];
-		// const variantImages =
-		// 	product.variants
-		// 		?.map((v) => v.image)
-		// 		.filter((img): img is string => !!img) || [];
-		// return [...mainImages /* , ...variantImages */];
 
-		const variantImages =
-			product.variants
-				?.map((v) => v.image)
-				.filter((img): img is string => !!img) || [];
-		const allImages = [...mainImages, ...variantImages];
-		return Array.from(new Set(allImages));
-	}, [product, createMode, createPreviewUrls]);
+		// 3. LOGIC MỚI: TÁCH RIÊNG
+		// Nếu đang có activeImage (tức là người dùng đã chọn 1 biến thể cụ thể)
+		if (activeImage) {
+			// Kiểm tra xem ảnh biến thể này đã có trong danh sách ảnh gốc chưa
+			// (Đôi khi admin up ảnh biến thể trùng với ảnh gốc)
+			const isImageInMain = mainImages.includes(activeImage);
+
+			if (!isImageInMain) {
+				// Nếu chưa có -> Đưa ảnh biến thể lên ĐẦU TIÊN + Ảnh gốc phía sau
+				return [activeImage, ...mainImages];
+			}
+			// Nếu có rồi thì thôi, hiển thị danh sách gốc (vì ảnh đó đã nằm trong đó rồi)
+			return mainImages;
+		}
+
+		// 4. Nếu KHÔNG chọn biến thể (activeImage == null)
+		// -> Chỉ trả về danh sách ảnh gốc của sản phẩm
+		return mainImages;
+	}, [product, createMode, createPreviewUrls, activeImage]);
 
 	const editableImages = useMemo(() => {
 		if (createMode) return createPreviewUrls;
@@ -296,8 +318,13 @@ export const ProductImageGallery: React.FC<ProductImageGalleryProps> = ({
 		return buildImageUrl(src);
 	};
 
+	const currentSrcRaw = displayImages[currentIndex];
 	const currentImageUrl =
-		displayImages.length > 0 ? getImageUrl(displayImages[currentIndex]) : null;
+		displayImages.length > 0 ? getImageUrl(currentSrcRaw) : null;
+
+	// Kiểm tra xem ảnh hiện tại có bị lỗi không
+	const isCurrentHeaderImageError =
+		currentSrcRaw && failedImages.has(currentSrcRaw);
 
 	if (isLoadingProduct) {
 		return (
@@ -635,22 +662,42 @@ export const ProductImageGallery: React.FC<ProductImageGalleryProps> = ({
 				<div
 					className="w-full h-full flex items-center justify-center cursor-pointer"
 					onClick={() => displayImages.length > 0 && handleOpenModal("view")}>
-					{displayImages.length > 0 && currentImageUrl ? (
+					{displayImages.length > 0 &&
+					currentImageUrl &&
+					!isCurrentHeaderImageError ? (
 						<img
 							src={currentImageUrl}
 							alt="Product"
 							className="w-full h-full object-contain transition-transform duration-500"
+							// Khi lỗi thì gọi hàm lưu lại URL lỗi
+							onError={() => handleImageError(currentSrcRaw)}
 						/>
 					) : (
-						<div className="flex flex-col items-center justify-center text-gray-400 select-none animate-in fade-in">
-							<ImageIcon
-								size={48}
-								strokeWidth={1.5}
-								className="mb-2 opacity-50"
-							/>
-							<span className="text-xs font-medium uppercase tracking-wider opacity-60">
-								Chưa có ảnh
-							</span>
+						// --- FALLBACK: Hiển thị Icon khi không có ảnh hoặc ảnh lỗi ---
+						<div className="flex flex-col items-center justify-center text-gray-400 select-none animate-in fade-in bg-gray-200 w-full h-full">
+							{isCurrentHeaderImageError ? (
+								<>
+									<ImageOff
+										size={48}
+										strokeWidth={1.5}
+										className="mb-2 opacity-50"
+									/>
+									<span className="text-xs font-medium uppercase tracking-wider opacity-60">
+										Lỗi ảnh
+									</span>
+								</>
+							) : (
+								<>
+									<Shirt
+										size={48}
+										strokeWidth={1.5}
+										className="mb-2 opacity-50"
+									/>
+									<span className="text-xs font-medium uppercase tracking-wider opacity-60">
+										Chưa có ảnh
+									</span>
+								</>
+							)}
 						</div>
 					)}
 				</div>
