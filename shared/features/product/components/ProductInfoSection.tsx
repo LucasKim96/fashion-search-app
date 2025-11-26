@@ -521,27 +521,29 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({
 				{/* 4. DASHBOARD INFO (Grid Layout) */}
 
 				{/* --- BỔ SUNG 1: HIỂN THỊ TỒN KHO --- */}
-				<div className="flex items-center gap-3 mt-2 p-3 bg-gray-50 rounded-xl border border-gray-200 w-fit">
-					<div className="p-2 bg-white rounded-lg shadow-sm text-blue-500">
-						<Box size={20} />
+				{!isShop && !isAdmin && currentMode === "view" && (
+					<div className="flex items-center gap-3 mt-2 p-3 bg-gray-50 rounded-xl border border-gray-200 w-fit">
+						<div className="p-2 bg-white rounded-lg shadow-sm text-blue-500">
+							<Box size={20} />
+						</div>
+						<div>
+							<p className="text-xs text-gray-400 font-bold uppercase tracking-wider">
+								{/* Logic đổi text: Đã chọn đủ option chưa? */}
+								{Object.keys(selectedOptions).length > 0 &&
+								Object.keys(selectedOptions).length ===
+									Object.keys(groupedAttributes).length
+									? "Tồn kho phiên bản này"
+									: "Tổng tồn kho"}
+							</p>
+							<p className="text-lg font-bold text-gray-800">
+								{new Intl.NumberFormat("vi-VN").format(displayStock)}{" "}
+								<span className="text-sm font-normal text-gray-500">
+									sản phẩm
+								</span>
+							</p>
+						</div>
 					</div>
-					<div>
-						<p className="text-xs text-gray-400 font-bold uppercase tracking-wider">
-							{/* Logic đổi text: Đã chọn đủ option chưa? */}
-							{Object.keys(selectedOptions).length > 0 &&
-							Object.keys(selectedOptions).length ===
-								Object.keys(groupedAttributes).length
-								? "Tồn kho phiên bản này"
-								: "Tổng tồn kho"}
-						</p>
-						<p className="text-lg font-bold text-gray-800">
-							{new Intl.NumberFormat("vi-VN").format(displayStock)}{" "}
-							<span className="text-sm font-normal text-gray-500">
-								sản phẩm
-							</span>
-						</p>
-					</div>
-				</div>
+				)}
 				{/* GIỎ HÀNG */}
 				{/* Chỉ hiện khi: KHÔNG phải Shop, KHÔNG phải Admin, và đang ở chế độ View */}
 				{!isShop && !isAdmin && currentMode === "view" && (
