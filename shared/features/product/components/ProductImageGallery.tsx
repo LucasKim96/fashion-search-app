@@ -93,8 +93,14 @@ export const ProductImageGallery: React.FC<ProductImageGalleryProps> = ({
 		// 	product.variants
 		// 		?.map((v) => v.image)
 		// 		.filter((img): img is string => !!img) || [];
+		// return [...mainImages /* , ...variantImages */];
 
-		return [...mainImages /* , ...variantImages */];
+		const variantImages =
+			product.variants
+				?.map((v) => v.image)
+				.filter((img): img is string => !!img) || [];
+		const allImages = [...mainImages, ...variantImages];
+		return Array.from(new Set(allImages));
 	}, [product, createMode, createPreviewUrls]);
 
 	const editableImages = useMemo(() => {
@@ -131,22 +137,16 @@ export const ProductImageGallery: React.FC<ProductImageGalleryProps> = ({
 
 	useEffect(() => {
 		if (activeImage && displayImages.length > 0) {
-			// Tìm index của ảnh này trong list ảnh đang hiển thị
-			// Lưu ý: Cần hàm buildImageUrl hoặc so sánh tương đối nếu url từ server khác format
-			// Ở đây giả định activeImage là full URL hoặc server path khớp với variants
+			// Chuẩn hóa activeImage để so sánh dễ hơn
+			const activeUrl = buildImageUrl(activeImage);
 
-			const index = displayImages.findIndex(
-				(img) =>
-					// So sánh trực tiếp hoặc qua hàm buildUrl
-					img === activeImage || buildImageUrl(img) === activeImage
-			);
+			const index = displayImages.findIndex((img) => {
+				const currentUrl = buildImageUrl(img);
+				return currentUrl === activeUrl || img === activeImage;
+			});
 
 			if (index !== -1) {
 				setCurrentIndex(index);
-			} else {
-				// Nếu ảnh variant chưa có trong list displayImages (hiếm gặp),
-				// Bạn có thể push nó vào hoặc chỉ hiển thị tạm thời.
-				// Logic đơn giản nhất ở đây là không làm gì nếu không tìm thấy.
 			}
 		}
 	}, [activeImage, displayImages]);
