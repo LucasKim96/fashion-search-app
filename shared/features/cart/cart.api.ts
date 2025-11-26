@@ -1,6 +1,7 @@
 // file: shared/features/cart/cart.api.ts
 
-import { axiosInstance, CART_ENDPOINTS } from "@shared/core";
+import { CART_ENDPOINTS } from "@shared/core/constants/api.constants";
+import { axiosInstance } from "@shared/core/api/axiosInstance";
 import { ApiResponse } from "@shared/types/common.types";
 import { Cart, AddToCartRequest, UpdateCartItemRequest } from "./cart.types";
 

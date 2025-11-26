@@ -3,7 +3,7 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import { useMyOrders } from "@shared/features/order/useMyOrders.hook";
-import { formatCurrency, buildImageUrl } from "@shared/core";
+import { formatCurrency, buildImageUrl } from "@shared/core/utils";
 import { Package, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import clsx from "clsx";
 

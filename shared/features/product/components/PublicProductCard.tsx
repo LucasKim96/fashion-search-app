@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { Shirt, BadgeCheck } from "lucide-react"; // Thêm icon check cho độ giống
-import { buildImageUrl, formatCurrency } from "@shared/core";
+import { buildImageUrl, formatCurrency } from "@shared/core/utils";
 import { ProductListItem, Product } from "@shared/features/product";
 import { ProductSearchResult } from "@shared/features/search";
 

@@ -18,7 +18,7 @@ import {
 	RotateCw,
 	Power,
 } from "lucide-react"; // Thêm Power
-import { buildImageUrl } from "@shared/core";
+import { buildImageUrl } from "@shared/core/utils/image.utils";
 import ConfirmationModal from "@/components/modals/ConfirmationModal";
 import clsx from "clsx";
 

@@ -7,10 +7,10 @@ import {
 	VariantGeneratedItem,
 	ProductAttributeWithValues,
 	UpdateProductVariantRequest,
-	GenerateNewVariantCombinationsRequest,
 } from "./productVariant.types";
 import { ApiResponse } from "@shared/types/common.types";
-import { useNotification, errorUtils } from "@shared/core";
+import { useNotification } from "@shared/core/ui/NotificationProvider";
+import { errorUtils } from "@shared/core/utils";
 
 // Import reloadShopProducts trực tiếp
 import { useProduct } from "../product/product.hook";

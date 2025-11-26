@@ -4,7 +4,7 @@ import { ShoppingCart, Menu, LogOut, User as UserIcon } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthContext } from "@shared/features/auth/AuthProvider";
-import { parseUserProfile, UserProfile } from "@shared/core";
+import { parseUserProfile, UserProfile } from "@shared/core/utils";
 import { SidebarTooltip } from "@shared/core/components/ui/SidebarTooltip";
 import { SearchInput } from "@shared/core/components/ui/SearchInput";
 
@@ -78,7 +78,11 @@ const UserInfoDisplay = ({
 	);
 };
 
-export default function ClientHeader() {
+interface ClientHeaderProps {
+	onMenuClick?: () => void;
+}
+
+export default function ClientHeader({ onMenuClick }: ClientHeaderProps) {
 	const { user: account, loading, logout } = useAuthContext();
 	const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 	const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -116,10 +120,16 @@ export default function ClientHeader() {
 
 	return (
 		<header className="w-full bg-white text-gray-800 shadow-sm py-3 px-6 flex items-center justify-between sticky top-0 z-40">
-			{/* Logo, Search... giữ nguyên */}
-			{/* ... */}
 			<div className="flex items-center gap-4">
-				<Menu className="w-6 h-6 md:hidden cursor-pointer text-gray-600 hover:text-primary transition" />
+				{/* <Menu className="w-6 h-6 md:hidden cursor-pointer text-gray-600 hover:text-primary transition" /> */}
+
+				{onMenuClick && (
+					<button
+						onClick={onMenuClick}
+						className="p-2 -ml-2 text-gray-600 lg:hidden">
+						<Menu className="w-6 h-6" />
+					</button>
+				)}
 				<div
 					className="font-extrabold text-2xl text-primary cursor-pointer"
 					onClick={() => router.push("/")}>
@@ -171,7 +181,6 @@ export default function ClientHeader() {
 
 					{/* Dropdown Menu */}
 					{account && dropdownOpen && (
-						/* ... giữ nguyên ... */
 						<div className="absolute right-0 top-full mt-3 w-48 bg-white border border-gray-200 rounded-xl shadow-lg py-2 z-50 animate-fadeIn">
 							<button
 								onClick={() => {

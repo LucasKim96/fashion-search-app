@@ -3,9 +3,8 @@
 import React, { useState } from "react";
 import { X, Minus, Plus, ShoppingCart } from "lucide-react";
 import { createPortal } from "react-dom";
-import clsx from "clsx";
 import { ProductDetail } from "@shared/features/product/product.types";
-import { formatCurrency, buildImageUrl } from "@shared/core";
+import { formatCurrency, buildImageUrl } from "@shared/core/utils";
 
 interface AddToCartModalProps {
 	isOpen: boolean;

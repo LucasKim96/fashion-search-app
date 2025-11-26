@@ -34,7 +34,7 @@ export const getProductDetail = async (req, res) => {
 export const handleGetAllProductsBase = async (req, res, options = {}) => {
 	try {
 		const { forAdmin = false, forShop = false, forCustomer = false } = options;
-
+		const { page, limit } = req.query;
 		// Mặc định không lấy sản phẩm ẩn
 		let includeInactive = false;
 		let shopId = null;
@@ -68,6 +68,8 @@ export const handleGetAllProductsBase = async (req, res, options = {}) => {
 			shopId,
 			accountId,
 			includeInactive,
+			page,
+			limit,
 		});
 
 		return res.status(result.success ? 200 : 400).json(result);
