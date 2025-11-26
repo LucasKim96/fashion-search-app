@@ -167,10 +167,10 @@ export const editShop = async (req, res, next) => {
 export const updateLogo = async (req, res, next) => {
 	try {
 		const { id } = req.params;
-		const accountId = req.user?.id; // || req.body.accountId;
+		const accountId = req.user?.id;
 
 		if (!req.file) throw ApiError.badRequest("Chưa upload file");
-		const logoUrl = `/uploads/shops/${id}/${req.file.filename}`;
+		const logoUrl = `/uploads/shops/${req.file.filename}`;
 
 		validateObjectId(id, "shopID");
 		validateObjectId(accountId, "accID");
@@ -191,9 +191,9 @@ export const updateLogo = async (req, res, next) => {
 export const updateCover = async (req, res, next) => {
 	try {
 		const { id } = req.params;
-		const accountId = req.user?.id; // || req.body.accountId;
+		const accountId = req.user?.id;
 		if (!req.file) throw ApiError.badRequest("Chưa upload file cover");
-		const coverUrl = `/uploads/shops/${id}/${req.file.filename}`;
+		const coverUrl = `/uploads/shops/${req.file.filename}`;
 
 		validateObjectId(id, "shopID");
 		validateObjectId(accountId, "accID");

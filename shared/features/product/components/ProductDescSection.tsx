@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useFormContext } from "react-hook-form";
+import { useRouter } from "next/navigation";
 import { Store, FileText, AlignLeft, ExternalLink } from "lucide-react";
 import { buildImageUrl } from "@shared/core/utils/image.utils";
 import clsx from "clsx";
@@ -10,8 +11,8 @@ interface ShopInfo {
 	_id: string;
 	shopName: string;
 	logoUrl?: string;
-	isOnline?: boolean; // Thêm trường này
-	lastActiveText?: string; // Thêm trường này
+	isOnline?: boolean;
+	lastActiveText?: string;
 }
 
 interface ProductDescSectionProps {
@@ -31,11 +32,16 @@ export const ProductDescSection: React.FC<ProductDescSectionProps> = ({
 		watch,
 	} = useFormContext();
 	const [imageError, setImageError] = useState(false);
+
+	// ✨ 2. Khởi tạo router
+	const router = useRouter();
+
 	// Lấy giá trị mô tả hiện tại từ form để hiển thị ở chế độ View
 	const descriptionValue = watch("description");
+
 	return (
 		<div className="space-y-8">
-			{/* Chỉ hiện nếu KHÔNG phải shop (khách xem) */}
+			{/* 1. THÔNG TIN SHOP (HEADER CARD) */}
 			{!isShop && shopInfo && (
 				<div className="group relative overflow-hidden rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300">
 					{/* Decoration Background */}
@@ -43,7 +49,10 @@ export const ProductDescSection: React.FC<ProductDescSectionProps> = ({
 
 					<div className="relative flex items-center gap-5 p-5 border-l-4 border-blue-500">
 						{/* Avatar */}
-						<div className="relative">
+						{/* ✨ 3. Thêm onClick vào khung Avatar */}
+						<div
+							className="relative cursor-pointer"
+							onClick={() => router.push(`/shop/${shopInfo._id}`)}>
 							<div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white shadow-md flex items-center justify-center bg-gray-50">
 								{shopInfo.logoUrl && !imageError ? (
 									<img
@@ -57,11 +66,10 @@ export const ProductDescSection: React.FC<ProductDescSectionProps> = ({
 								)}
 							</div>
 
-							{/* --- LOGIC TRẠNG THÁI (DOT) --- */}
 							<div
 								className={clsx(
 									"absolute bottom-0 right-0 w-4 h-4 border-2 border-white rounded-full",
-									shopInfo.isOnline ? "bg-green-500" : "bg-gray-400" // Xanh nếu online, Xám nếu offline
+									shopInfo.isOnline ? "bg-green-500" : "bg-gray-400"
 								)}
 								title={shopInfo.isOnline ? "Đang hoạt động" : "Ngoại tuyến"}
 							/>
@@ -71,14 +79,16 @@ export const ProductDescSection: React.FC<ProductDescSectionProps> = ({
 							<span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
 								Nhà cung cấp
 							</span>
-							<h4 className="font-extrabold text-gray-800 text-xl truncate leading-tight">
+
+							{/* ✨ 4. Thêm onClick và style hover vào Tên Shop */}
+							<h4
+								className="font-extrabold text-gray-800 text-xl truncate leading-tight cursor-pointer hover:text-blue-600 transition-colors"
+								onClick={() => router.push(`/shop/${shopInfo._id}`)}>
 								{shopInfo.shopName || "Cửa hàng"}
 							</h4>
 
-							{/* --- LOGIC HIỂN THỊ TRẠNG THÁI TEXT --- */}
 							<div className="mt-1 flex items-center gap-1.5">
 								{shopInfo.isOnline ? (
-									// Trường hợp Online
 									<>
 										<span className="relative flex h-2 w-2">
 											<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
@@ -89,7 +99,6 @@ export const ProductDescSection: React.FC<ProductDescSectionProps> = ({
 										</p>
 									</>
 								) : (
-									// Trường hợp Offline
 									<>
 										<span className="w-1.5 h-1.5 bg-gray-400 rounded-full inline-block" />
 										<p className="text-xs text-gray-500 font-medium">
@@ -100,7 +109,11 @@ export const ProductDescSection: React.FC<ProductDescSectionProps> = ({
 							</div>
 						</div>
 
-						<button className="group/btn flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-50 text-blue-600 font-bold text-sm hover:bg-blue-600 hover:text-white transition-all duration-300">
+						{/* ✨ 5. Thêm onClick và type="button" vào Nút Xem Shop */}
+						<button
+							type="button" // Quan trọng: Để không bị submit form nếu đang trong form
+							onClick={() => router.push(`/shop/${shopInfo._id}`)}
+							className="group/btn flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-50 text-blue-600 font-bold text-sm hover:bg-blue-600 hover:text-white transition-all duration-300">
 							Xem Shop
 							<ExternalLink
 								size={16}
@@ -120,25 +133,21 @@ export const ProductDescSection: React.FC<ProductDescSectionProps> = ({
 							<div className="flex items-center gap-2 mb-3">
 								<FileText size={18} className="text-gray-400" />
 								<span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-									Mô tả sản phẩm
+									Chi tiết sản phẩm
 								</span>
 							</div>
 
-							<div className="p-6 rounded-2xl border border-gray-100 text-gray-700 leading-relaxed whitespace-pre-line min-h-[120px] relative overflow-hidden">
-								{/* Watermark Icon */}
+							<div className="p-6 bg-gray-50/50 rounded-2xl border border-gray-100 text-gray-700 leading-relaxed whitespace-pre-line min-h-[120px] relative overflow-hidden">
 								<AlignLeft
 									className="absolute top-4 right-4 text-gray-200/50 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
 									size={80}
 								/>
 
 								{descriptionValue ? (
-									<div className="relative z-10 prose prose-sm max-w-none text-base text-gray-800">
+									<div className="relative z-10 prose prose-sm max-w-none text-base">
 										{descriptionValue}
 									</div>
 								) : (
-									// <div className="relative z-10 prose prose-sm max-w-none text-base">
-									// 	{descriptionValue}
-									// </div>
 									<span className="text-gray-400 italic flex items-center gap-2">
 										Chưa có mô tả cho sản phẩm này.
 									</span>
@@ -149,12 +158,11 @@ export const ProductDescSection: React.FC<ProductDescSectionProps> = ({
 				) : (
 					// --- EDIT / CREATE MODE ---
 					<div className="relative group/input">
-						<label className="block text-base font-bold text-indigo-700 uppercase tracking-wider mb-2 ml-1">
+						<label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2 ml-1">
 							Mô tả chi tiết
 						</label>
 
 						<div className="relative transition-all duration-300 focus-within:-translate-y-1 focus-within:shadow-lg rounded-xl bg-white">
-							{/* Icon nằm ở góc trên trái */}
 							<div className="absolute top-4 left-4 pointer-events-none">
 								<AlignLeft
 									className={clsx(

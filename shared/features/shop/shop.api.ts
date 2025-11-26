@@ -2,7 +2,10 @@
 import { axiosInstance } from "@shared/core/api/axiosInstance";
 import { SHOP_ENDPOINTS } from "@shared/core/constants/api.constants";
 import { ApiResponse } from "@shared/types/common.types";
-import { CreateShopRequest, ShopResponse } from "./shop.types";
+import {
+	CreateShopRequest,
+	ShopResponse,
+} from "@shared/features/shop/shop.types";
 
 // Lấy danh sách shop
 export const getShopsApi = () =>

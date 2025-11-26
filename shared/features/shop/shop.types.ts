@@ -1,14 +1,20 @@
 // file: client/features/shop/shop.types.ts
 
 // Kiểu dữ liệu trả về của một shop từ server
+export interface ShopAccountInfo {
+	_id: string;
+	username: string;
+	phoneNumber?: string;
+}
+
 export interface ShopResponse {
 	_id: string;
 	shopName: string;
 	logoUrl: string;
 	coverUrl: string;
 	description: string;
-	accountId: string;
-	status: "active" | "closed" | "suspended"; // Cập nhật cho khớp với backend service
+	accountId: string | ShopAccountInfo;
+	status: "active" | "closed" | "suspended";
 	createdAt: string;
 	updatedAt: string;
 }
