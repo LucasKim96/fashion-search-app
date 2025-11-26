@@ -26,6 +26,7 @@ import {
 import { Order } from "@shared/features/order/order.types";
 import { formatCurrency, buildImageUrl, errorUtils } from "@shared/core/utils";
 import { useNotification } from "@shared/core/ui/NotificationProvider";
+import { ImageWithFallback } from "@shared/core/components/ui/ImageWithFallback";
 
 // --- CẤU HÌNH STEPPER ---
 const ORDER_STEPS = [
@@ -258,8 +259,8 @@ export default function BuyerOrderDetailPage() {
 						<div key={idx} className="flex gap-4 items-start">
 							{/* Ảnh Snapshot */}
 							<div className="w-20 h-20 flex-shrink-0 border border-gray-200 rounded-md overflow-hidden bg-gray-50">
-								<img
-									src={buildImageUrl(item.imageAtOrder)}
+								<ImageWithFallback
+									src={item.imageAtOrder}
 									alt={item.pdNameAtOrder}
 									className="w-full h-full object-cover"
 								/>
