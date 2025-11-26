@@ -22,6 +22,7 @@ import { formatCurrency } from "@shared/core/utils/formatCurrency";
 import { buildImageUrl } from "@shared/core/utils/image.utils";
 import ClientHeader from "@/components/layouts/ClientHeader";
 import ClientFooter from "@/components/layouts/ClientFooter";
+import { ImageWithFallback } from "@shared/core/components/ui/ImageWithFallback";
 
 // --- Interface cho Form ---
 interface CheckoutFormData {
@@ -266,15 +267,10 @@ export default function CheckoutPage() {
 											key={item.productVariantId}
 											className="flex gap-3 items-start">
 											<div className="w-16 h-16 flex-shrink-0 border border-gray-200 rounded-md overflow-hidden bg-gray-50">
-												<img
-													src={buildImageUrl(displayImage)}
+												<ImageWithFallback
+													src={displayImage}
 													alt={displayName}
 													className="w-full h-full object-cover"
-													// Thêm xử lý lỗi ảnh nếu muốn chắc chắn hơn
-													onError={(e) => {
-														(e.target as HTMLImageElement).src =
-															"/placeholder.png"; // Hoặc ảnh mặc định của bạn
-													}}
 												/>
 											</div>
 											<div className="flex-1 min-w-0">
