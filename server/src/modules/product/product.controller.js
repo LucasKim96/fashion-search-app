@@ -34,7 +34,7 @@ export const getProductDetail = async (req, res) => {
 export const handleGetAllProductsBase = async (req, res, options = {}) => {
 	try {
 		const { forAdmin = false, forShop = false, forCustomer = false } = options;
-
+		const { page, limit } = req.query;
 		// Mặc định không lấy sản phẩm ẩn
 		let includeInactive = false;
 		let shopId = null;
@@ -68,6 +68,8 @@ export const handleGetAllProductsBase = async (req, res, options = {}) => {
 			shopId,
 			accountId,
 			includeInactive,
+			page,
+			limit,
 		});
 
 		return res.status(result.success ? 200 : 400).json(result);
@@ -120,12 +122,10 @@ export const createProductWithVariants = async (req, res) => {
 			try {
 				variantsPayload = JSON.parse(variantsPayload);
 			} catch {
-				return res
-					.status(400)
-					.json({
-						success: false,
-						message: "variantsPayload không phải JSON hợp lệ",
-					});
+				return res.status(400).json({
+					success: false,
+					message: "variantsPayload không phải JSON hợp lệ",
+				});
 			}
 		}
 
@@ -190,12 +190,10 @@ export const updateProductImages = async (req, res) => {
 			try {
 				keepImages = JSON.parse(req.body.keepImages);
 			} catch {
-				return res
-					.status(400)
-					.json({
-						success: false,
-						message: "keepImages không phải JSON hợp lệ",
-					});
+				return res.status(400).json({
+					success: false,
+					message: "keepImages không phải JSON hợp lệ",
+				});
 			}
 		}
 
