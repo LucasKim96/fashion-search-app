@@ -147,8 +147,8 @@ export const CART_ENDPOINTS = {
 export const SEARCH_ENDPOINTS = {
 	SEARCH: "/search/search-image",
 	DETECT_SEARCH: "/search/detect",
-},
-      
+};
+
 export const ORDER_ENDPOINTS = {
 	BASE: "/orders", // Prefix gốc (khai báo ở index.routes.js)
 
