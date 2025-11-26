@@ -260,7 +260,7 @@ export const getShopDashboardStats = async (accountId) => {
 				totalRevenue: {
 					$sum: {
 						$cond: [
-							{ $in: ["$status", ["delivered", "confirmed"]] }, // Điều kiện
+							{ $in: ["$status", ["delivered", "completed"]] }, // Điều kiện
 							"$totalAmount", // Nếu đúng thì cộng tiền
 							0, // Sai thì cộng 0
 						],

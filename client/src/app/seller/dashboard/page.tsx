@@ -3,8 +3,8 @@
 import React, { useEffect, useState } from "react";
 import { BarChart3, Package, ShoppingBag, Users, Loader2 } from "lucide-react";
 import { getShopDashboardStatsApi } from "@shared/features/shop/shop.api";
-import { formatCurrency } from "@shared/core/utils"; // Hàm format tiền tệ của bạn
-import { DashboardStats } from "@shared/features/shop/shop.types"; // Nhớ export interface ở bước trên
+import { formatCurrency } from "@shared/core/utils";
+import { DashboardStats } from "@shared/features/shop/shop.types";
 
 export default function SellerDashboardPage() {
 	const [stats, setStats] = useState<DashboardStats | null>(null);
