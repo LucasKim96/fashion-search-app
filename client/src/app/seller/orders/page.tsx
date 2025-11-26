@@ -52,11 +52,6 @@ const STATUS_CONFIG: Record<
 		color: "text-red-700 bg-red-100 border-red-200",
 		icon: Archive,
 	},
-	confirmed: {
-		label: "Đã xác nhận",
-		color: "text-blue-700 bg-blue-100 border-blue-200",
-		icon: CheckCircle,
-	},
 };
 
 export default function SellerOrdersPage() {

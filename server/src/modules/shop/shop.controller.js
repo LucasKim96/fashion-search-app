@@ -267,16 +267,11 @@ export const updateDefaultCover = async (req, res, next) => {
 	}
 };
 
-/**
- * Ẩn shop (soft delete) của user đang đăng nhập
- */
-export const softRemoveMyShop = async (req, res, next) => {
+export const getDashboardStats = async (req, res, next) => {
 	try {
 		const accountId = req.user?.id;
-		if (!accountId) throw ApiError.unauthorized("Chưa đăng nhập");
-
-		const result = await ShopService.softDeleteShopByAccount(accountId);
-		return successResponse(res, result, result.message);
+		const stats = await ShopService.getShopDashboardStats(accountId);
+		return successResponse(res, stats, "Lấy thống kê thành công");
 	} catch (error) {
 		next(error);
 	}

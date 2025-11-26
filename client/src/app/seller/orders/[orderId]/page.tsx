@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
 	Package,
@@ -14,7 +14,6 @@ import {
 	ChevronLeft,
 	Loader2,
 	AlertTriangle,
-	Archive,
 } from "lucide-react";
 import clsx from "clsx";
 
@@ -27,12 +26,8 @@ import {
 	cancelBySellerApi,
 } from "@shared/features/order/order.api";
 import { Order } from "@shared/features/order/order.types";
-import {
-	useNotification,
-	formatCurrency,
-	buildImageUrl,
-	errorUtils,
-} from "@shared/core";
+import { formatCurrency, errorUtils } from "@shared/core/utils";
+import { useNotification } from "@shared/core/ui/NotificationProvider";
 import { ImageWithFallback } from "@shared/core/components/ui/ImageWithFallback";
 import PromptModal from "@/components/modals/PromptModal";
 
@@ -45,11 +40,6 @@ const STATUS_CONFIG: Record<
 		label: "Chờ xác nhận",
 		color: "text-yellow-700 bg-yellow-50 border-yellow-200",
 		icon: Clock,
-	},
-	confirmed: {
-		label: "Đã xác nhận",
-		color: "text-blue-700 bg-blue-50 border-blue-200",
-		icon: CheckCircle,
 	},
 	packing: {
 		label: "Đang đóng gói",
@@ -79,7 +69,7 @@ const STATUS_CONFIG: Record<
 };
 
 export default function SellerOrderDetailPage() {
-	const { id } = useParams() as { id: string };
+	const { orderId } = useParams() as { orderId: string };
 	const router = useRouter();
 	const { showToast, showConfirm } = useNotification();
 
@@ -92,7 +82,7 @@ export default function SellerOrderDetailPage() {
 	const fetchOrder = useCallback(async () => {
 		setLoading(true);
 		try {
-			const res = await getShopOrderDetailApi(id);
+			const res = await getShopOrderDetailApi(orderId);
 			if (res.success && res.data) {
 				setOrder(res.data);
 			} else {
@@ -104,7 +94,7 @@ export default function SellerOrderDetailPage() {
 		} finally {
 			setLoading(false);
 		}
-	}, [id, showToast, router]);
+	}, [orderId, showToast, router]);
 
 	useEffect(() => {
 		fetchOrder();

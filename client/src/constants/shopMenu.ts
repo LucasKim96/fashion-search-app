@@ -7,12 +7,12 @@ export const shopMenuItems = [
 		path: "/seller/dashboard",
 		color: "text-blue-500",
 	},
-	{
-		label: "Phân tích",
-		icon: Shirt,
-		path: "/seller/analytics",
-		color: "text-red-500",
-	},
+	// {
+	// 	label: "Phân tích",
+	// 	icon: Shirt,
+	// 	path: "/seller/analytics",
+	// 	color: "text-red-500",
+	// },
 	{
 		label: "Sản phẩm",
 		icon: Users,

@@ -34,3 +34,10 @@ export type UpdateShopRequest = Partial<
 > & {
 	status?: "active" | "closed" | "suspended";
 };
+
+export interface DashboardStats {
+	totalRevenue: number;
+	totalOrders: number;
+	totalProducts: number;
+	totalCustomers: number;
+}

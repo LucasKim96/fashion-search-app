@@ -34,12 +34,12 @@ const ORDER_STEPS = [
 	{ status: "packing", label: "Đang đóng gói", icon: Package },
 	{ status: "shipping", label: "Đang vận chuyển", icon: Truck },
 	{ status: "delivered", label: "Đã giao hàng", icon: CheckCircle },
-	// 'completed' và 'confirmed' sẽ dùng chung step cuối
+	// { status: "completed", label: "Hoàn tất", icon: User },
 ];
 
 const getStepStatus = (currentStatus: string) => {
 	if (currentStatus === "cancelled") return -1;
-	if (currentStatus === "confirmed" || currentStatus === "completed") return 4;
+	if (currentStatus === "delivered" || currentStatus === "completed") return 3;
 	return ORDER_STEPS.findIndex((s) => s.status === currentStatus);
 };
 
