@@ -3,9 +3,7 @@ import { ApiError, withTransaction } from "../../utils/index.js";
 import { Account } from "../account/index.js";
 import { calculateCartTotal } from "../cart/cart.service.js"; // hoặc đúng path sếp dùng
 
-/**
- * Buyer: Tạo đơn hàng từ giỏ
- */
+/*Buyer: Tạo đơn hàng từ giỏ*/
 
 export const createOrderFromCart = async (accountId, data) => {
 	const { addressLine, receiverName, phone, note } = data;
@@ -115,9 +113,7 @@ export const createOrderFromCart = async (accountId, data) => {
 	}
 };
 
-/**
- * Buyer: Lấy đơn của chính mình
- */
+/*Buyer: Lấy đơn của chính mình*/
 export const getOrdersByBuyer = async (
 	accountId,
 	{ page = 1, limit = 10, status = "all" }
@@ -145,9 +141,7 @@ export const getOrdersByBuyer = async (
 	};
 };
 
-/**
- * Buyer: Chi tiết đơn
- */
+/*Buyer: Chi tiết đơn*/
 export const getOrderDetailForBuyer = async (orderId, accountId) => {
 	const order = await Order.findOne({ _id: orderId, accountId }).populate(
 		"shopId",
@@ -157,9 +151,7 @@ export const getOrderDetailForBuyer = async (orderId, accountId) => {
 	return order;
 };
 
-/**
- * Buyer confirm nhận hàng
- */
+/*Buyer confirm nhận hàng*/
 export const confirmOrderReceived = async (orderId, accountId) => {
 	const order = await Order.findOne({ _id: orderId, accountId });
 	if (!order) throw ApiError.notFound("Không tìm thấy đơn hàng");
@@ -175,9 +167,7 @@ export const confirmOrderReceived = async (orderId, accountId) => {
 	return order;
 };
 
-/**
- * Buyer báo cáo sự cố
- */
+/*Buyer báo cáo sự cố*/
 export const reportOrderIssue = async (orderId, accountId, note) => {
 	const order = await Order.findOne({ _id: orderId, accountId });
 	if (!order) throw ApiError.notFound("Không tìm thấy đơn hàng");
@@ -190,9 +180,7 @@ export const reportOrderIssue = async (orderId, accountId, note) => {
 	return { message: "Đã báo cáo sự cố, admin sẽ xem xét sớm!" };
 };
 
-/**
- * Buyer hủy đơn khi pending
- */
+/*Buyer huỷ đơn*/
 export const cancelOrderByBuyer = async (orderId, accountId) => {
 	const order = await Order.findOne({ _id: orderId, accountId });
 	if (!order) throw ApiError.notFound("Không tìm thấy đơn hàng");
@@ -208,9 +196,7 @@ export const cancelOrderByBuyer = async (orderId, accountId) => {
 	return order;
 };
 
-/**
- * Seller: Lấy danh sách đơn của shop
- */
+/*Seller: Lấy danh sách đơn của shop*/
 export const getOrdersByShop = async (
 	shopId,
 	{ page = 1, limit = 10, status = "all" }
@@ -238,9 +224,7 @@ export const getOrdersByShop = async (
 	};
 };
 
-/**
- * Seller huỷ đơn hàng
- */
+/*Seller huỷ đơn hàng*/
 export const cancelBySeller = async (orderId, sellerId, reason = "") => {
 	// Tìm đơn
 	const order = await Order.findById(orderId)
@@ -257,7 +241,6 @@ export const cancelBySeller = async (orderId, sellerId, reason = "") => {
 			"Chỉ được hủy đơn khi đang ở trạng thái 'pending'"
 		);
 	}
-
 	// Check quyền: phải là chủ shop của đơn hoặc admin
 	const sellerAccount = await Account.findById(sellerId).populate(
 		"roles",
@@ -273,15 +256,21 @@ export const cancelBySeller = async (orderId, sellerId, reason = "") => {
 	if (!isOwner && !isAdmin)
 		throw ApiError.forbidden("Không có quyền huỷ đơn hàng này");
 
-	// Transaction: rollback stock + update status
 	return await withTransaction(async (session) => {
-		// Rollback stock cho từng biến thể
-		for (const item of order.orderItems) {
-			await ProductVariant.updateOne(
-				{ _id: item.productVariantId },
-				{ $inc: { stock: item.quantity } },
-				{ session }
-			);
+		// --- SỬA LOGIC HOÀN KHO ---
+		// Chỉ hoàn kho nếu đơn hàng ĐÃ trừ kho (tức là trạng thái packing trở đi)
+		// Nhưng theo logic hiện tại của bạn, Seller chỉ được hủy khi 'pending'.
+		// Nếu đơn là 'pending' -> Chưa trừ kho -> KHÔNG CẦN CỘNG LẠI.
+
+		// Nếu bạn mở rộng cho phép hủy cả đơn 'packing' thì mới cần logic dưới:
+		if (["packing", "shipping"].includes(order.status)) {
+			for (const item of order.orderItems) {
+				await ProductVariant.updateOne(
+					{ _id: item.productVariantId },
+					{ $inc: { stock: item.quantity } },
+					{ session }
+				);
+			}
 		}
 
 		// Update trạng thái
@@ -296,27 +285,55 @@ export const cancelBySeller = async (orderId, sellerId, reason = "") => {
 		return {
 			message: "Đơn hàng đã được huỷ thành công",
 			orderId: order._id,
-			rollbackItems: order.orderItems.length,
 		};
 	});
 };
 
-/**
- * Seller cập nhật trạng thái
+/*Seller xác nhận đơn hàng (Chuyển sang Packing)
+ * -> Kích hoạt trừ tồn kho tại đây
  */
 export const updateStatusPacking = async (orderId, shopId) => {
-	const order = await Order.findOne({ _id: orderId, shopId });
-	if (!order) throw ApiError.notFound("Không tìm thấy đơn hàng");
-	if (order.status !== "pending")
-		throw ApiError.badRequest("Đơn hàng phải ở trạng thái pending");
+	// Sử dụng Transaction để đảm bảo an toàn dữ liệu
+	return await withTransaction(async (session) => {
+		const order = await Order.findOne({ _id: orderId, shopId }).session(
+			session
+		);
+		if (!order) throw ApiError.notFound("Không tìm thấy đơn hàng");
+		if (order.status !== "pending")
+			throw ApiError.badRequest(
+				"Đơn hàng phải ở trạng thái pending mới được đóng gói"
+			);
 
-	order.status = "packing";
-	order.statusHistory.push({
-		status: "packing",
-		note: "Shop đang chuẩn bị hàng",
+		// --- LOGIC TRỪ TỒN KHO ---
+		for (const item of order.orderItems) {
+			// Tìm và trừ tồn kho. Điều kiện: stock phải >= số lượng mua
+			const updatedVariant = await ProductVariant.findOneAndUpdate(
+				{
+					_id: item.productVariantId,
+					stock: { $gte: item.quantity }, // Quan trọng: Chặn nếu không đủ hàng
+				},
+				{ $inc: { stock: -item.quantity } }, // Trừ số lượng
+				{ session, new: true }
+			);
+
+			if (!updatedVariant) {
+				throw ApiError.badRequest(
+					`Sản phẩm "${item.pdNameAtOrder}" (Biến thể) không đủ tồn kho để xác nhận đơn này.`
+				);
+			}
+		}
+
+		// --- Cập nhật trạng thái đơn ---
+		order.status = "packing";
+		order.statusHistory.push({
+			status: "packing",
+			note: "Shop đã xác nhận và đang chuẩn bị hàng (Đã trừ tồn kho)",
+			changedAt: new Date(),
+		});
+
+		await order.save({ session });
+		return order;
 	});
-	await order.save();
-	return order;
 };
 
 export const updateStatusShipping = async (orderId, shopId) => {
@@ -350,9 +367,7 @@ export const updateStatusDelivered = async (orderId, shopId) => {
 	return order;
 };
 
-/**
- * Admin force complete
- */
+/*Admin force complete*/
 export const forceCompleteOrder = async (orderId, adminId) => {
 	const admin = await Account.findById(adminId);
 	if (!admin) throw ApiError.notFound("Admin không tồn tại");
@@ -383,13 +398,16 @@ export const adminCancelOrder = async (
 		throw ApiError.badRequest("Đơn này đã bị huỷ rồi");
 
 	return await withTransaction(async (session) => {
-		// Rollback stock
-		for (const item of order.orderItems) {
-			await ProductVariant.updateOne(
-				{ _id: item.productVariantId },
-				{ $inc: { stock: item.quantity } },
-				{ session }
-			);
+		// --- SỬA LOGIC HOÀN KHO ---
+		// Chỉ hoàn kho nếu đơn không phải là 'pending'
+		if (order.status !== "pending" && order.status !== "cancelled") {
+			for (const item of order.orderItems) {
+				await ProductVariant.updateOne(
+					{ _id: item.productVariantId },
+					{ $inc: { stock: item.quantity } },
+					{ session }
+				);
+			}
 		}
 
 		order.status = "cancelled";
@@ -400,11 +418,7 @@ export const adminCancelOrder = async (
 		});
 		await order.save({ session });
 
-		return {
-			orderId: order._id,
-			message: "Admin huỷ đơn hàng thành công",
-			rollbackItems: order.orderItems.length,
-		};
+		return { message: "Admin huỷ đơn hàng thành công" };
 	});
 };
 
@@ -455,30 +469,61 @@ export const reviewReportedOrder = async (
 	};
 };
 
-/** AUTO TRANSITION ORDERS */
 export const autoTransitionOrders = async () => {
 	const now = new Date();
 	const oneDay = 24 * 60 * 60 * 1000;
 
 	const updatedOrders = [];
+	const failedOrders = []; // Theo dõi đơn lỗi
 
-	// PENDING → PACKING (quá 1 ngày)
+	// 1. PENDING → PACKING (Cần trừ tồn kho)
 	const pendingOrders = await Order.find({
 		status: "pending",
 		createdAt: { $lte: new Date(now - oneDay) },
 	});
+
 	for (const o of pendingOrders) {
-		o.status = "packing";
-		o.statusHistory.push({
-			status: "packing",
-			note: "Auto chuyển sau 1 ngày",
-			changedAt: now,
-		});
-		await o.save();
-		updatedOrders.push(o._id);
+		// Dùng try/catch để nếu 1 đơn lỗi (hết hàng) thì không chặn các đơn khác
+		try {
+			await withTransaction(async (session) => {
+				// --- LOGIC TRỪ KHO ---
+				for (const item of o.orderItems) {
+					const updatedVariant = await ProductVariant.findOneAndUpdate(
+						{
+							_id: item.productVariantId,
+							stock: { $gte: item.quantity }, // Kiểm tra đủ hàng
+						},
+						{ $inc: { stock: -item.quantity } },
+						{ session, new: true }
+					);
+
+					if (!updatedVariant) {
+						throw new Error(`Sản phẩm ${item.pdNameAtOrder} hết hàng`);
+					}
+				}
+
+				// --- CẬP NHẬT TRẠNG THÁI ---
+				o.status = "packing";
+				o.statusHistory.push({
+					status: "packing",
+					note: "Auto chuyển sau 1 ngày (Đã trừ tồn kho)",
+					changedAt: now,
+				});
+				await o.save({ session });
+			});
+
+			updatedOrders.push(o._id);
+		} catch (error) {
+			console.error(
+				`Auto transition failed for Order ${o._id}:`,
+				error.message
+			);
+			failedOrders.push({ id: o._id, reason: error.message });
+			// Tùy chọn: Có thể đánh dấu đơn này là cần shop xử lý thủ công
+		}
 	}
 
-	// PACKING → SHIPPING (quá 3 ngày)
+	// 2. PACKING → SHIPPING (Không cần trừ kho nữa vì đã trừ ở bước 1)
 	const packingOrders = await Order.find({
 		status: "packing",
 		updatedAt: { $lte: new Date(now - 3 * oneDay) },
@@ -494,7 +539,7 @@ export const autoTransitionOrders = async () => {
 		updatedOrders.push(o._id);
 	}
 
-	// SHIPPING → COMPLETED (auto sau 7 ngày)
+	// 3. SHIPPING → COMPLETED (Không ảnh hưởng kho)
 	const shippingOrders = await Order.find({
 		status: "shipping",
 		updatedAt: { $lte: new Date(now - 7 * oneDay) },
@@ -512,6 +557,8 @@ export const autoTransitionOrders = async () => {
 
 	return {
 		updatedCount: updatedOrders.length,
+		failedCount: failedOrders.length,
 		updatedOrders,
+		failedDetails: failedOrders, // Trả về để Admin biết đơn nào treo
 	};
 };
