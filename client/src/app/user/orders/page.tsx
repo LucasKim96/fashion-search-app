@@ -219,7 +219,6 @@ import { Order } from "@shared/features/order/order.types";
 // Mapping trạng thái sang tiếng Việt và màu sắc
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
 	pending: { label: "Chờ xác nhận", color: "text-yellow-600 bg-yellow-50" },
-	confirmed: { label: "Đã xác nhận", color: "text-blue-600 bg-blue-50" },
 	packing: { label: "Đang đóng gói", color: "text-indigo-600 bg-indigo-50" },
 	shipping: { label: "Đang giao hàng", color: "text-purple-600 bg-purple-50" },
 	delivered: { label: "Đã giao hàng", color: "text-green-600 bg-green-50" },

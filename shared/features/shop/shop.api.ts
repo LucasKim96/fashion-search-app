@@ -5,7 +5,19 @@ import { ApiResponse } from "@shared/types/common.types";
 import {
 	CreateShopRequest,
 	ShopResponse,
+	DashboardStats,
 } from "@shared/features/shop/shop.types";
+
+// Interface cho dữ liệu trả về
+
+// Thêm hàm gọi API
+export const getShopDashboardStatsApi = async () => {
+	// URL: /api/shops/owner/dashboard-stats
+	const res = await axiosInstance.get<ApiResponse<DashboardStats>>(
+		"/shops/owner/dashboard-stats"
+	);
+	return res.data;
+};
 
 // Lấy danh sách shop
 export const getShopsApi = () =>

@@ -158,9 +158,9 @@ export const confirmOrderReceived = async (orderId, accountId) => {
 	if (order.status !== "delivered")
 		throw ApiError.badRequest("Chưa thể xác nhận vì đơn chưa giao xong");
 
-	order.status = "confirmed";
+	order.status = "completed";
 	order.statusHistory.push({
-		status: "confirmed",
+		status: "completed",
 		note: "Người mua xác nhận đã nhận hàng",
 	});
 	await order.save();
@@ -239,24 +239,26 @@ export const getOrderDetailForShop = async (orderId, shopId) => {
 	return order;
 };
 
-/*Seller huỷ đơn hàng*/
 export const cancelBySeller = async (orderId, sellerId, reason = "") => {
-	// Tìm đơn
 	const order = await Order.findById(orderId)
 		.populate("shopId", "accountId shopName")
 		.populate("orderItems.productVariantId");
 
 	if (!order) throw ApiError.notFound("Không tìm thấy đơn hàng");
+
+	// Check các trạng thái không được hủy
 	if (order.status === "cancelled")
 		throw ApiError.badRequest("Đơn này đã bị huỷ rồi");
-	if (["delivered", "completed"].includes(order.status))
-		throw ApiError.badRequest("Không thể huỷ đơn đã giao hoặc hoàn tất");
-	if (order.status !== "pending") {
+
+	// Chỉ cấm hủy khi đang giao hoặc đã giao xong
+	if (["shipping", "delivered", "completed"].includes(order.status))
 		throw ApiError.badRequest(
-			"Chỉ được hủy đơn khi đang ở trạng thái 'pending'"
+			"Không thể huỷ đơn khi đang giao hoặc đã hoàn tất"
 		);
-	}
-	// Check quyền: phải là chủ shop của đơn hoặc admin
+
+	// --> VẬY LÀ CHO PHÉP HỦY 'pending' VÀ 'packing'
+
+	// Check quyền (Giữ nguyên)
 	const sellerAccount = await Account.findById(sellerId).populate(
 		"roles",
 		"roleName level"
@@ -272,21 +274,18 @@ export const cancelBySeller = async (orderId, sellerId, reason = "") => {
 		throw ApiError.forbidden("Không có quyền huỷ đơn hàng này");
 
 	return await withTransaction(async (session) => {
-		// --- SỬA LOGIC HOÀN KHO ---
-		// Chỉ hoàn kho nếu đơn hàng ĐÃ trừ kho (tức là trạng thái packing trở đi)
-		// Nhưng theo logic hiện tại của bạn, Seller chỉ được hủy khi 'pending'.
-		// Nếu đơn là 'pending' -> Chưa trừ kho -> KHÔNG CẦN CỘNG LẠI.
-
-		// Nếu bạn mở rộng cho phép hủy cả đơn 'packing' thì mới cần logic dưới:
-		if (["packing", "shipping"].includes(order.status)) {
+		// --- LOGIC HOÀN KHO ---
+		// Nếu đơn đang là 'packing', nghĩa là lúc trước đã trừ kho rồi -> GIỜ PHẢI CỘNG LẠI
+		if (order.status === "packing") {
 			for (const item of order.orderItems) {
 				await ProductVariant.updateOne(
 					{ _id: item.productVariantId },
-					{ $inc: { stock: item.quantity } },
+					{ $inc: { stock: item.quantity } }, // Cộng lại kho
 					{ session }
 				);
 			}
 		}
+		// Nếu 'pending' thì chưa trừ kho -> Không cần làm gì
 
 		// Update trạng thái
 		order.status = "cancelled";
@@ -298,8 +297,9 @@ export const cancelBySeller = async (orderId, sellerId, reason = "") => {
 		await order.save({ session });
 
 		return {
-			message: "Đơn hàng đã được huỷ thành công",
+			message: "Đơn hàng đã được huỷ thành công (Đã hoàn kho nếu cần)",
 			orderId: order._id,
+			rollbackItems: order.status === "packing" ? order.orderItems.length : 0,
 		};
 	});
 };
