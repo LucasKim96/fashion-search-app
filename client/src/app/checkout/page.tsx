@@ -250,11 +250,17 @@ export default function CheckoutPage() {
 							<div className="max-h-[400px] overflow-y-auto pr-2 space-y-4 mb-6 custom-scrollbar">
 								{cart.items.map((item) => {
 									// Logic lấy tên và ảnh tương tự CartPage
+									// 1. Logic lấy ảnh: Thử tất cả các trường có thể có
 									const displayImage =
-										item.productVariant?.image || item.product?.thumbnail || "";
-									const displayName =
-										item.product?.name || item.product?.pdName || "Sản phẩm";
+										item.productVariant?.image || // Key chuẩn variant từ Backend
+										item.productVariant?.imageUrl || // Key dự phòng variant
+										item.product?.thumbnail || // Key thumbnail sản phẩm (nếu có)
+										item.product?.images?.[0] || // Key mảng ảnh sản phẩm (Mongoose thường trả về cái này)
+										"";
 
+									// 2. Logic lấy tên: Ưu tiên pdName (tên chuẩn trong DB)
+									const displayName =
+										item.product?.pdName || item.product?.name || "Sản phẩm";
 									return (
 										<div
 											key={item.productVariantId}
@@ -264,12 +270,19 @@ export default function CheckoutPage() {
 													src={buildImageUrl(displayImage)}
 													alt={displayName}
 													className="w-full h-full object-cover"
+													// Thêm xử lý lỗi ảnh nếu muốn chắc chắn hơn
+													onError={(e) => {
+														(e.target as HTMLImageElement).src =
+															"/placeholder.png"; // Hoặc ảnh mặc định của bạn
+													}}
 												/>
 											</div>
 											<div className="flex-1 min-w-0">
 												<h4 className="text-sm font-semibold text-gray-800 line-clamp-2">
 													{displayName}
 												</h4>
+
+												{/* Logic hiển thị thuộc tính (Giữ nguyên vì đã ổn) */}
 												<div className="text-xs text-gray-500 mt-1 line-clamp-1">
 													{item.productVariant?.attributes
 														?.map(
@@ -280,6 +293,7 @@ export default function CheckoutPage() {
 														)
 														.join(" | ")}
 												</div>
+
 												<div className="flex justify-between items-center mt-1">
 													<span className="text-xs text-gray-500">
 														x{item.quantity}
