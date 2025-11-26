@@ -519,7 +519,56 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({
 					</div>
 				)}
 				{/* 4. DASHBOARD INFO (Grid Layout) */}
+				{/* --- BỔ SUNG: UI HIỂN THỊ THUỘC TÍNH (Ngay dưới giá) --- */}
+				{Object.keys(groupedAttributes).length > 0 && (
+					<div className="relative pl-3 border-l-4 border-blue-400 transition-all hover:border-blue-300 mt-4">
+						<span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 block">
+							Tùy chọn sản phẩm
+						</span>
 
+						<div className="flex flex-col gap-4">
+							{Object.entries(groupedAttributes).map(([label, values]) => (
+								<div key={label} className="flex flex-col gap-2">
+									{/* Tên thuộc tính */}
+									<div className="flex items-center gap-2">
+										<Layers size={14} className="text-gray-400" />
+										<span className="text-sm font-semibold text-gray-700 capitalize">
+											{label}:
+											{/* Hiện giá trị đang chọn bên cạnh label cho dễ nhìn */}
+											{selectedOptions[label] && (
+												<span className="ml-1 text-blue-600 font-bold">
+													{selectedOptions[label]}
+												</span>
+											)}
+										</span>
+									</div>
+
+									{/* Danh sách nút bấm */}
+									<div className="flex flex-wrap gap-2">
+										{values.map((val, idx) => {
+											const isSelected = selectedOptions[label] === val;
+											return (
+												<button
+													key={idx}
+													type="button" // Quan trọng để không submit form
+													onClick={() => handleOptionClick(label, val)}
+													className={clsx(
+														"px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 border select-none flex items-center gap-2",
+														isSelected
+															? "bg-blue-600 border-blue-600 text-white shadow-md scale-105"
+															: "bg-white border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50"
+													)}>
+													{val}
+													{isSelected && <Check size={14} strokeWidth={3} />}
+												</button>
+											);
+										})}
+									</div>
+								</div>
+							))}
+						</div>
+					</div>
+				)}
 				{/* --- BỔ SUNG 1: HIỂN THỊ TỒN KHO --- */}
 				<div className="flex items-center gap-3 mt-2 p-3 bg-gray-50 rounded-xl border border-gray-200 w-fit">
 					<div className="p-2 bg-white rounded-lg shadow-sm text-blue-500">
