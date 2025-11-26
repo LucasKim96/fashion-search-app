@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { buildImageUrl } from "@shared/core";
+import { buildImageUrl } from "@shared/core/utils/image.utils";
 
 export const ProductImages = ({ images }: { images: string[] }) => {
 	const [selectedImage, setSelectedImage] = useState(images?.[0] || "");

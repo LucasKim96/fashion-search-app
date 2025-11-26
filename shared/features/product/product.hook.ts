@@ -11,7 +11,8 @@ import {
 	ProductSearchRequest,
 } from "./product.types";
 import { ApiResponse } from "@shared/types/common.types";
-import { useNotification, errorUtils } from "@shared/core";
+import { useNotification } from "@shared/core/ui/NotificationProvider";
+import { errorUtils } from "@shared/core/utils";
 
 export const useProduct = () => {
 	const { showToast } = useNotification();

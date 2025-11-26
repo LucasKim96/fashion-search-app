@@ -15,7 +15,7 @@ import {
 	CheckCircle,
 	CirclePoundSterling,
 } from "lucide-react";
-import { SearchHeader, GradientButton } from "@shared/core";
+import { SearchHeader, GradientButton } from "@shared/core/components/ui";
 import { ProductSearchRequest } from "@shared/features/product";
 import { i } from "node_modules/framer-motion/dist/types.d-BJcRxCew";
 

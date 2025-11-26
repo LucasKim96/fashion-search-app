@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useNotification, errorUtils } from "@shared/core";
+import { useNotification } from "@shared/core/ui/NotificationProvider";
+import { errorUtils } from "@shared/core/utils";
 import { Cart, AddToCartRequest } from "./cart.types";
 import {
 	getMyCartApi,

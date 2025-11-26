@@ -1,5 +1,6 @@
 // client/features/shop/shop.api.ts
-import { axiosInstance, SHOP_ENDPOINTS } from "@shared/core";
+import { axiosInstance } from "@shared/core/api/axiosInstance";
+import { SHOP_ENDPOINTS } from "@shared/core/constants/api.constants";
 import { ApiResponse } from "@shared/types/common.types";
 import { CreateShopRequest, ShopResponse } from "./shop.types";
 
