@@ -5,7 +5,7 @@ from app.config import HOST, PORT
 
 # Import các routes
 from app.routes import img2img_route 
-# from app.routes import txt2img_route 
+from app.routes import txt2img_route
 from app.routes import health
 
 app = FastAPI(title="Fashion Search & Text2Img API")
@@ -18,7 +18,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# app.include_router(txt2img_route.router)
+app.include_router(txt2img_route.router, prefix="/txt2img", tags=["Text-to-Image Search"])
 app.include_router(img2img_route.router)
 app.include_router(health.router)
 
