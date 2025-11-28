@@ -3,8 +3,8 @@ import ProductVariant from "./productVariant.model.js";
 import Product from "./product.model.js";
 import ProductAIConfig from "./productAIConfig.model.js";
 import { getLastActiveString } from "../../utils/index.js";
-import Attribute from "./attribute.model.js";
-import AttributeValue from "./attributeValue.model.js";
+// import Attribute from "./attribute.model.js";
+// import AttributeValue from "./attributeValue.model.js";
 import { createProductVariantsBulk } from "./productVariant.service.js";
 import Shop from "../shop/shop.model.js";
 import fs from "fs";
@@ -1000,4 +1000,115 @@ export const searchProducts = async ({
 			data: { products: [], total: 0, page: 1, limit: 20, totalPages: 1 },
 		};
 	}
+};
+
+//========== ADMIN SEARCH SERVICES ==========
+import { syncToAI, syncToTextAI } from "../../utils/ai-sync.util.js";
+
+/**
+ * Hàm helper để kiểm tra file có tồn tại không
+ */
+const isFileExist = (imagePath) => {
+	if (!imagePath) return false;
+	// Xóa dấu '/' ở đầu nếu có để path.join hoạt động đúng từ root
+	const relativePath = imagePath.startsWith("/")
+		? imagePath.slice(1)
+		: imagePath;
+	const absolutePath = path.join(process.cwd(), relativePath);
+	return fs.existsSync(absolutePath);
+};
+
+/**
+ * ADMIN: Quét toàn bộ DB và gửi sang AI để embedding lại
+ */
+export const reindexAllProductsService = async () => {
+	console.log("🚀 Bắt đầu Re-index toàn bộ sản phẩm...");
+
+	const products = await Product.find({ isActive: true }).lean();
+	let count = 0;
+
+	for (const product of products) {
+		const pid = product._id.toString();
+
+		// 1. Index ảnh chính của Product (thường là mảng images)
+		if (product.images && product.images.length > 0) {
+			for (const img of product.images) {
+				if (isFileExist(img)) {
+					await syncToAI(pid, img);
+					count++;
+				} else {
+					console.warn(`⚠️ Bỏ qua ảnh lỗi (Product): ${img}`);
+				}
+			}
+		}
+
+		// 2. Index ảnh của Variant (nếu có ảnh riêng)
+		const variants = await ProductVariant.find({ productId: pid }).lean();
+		for (const variant of variants) {
+			if (variant.image) {
+				if (isFileExist(variant.image)) {
+					await syncToAI(pid, variant.image);
+					count++;
+				} else {
+					console.warn(`⚠️ Bỏ qua ảnh lỗi (Variant): ${variant.image}`);
+				}
+			}
+		}
+	}
+
+	console.log(`✅ Re-index hoàn tất! Tổng cộng ${count} ảnh đã được xử lý.`);
+	return { message: `Đã gửi ${count} ảnh sang AI để xử lý.` };
+};
+
+/**
+ * ADMIN: Re-index chỉ cho Text Search (Không đụng hàng đồng nghiệp)
+ */
+export const reindexTextSearchService = async () => {
+	console.log("🚀 Bắt đầu Re-index Text Search...");
+
+	// 1. Lấy tất cả sản phẩm đang hoạt động
+	const products = await Product.find({ isActive: true })
+		.select("_id images")
+		.lean();
+	let count = 0;
+
+	for (const product of products) {
+		const pid = product._id.toString();
+
+		// A. Index ảnh chính của Product
+		if (product.images && product.images.length > 0) {
+			// Thường chỉ cần index ảnh đầu tiên (thumbnail) là đủ cho text search
+			// Nhưng nếu muốn kỹ thì loop hết
+			for (const img of product.images) {
+				if (isFileExist(img)) {
+					await syncToTextAI(pid, img);
+					count++;
+				} else {
+					console.warn(`⚠️ Bỏ qua ảnh lỗi (Product): ${img}`);
+				}
+			}
+		}
+
+		// B. Index ảnh của Biến thể (Variant)
+		// Vì biến thể có màu sắc khác nhau (VD: Áo đỏ, Áo xanh) nên cần index hết
+		const variants = await ProductVariant.find({ productId: pid })
+			.select("image")
+			.lean();
+		for (const variant of variants) {
+			if (variant.image) {
+				if (isFileExist(variant.image)) {
+					await syncToTextAI(pid, variant.image);
+					count++;
+				} else {
+					console.warn(`⚠️ Bỏ qua ảnh lỗi (Variant): ${variant.image}`);
+				}
+			}
+		}
+	}
+
+	console.log(`✅ Re-index Text Search hoàn tất! Đã gửi ${count} ảnh.`);
+	return {
+		totalProcessed: count,
+		message: `Đã gửi ${count} ảnh sang hệ thống Text Search để xử lý.`,
+	};
 };
