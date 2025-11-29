@@ -44,7 +44,7 @@ async def index_product(payload: TextIndexRequest):
         vector = txt2img_service.embed_image(payload.image_path)
         
         if vector is None:
-            raise HTTPException(status_code=400, detail="Image not found or invalid")
+            raise HTTPException(status_code=400, detail="Image not found")
 
         # B2: Service Index -> Lưu Vector + ID + Path vào FAISS & Map
         # (Đây là hàm đã sửa ở bước trước, nhận 3 tham số)

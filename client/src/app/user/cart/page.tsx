@@ -2,10 +2,13 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
+// 1. IMPORT AUTH & NOTIFICATION
+import { useAuth } from "@shared/features/auth";
+import { useNotification } from "@shared/core/ui/NotificationProvider";
+
 import { useCart } from "@shared/features/cart/useCart.hook";
 import { buildImageUrl, formatCurrency } from "@shared/core/utils";
 import { Loader2, Trash2, ShoppingBag, Plus, Minus, Store } from "lucide-react";
-import { clsx } from "clsx";
 import { ImageWithFallback } from "@shared/core/components/ui/ImageWithFallback";
 
 // --- COMPONENT: Giỏ hàng trống ---
@@ -64,7 +67,6 @@ const CartItemRow = ({ item, onUpdateQuantity, onRemove }: any) => {
 		"";
 
 	const displayName = item.product?.pdName || item.product?.name || "Sản phẩm";
-
 	return (
 		<div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 py-4 border-b border-gray-100 last:border-0">
 			{/* Ảnh */}
@@ -180,10 +182,28 @@ const CartSummary = ({ subtotal }: { subtotal: number }) => {
 // MAIN PAGE
 // ===================================================================
 export default function CartPage() {
-	const { cart, loading, error, updateItemQuantity, removeItem } = useCart();
 	const router = useRouter();
 
-	// Logic gom nhóm theo Shop
+	// 2. LẤY TRẠNG THÁI AUTH
+	const { isAuthenticated, loading: authLoading } = useAuth();
+	const { showToast } = useNotification();
+
+	const {
+		cart,
+		loading: cartLoading,
+		error,
+		updateItemQuantity,
+		removeItem,
+	} = useCart();
+
+	// 3. CHECK AUTH: Nếu chưa đăng nhập -> Đá về Login
+	useEffect(() => {
+		if (!authLoading && !isAuthenticated) {
+			showToast("Vui lòng đăng nhập để xem giỏ hàng", "warning");
+			router.push("/login");
+		}
+	}, [authLoading, isAuthenticated, router, showToast]);
+
 	const groupedItems = useMemo(() => {
 		if (!cart?.items?.length) return [];
 
@@ -213,9 +233,19 @@ export default function CartPage() {
 		return Object.values(groups);
 	}, [cart]);
 
-	if (loading) return <CartLoadingSkeleton />;
+	// 4. ĐIỀU KIỆN RENDER:
+	// Đang check auth HOẶC chưa đăng nhập -> Hiện Skeleton (hoặc null) để ko lộ giỏ hàng
+	if (authLoading || !isAuthenticated) return <CartLoadingSkeleton />;
+
+	if (cartLoading) return <CartLoadingSkeleton />;
+
 	if (error)
-		return <div className="text-center text-red-500 p-8">Lỗi: {error}</div>;
+		return (
+			<div className="text-center text-red-500 p-8">
+				Lỗi khi tải giỏ hàng: {error}
+			</div>
+		);
+
 	if (!cart || cart.items.length === 0) return <EmptyCart />;
 
 	return (

@@ -1,7 +1,11 @@
 import { axiosInstance } from "../../core/api/axiosInstance";
 import { SEARCH_ENDPOINTS } from "../../core/constants/api.constants";
 import { ApiResponse } from "../../types/common.types";
-import { DetectResponseData, SearchImageResponseData } from "./search.types";
+import {
+	DetectResponseData,
+	ProductSearchResult,
+	SearchImageResponseData,
+} from "./search.types";
 
 /**
  * Bước 1: Gửi ảnh gốc để AI phát hiện các vùng (Candidates)
@@ -40,4 +44,15 @@ export const searchByImage = async (
 		headers: { "Content-Type": "multipart/form-data" },
 	});
 	return response.data;
+};
+
+// Endpoint tìm kiếm Text (AI PhoCLIP)
+export const searchByTextApi = async (query: string, limit = 60) => {
+	const res = await axiosInstance.get<ApiResponse<ProductSearchResult[]>>(
+		"/search/text", // Khớp với route backend
+		{
+			params: { query, limit },
+		}
+	);
+	return res.data;
 };

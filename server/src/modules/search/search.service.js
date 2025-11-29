@@ -142,12 +142,12 @@ export const searchImageService = async (file) => {
  * @param {string} query - Từ khóa tìm kiếm
  * @param {number} limit - Số lượng kết quả
  */
-export const searchByTextService = async (query, limit = 20) => {
+export const searchByTextService = async (q, limit = 40) => {
 	try {
 		// 1. Gọi sang Python (PhoCLIP)
 		// Python trả về: { data: [ { id, score, image }, ... ] }
 		const aiResponse = await axios.post(`${TXT_API_URL}/search`, {
-			query: query,
+			query: q,
 			limit: Number(limit),
 		});
 
@@ -177,15 +177,32 @@ export const searchByTextService = async (query, limit = 20) => {
 			productsFromDb.map((p) => [p._id.toString(), p])
 		);
 		const finalResults = [];
+		const rootDir = process.cwd();
 
 		for (const aiItem of aiResults) {
 			const productDb = productMap.get(aiItem.id);
 
 			if (productDb) {
+				// --- XỬ LÝ ĐƯỜNG DẪN ẢNH ---
+				let imageUrl = aiItem.image; // Đang là C:\Users\...\uploads\...
+
+				// 1. Nếu chứa đường dẫn gốc hệ thống -> Xóa đi
+				// (Giữ lại phần từ \uploads trở đi)
+				if (imageUrl.includes(rootDir)) {
+					imageUrl = imageUrl.replace(rootDir, "");
+				}
+
+				// 2. Đổi tất cả dấu gạch ngược "\" thành "/" (Chuẩn Web)
+				imageUrl = imageUrl.replace(/\\/g, "/");
+
+				// 3. Đảm bảo bắt đầu bằng "/"
+				if (!imageUrl.startsWith("/")) {
+					imageUrl = "/" + imageUrl;
+				}
 				finalResults.push({
 					...productDb,
 					// [QUAN TRỌNG] Gán ảnh mà AI tìm thấy vào thumbnail để FE hiển thị
-					thumbnail: aiItem.image,
+					thumbnail: imageUrl,
 					similarity: aiItem.score,
 				});
 			}
