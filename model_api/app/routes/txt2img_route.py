@@ -1,7 +1,8 @@
-from fastapi import APIRouter, HTTPException
+# model_api/app/routes/txt2img_route.py
+from fastapi import APIRouter, HTTPException, Form, File, UploadFile
 from app.schemas.txt2img_request import (
     TextSearchRequest, 
-    TextIndexRequest, 
+    # TextIndexRequest, 
     TextDeleteRequest, 
     TextBatchDeleteRequest
 )
@@ -37,29 +38,34 @@ async def search_by_text(payload: TextSearchRequest):
 
 # 2. API INDEX (ADD/UPDATE)
 @router.post("/index", response_model=BaseResponse)
-async def index_product(payload: TextIndexRequest):
+async def index_product(
+    product_id: str = Form(...),
+    image_path: str = Form(...),
+    image: UploadFile = File(...) # Đây là cách FastAPI nhận file
+):
     try:
-        # B1: Service Model -> Đọc ảnh từ path và chuyển thành vector
-        # (Đây là hàm trong file bạn vừa gửi)
-        vector = txt2img_service.embed_image(payload.image_path)
+        # B1: Service Model -> Đọc nội dung file ảnh VÀ chuyển thành vector
+        #     Chúng ta sẽ truyền trực tiếp nội dung file, không phải đường dẫn
+        vector = txt2img_service.embed_image(image.file) # Truyền image.file (một file-like object)
         
         if vector is None:
-            raise HTTPException(status_code=400, detail="Image not found")
+            # Thông báo lỗi rõ hơn
+            raise HTTPException(status_code=400, detail=f"Could not process the uploaded image for {image_path}")
 
         # B2: Service Index -> Lưu Vector + ID + Path vào FAISS & Map
-        # (Đây là hàm đã sửa ở bước trước, nhận 3 tham số)
-        text_index_service.add_product(vector, payload.product_id, payload.image_path)
+        #     Hàm này vẫn nhận 3 tham số như cũ
+        text_index_service.add_product(vector, product_id, image_path)
         
         return {
             "success": True, 
-            "message": f"Product {payload.product_id} indexed successfully"
+            "message": f"Product {product_id} with image {image_path} indexed successfully"
         }
     except HTTPException as he:
         raise he
     except Exception as e:
         logger.error(f"[TextIndex] Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
+    
 # 3. API BATCH DELETE (Xóa nhiều ảnh cụ thể)
 @router.post("/delete-batch", response_model=BaseResponse)
 async def delete_batch(payload: TextBatchDeleteRequest):
@@ -78,4 +84,17 @@ async def delete_product(payload: TextDeleteRequest):
         return {"success": True, "message": f"Deleted {count} vectors"}
     except Exception as e:
         logger.error(f"[TextDelete] Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@router.post("/clear", response_model=BaseResponse)
+async def clear_index():
+    """Xóa toàn bộ Index để chạy lại từ đầu"""
+    try:
+        success = text_index_service.reset_index()
+        if success:
+            return {"success": True, "message": "Index cleared successfully"}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to clear index")
+    except Exception as e:
+        logger.error(f"[TextClear] Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))

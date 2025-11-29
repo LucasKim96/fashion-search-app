@@ -1,3 +1,4 @@
+# model_api/app/schemas/txt2img_response.py
 from pydantic import BaseModel
 from typing import List, Optional
 
