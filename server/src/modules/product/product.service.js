@@ -19,8 +19,10 @@ import {
 	withTransaction,
 	toObjectId,
 } from "../../utils/index.js";
+import { syncToAI, syncToTextAI } from "../../utils/ai-sync.util.js";
 
 const MODEL_API_URL = "http://localhost:8000/img2img";
+const TEXT_MODEL_API_URL = "http://localhost:8001/txt2img";
 
 const UPLOADS_ROOT = path.join(process.cwd(), "uploads");
 export const PRODUCT_FOLDER = path.join(UPLOADS_ROOT, "products");
@@ -1003,7 +1005,6 @@ export const searchProducts = async ({
 };
 
 //========== ADMIN SEARCH SERVICES ==========
-import { syncToAI, syncToTextAI } from "../../utils/ai-sync.util.js";
 
 /**
  * Hàm helper để kiểm tra file có tồn tại không

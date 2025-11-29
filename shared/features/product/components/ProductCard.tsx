@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import clsx from "clsx";
 import { Eye, EyeOff, Trash2, Edit, Shirt } from "lucide-react";
-import { Product } from "../product.types"; // Import type Product của bạn
-import { useProduct } from "../index"; // Import hook
+import { Product } from "../product.types";
+import { useProduct } from "../index";
 import { buildImageUrl, formatCurrency } from "@shared/core/utils";
 import { SidebarTooltip } from "@shared/core/components/ui";
 import { useNotification } from "@shared/core/ui/NotificationProvider";
@@ -110,6 +110,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 	// Nhưng nếu logic Client cho phép thấy inactive thì vẫn hiện.
 	const shouldShowBadge = showStatusBadge && !product.isActive;
 
+	const handleImageError = useCallback(() => {
+		setImageError(true);
+	}, []);
+
 	return (
 		<div
 			className={clsx(
@@ -137,7 +141,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 						)}
 						loading="lazy"
 						// Thêm onError để xử lý khi ảnh không tải được
-						onError={() => setImageError(true)}
+						onError={handleImageError}
 					/>
 				) : (
 					// Nếu không có imageUrl HOẶC đã bị lỗi -> render icon
