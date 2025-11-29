@@ -37,12 +37,28 @@ class TextIndexService:
             try:
                 with open(self.mapping_path, 'r', encoding='utf-8') as f:
                     data = json.load(f)
+                    
                     # Convert key string sang int
-                    self.id_map = {int(k): v for k, v in data.get("mapping", {}).items()}
-                    self.next_id = data.get("next_id", 0)
-                logger.info(f"[TextIndex] Loaded mapping. Count: {len(self.id_map)}")
+                    temp_map = {int(k): v for k, v in data.get("mapping", {}).items()}
+                    self.id_map = temp_map
+                    
+                    # --- LOGIC AN TOÀN CHO next_id ---
+                    # Lấy next_id từ file nếu có
+                    next_id_from_file = data.get("next_id", 0)
+                    
+                    # Tìm ID lớn nhất thực sự có trong map
+                    max_id_in_map = max(self.id_map.keys()) if self.id_map else -1
+
+                    # next_id phải là giá trị lớn nhất trong 3 giá trị:
+                    # 1. next_id đọc từ file
+                    # 2. ID lớn nhất trong map + 1
+                    # 3. 0 (để tránh số âm)
+                    self.next_id = max(next_id_from_file, max_id_in_map + 1, 0)
+                    
+                logger.info(f"[TextIndex] Loaded mapping. Count: {len(self.id_map)}. Next ID set to: {self.next_id}")
+
             except Exception:
-                logger.error(f"[TextIndex] Error loading mapping:\n{traceback.format_exc()}")
+                logger.error(f"[TextIndex] Error loading mapping, resetting:\n{traceback.format_exc()}")
                 self.id_map = {}
                 self.next_id = 0
         else:
