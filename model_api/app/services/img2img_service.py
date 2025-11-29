@@ -111,7 +111,7 @@ class Img2ImgService:
         # 1. Decode
         img_np = self._decode_image(image_bytes)
 
-        # 2. Auto Crop (Logic mới)
+        # 2. Auto Crop
         with Timer("Shop Auto Crop"):
             final_img_np, method_used = auto_crop_for_seller(
                 self.yolo_model, img_np, target_group
