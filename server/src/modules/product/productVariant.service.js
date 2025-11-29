@@ -387,7 +387,6 @@ export const updateProductVariant = async (
 					syncEmbeddings(pid, result.data.image);
 				}
 			}
-			// --- KẾT THÚC THAY ĐỔI ---
 
 			return result;
 		})

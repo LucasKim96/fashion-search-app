@@ -77,7 +77,7 @@ export const login = async ({ usernameOrPhone, password }) => {
 
 		// Kiểm tra mật khẩu
 		const isMatch = await bcrypt.compare(password, account.password);
-		if (!isMatch) throw new Error("Sai mật khẩu!");
+		if (!isMatch) throw new Error("Sai tên đăng nhập hoặc mật khẩu!");
 
 		// Tạo accessToken và refreshToken
 		const payload = {

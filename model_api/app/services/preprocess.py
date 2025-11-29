@@ -196,6 +196,7 @@ def detect_candidates_for_buyer(yolo_model, img_np):
         })
         
     return candidates
+
 # def detect_candidates_for_buyer(yolo_model, img_np):
     """
     Logic cho Client chọn vùng tìm kiếm:
