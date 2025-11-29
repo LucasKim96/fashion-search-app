@@ -21,9 +21,10 @@ export const PublicProductCard: React.FC<PublicProductCardProps> = ({
 
 	const displayName = p.name || p.pdName || "Sản phẩm";
 
+	const Image = `/uploads/products/${p.matchedImage}`;
 	const displayImage =
 		p.thumbnail ||
-		p.matchedImage ||
+		Image ||
 		(p.images && p.images.length > 0 ? p.images[0] : "");
 
 	// Xử lý riêng cho kết quả tìm kiếm
