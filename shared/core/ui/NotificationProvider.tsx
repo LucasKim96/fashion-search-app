@@ -122,12 +122,17 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
 										toast.type === "error",
 									"bg-gradient-to-r from-blue-500 to-indigo-600 text-white":
 										toast.type === "info",
+									"bg-gradient-to-r from-yellow-500/90 to-orange-500/90 text-white":
+										toast.type === "warning",
 								}
 							)}>
 							{/* Icon */}
 							{toast.type === "success" && <CheckCircle className="w-5 h-5" />}
 							{toast.type === "error" && <AlertTriangle className="w-5 h-5" />}
 							{toast.type === "info" && <Info className="w-5 h-5" />}
+							{toast.type === "warning" && (
+								<AlertTriangle className="w-5 h-5" />
+							)}
 
 							{/* Message */}
 							<span className="text-center break-words">{toast.message}</span>
@@ -144,39 +149,59 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
 				createPortal(
 					<div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[99999] p-4">
 						<div className="bg-white rounded-2xl shadow-2xl p-6 w-[500px] max-w-[90vw] relative overflow-hidden border border-gray-200">
-							{/* Icon cảnh báo */}
-							<div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-gradient-to-tr from-blue-500 to-indigo-500 p-4 rounded-full shadow-xl">
-								<Info className="text-white w-6 h-6" />
-							</div>
+							{(() => {
+								// 1. Lấy style dựa trên variant (info/warning/danger)
+								const styles = getConfirmStyles(confirm.variant);
 
-							{/* Message */}
-							<p className="text-gray-800 text-base mt-6 mb-6 text-center font-medium leading-relaxed">
-								{confirm.message}
-							</p>
+								return (
+									<>
+										<div className="flex flex-col items-center text-center">
+											{/* 2. Áp dụng màu nền và màu icon (styles.iconBg, styles.iconColor) */}
+											<div
+												className={clsx(
+													"p-3 rounded-full mb-4",
+													styles.iconBg,
+													styles.iconColor
+												)}>
+												{styles.icon}
+											</div>
 
-							{/* Buttons */}
-							<div className="flex justify-center gap-4">
-								<button
-									className="px-5 py-2 rounded-full bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 transition-all shadow-sm hover:shadow-md transform active:scale-95"
-									onClick={() => {
-										confirm.onCancel?.();
-										setConfirm(null);
-									}}>
-									Hủy
-								</button>
-								<button
-									className="px-5 py-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold hover:from-blue-600 hover:to-indigo-700 shadow-lg transition-all transform active:scale-95"
-									onClick={() => {
-										confirm.onConfirm();
-										setConfirm(null);
-									}}>
-									Xác nhận
-								</button>
-							</div>
+											<h3 className="text-lg font-bold text-gray-900 mb-2">
+												{confirm.title || "Xác nhận hành động"}
+											</h3>
 
-							{/* Decorative blur circles */}
-							<span className="absolute -top-16 -left-16 w-40 h-40 rounded-full bg-blue-200 opacity-20 blur-3xl"></span>
-							<span className="absolute -bottom-16 -right-16 w-40 h-40 rounded-full bg-indigo-200 opacity-20 blur-3xl"></span>
+											<p className="text-gray-600 text-sm mb-8 leading-relaxed">
+												{confirm.message}
+											</p>
+										</div>
+
+										{/* Buttons */}
+										<div className="flex gap-3">
+											<button
+												className="flex-1 px-4 py-2.5 rounded-xl bg-gray-100 text-gray-700 font-bold hover:bg-gray-200 transition-all"
+												onClick={() => {
+													confirm.onCancel?.();
+													setConfirm(null);
+												}}>
+												{confirm.cancelButtonText || "Hủy bỏ"}
+											</button>
+
+											{/* 3. Áp dụng màu nút bấm (styles.btnBg) */}
+											<button
+												className={clsx(
+													"flex-1 px-4 py-2.5 rounded-xl text-white font-bold shadow-lg transition-all transform active:scale-95",
+													styles.btnBg
+												)}
+												onClick={() => {
+													confirm.onConfirm();
+													setConfirm(null);
+												}}>
+												{confirm.confirmButtonText || "Xác nhận"}
+											</button>
+										</div>
+									</>
+								);
+							})()}
 						</div>
 					</div>,
 					document.body
