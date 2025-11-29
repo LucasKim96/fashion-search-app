@@ -7,6 +7,7 @@ HOST = os.getenv("HOST", "0.0.0.0")
 
 # --- PATHS ---
 BASE_DIR = Path(__file__).resolve().parent.parent
+UPLOAD_ROOT_DIR = BASE_DIR.parent / "server" 
 
 # Model Paths
 YOLO_WEIGHT_PATH = os.getenv("YOLO_WEIGHT_PATH", str(BASE_DIR / "weights/best.pt"))

@@ -1,9 +1,11 @@
+# model_api/app/services/txt2img_service.py
 import os
 import torch
 import numpy as np
 from PIL import Image
 from transformers import AutoTokenizer # Dùng Tokenizer thay vì Processor
 from torchvision import transforms
+from typing import Union, IO
 
 # Import Config
 from app.config import (
@@ -11,7 +13,7 @@ from app.config import (
     TEXT2IMG_BASE_ARCH, 
     TEXT2IMG_EMBEDDING_DIM, 
     DEVICE,
-    RGB_MEAN, RGB_STD, INPUT_SIZE
+    RGB_MEAN, RGB_STD, INPUT_SIZE, UPLOAD_ROOT_DIR
 )
 from app.utils.logger import logger
 from app.utils.timer import Timer
@@ -97,24 +99,28 @@ class Text2ImgService:
             logger.error(f"Text embed error: {e}")
             raise e
 
-    def embed_image(self, image_path: str):
-        """Chuyển Ảnh -> Vector"""
+    def embed_image(self, image_data: Union[str, IO]):
+        """
+        Chuyển Ảnh -> Vector.
+        Có thể nhận vào đường dẫn file (str) hoặc file-like object (IO).
+        """
         try:
-            image = Image.open(image_path).convert("RGB")
+            # Mở ảnh trực tiếp từ dữ liệu được truyền vào
+            image = Image.open(image_data).convert("RGB")
+
             image_tensor = self.transform(image).unsqueeze(0).to(self.device)
             
             with torch.no_grad():
-                # Gọi image_encoder của PhoCLIP
                 features = self.model.image_encoder(image_tensor)
             
             vector = features.cpu().numpy().astype('float32')
-            # Normalize
             norm = np.linalg.norm(vector)
             if norm > 0: vector = vector / norm
                 
             return vector
         except Exception as e:
-            logger.error(f"Error embedding image {image_path}: {e}")
+            # Sửa log để không bị lỗi nếu image_data không phải là string
+            logger.error(f"Error embedding image: {e}")
             return None
 
 # Singleton Instance

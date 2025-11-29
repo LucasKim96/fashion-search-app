@@ -23,7 +23,6 @@ import {
 	fetchAttributeWithValues,
 } from "./attribute.helper.js";
 import { getShopIdFromAccount } from "./getShopIdFromAccount.js";
-import { syncToAI, syncToTextAI } from "./ai-sync.util.js";
 
 export {
 	ApiError,
@@ -49,6 +48,4 @@ export {
 	validateAttributeValue,
 	fetchAttributeWithValues,
 	getShopIdFromAccount,
-	syncToAI,
-	syncToTextAI,
 };

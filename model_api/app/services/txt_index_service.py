@@ -1,3 +1,4 @@
+# model_api/app/services/txt_index_service.py
 import faiss
 import numpy as np
 import os
@@ -56,46 +57,44 @@ class TextIndexService:
         self.next_id = 0
 
     def add_product(self, vector, product_id: str, image_path: str):
-        """Thêm vector của 1 ảnh sản phẩm"""
+        """
+        Thêm vector của 1 ảnh sản phẩm.
+        KHÔNG ĐƯỢC xóa toàn bộ product_id, chỉ xóa ảnh trùng (nếu có) để update.
+        """
         try:
-            # --- DEBUG LOG ---
-            # print(f"DEBUG: Adding {product_id} | Path: {image_path}")
-
             if vector is None: 
                 logger.error("Vector is None, skipping")
                 return False
 
-            # 1. Xóa dữ liệu cũ trước (quan trọng)
-            self.remove_product(product_id)
+            # --- SỬA ĐỔI QUAN TRỌNG ---
+            # Thay vì xóa toàn bộ sản phẩm (remove_product), 
+            # ta chỉ xóa vector cũ của CHÍNH ẢNH NÀY (để tránh trùng lặp khi update ảnh)
+            self.remove_specific_image_entry(product_id, image_path)
+            # --------------------------
 
-            # 2. Chuẩn bị vector
+            # Chuẩn bị vector (Fix shape như bài trước)
             vector_np = np.array(vector).astype('float32')
-
             if len(vector_np.shape) == 1:
-                # Nếu là (256,) -> thêm chiều thành (1, 256)
                 vector_np = np.expand_dims(vector_np, axis=0)
             elif len(vector_np.shape) == 3:
-                # Nếu lỡ bị (1, 1, 256) -> ép về (1, 256)
                 vector_np = vector_np.reshape(1, -1)
-            
-            # Kiểm tra lần cuối
+
             if vector_np.shape[1] != self.dim:
                 logger.error(f"Dimension mismatch! Got {vector_np.shape[1]}, expected {self.dim}")
                 return False
-            
+
             ids_np = np.array([self.next_id]).astype('int64')
 
-            # 3. Add vào FAISS
+            # Add vào FAISS
             self.index.add_with_ids(vector_np, ids_np)
 
-            # 4. Lưu Metadata
+            # Lưu Metadata (Mỗi ảnh là 1 entry riêng biệt)
             self.id_map[self.next_id] = {
                 "product_id": product_id,
                 "image_path": image_path
             }
             self.next_id += 1
             
-            # 5. Lưu ngay lập tức để test
             self.save()
             return True
             
@@ -103,6 +102,23 @@ class TextIndexService:
             logger.error(f"[TextIndex] ADD CRASHED:\n{traceback.format_exc()}")
             return False
 
+    # --- HÀM HELPER MỚI (Để xóa ảnh trùng lặp trước khi add) ---
+    def remove_specific_image_entry(self, product_id: str, image_path: str):
+        """Tìm và xóa entry cũ của chính ảnh này nếu đã tồn tại"""
+        ids_to_remove = []
+        
+        for int_id, info in list(self.id_map.items()):
+            if not isinstance(info, dict): continue
+            
+            # Nếu cùng Product ID VÀ cùng đường dẫn ảnh -> Xóa cái cũ đi
+            if str(info.get('product_id')) == str(product_id) and info.get('image_path') == image_path:
+                ids_to_remove.append(int_id)
+                del self.id_map[int_id]
+
+        if ids_to_remove:
+            ids_np = np.array(ids_to_remove).astype('int64')
+            self.index.remove_ids(ids_np)
+            # Không cần save ở đây vì hàm add_product sẽ save ngay sau đó
     def remove_product(self, product_id: str):
         """Xóa sản phẩm khỏi index"""
         ids_to_remove = []
@@ -195,6 +211,24 @@ class TextIndexService:
             logger.error(f"[TextIndex] SEARCH CRASHED:\n{traceback.format_exc()}")
             return []
 
+    def reset_index(self):
+            """Xóa trắng toàn bộ dữ liệu và reset ID về 0"""
+            try:
+                logger.warning("[TextIndex] RESETTING INDEX...")
+                
+                # 1. Tạo mới hoàn toàn (Reset RAM)
+                self._create_new()
+                
+                # 2. Ghi đè xuống ổ cứng (Reset File)
+                # Việc này sẽ làm file .faiss và .json trở về trạng thái rỗng
+                self.save()
+                
+                logger.info("[TextIndex] Index reset successfully.")
+                return True
+            except Exception as e:
+                logger.error(f"[TextIndex] RESET FAILED: {e}")
+                return False
+            
     def save(self):
         """Lưu xuống ổ cứng"""
         try:
