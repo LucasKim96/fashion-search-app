@@ -262,7 +262,7 @@ export default function OrdersPage() {
 		{ key: "all", label: "Tất cả" },
 		{ key: "pending", label: "Chờ xác nhận" },
 		{ key: "shipping", label: "Đang giao" },
-		{ key: "delivered", label: "Đã giao" },
+		{ key: "completed", label: "Đã giao" },
 		{ key: "cancelled", label: "Đã hủy" },
 	];
 
