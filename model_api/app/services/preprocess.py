@@ -233,8 +233,8 @@ def detect_candidates_for_buyer(yolo_model, img_np):
             
             # Cập nhật nếu tìm thấy box tốt hơn trong nhóm
             if label and conf > best_matches[label]["score"]:
-                 best_matches[label]["score"] = conf
-                 best_matches[label]["box"] = coords
+                best_matches[label]["score"] = conf
+                best_matches[label]["box"] = coords
 
     # Đưa các box detected vào list kết quả
     for label, data in best_matches.items():

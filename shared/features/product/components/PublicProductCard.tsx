@@ -22,7 +22,9 @@ export const PublicProductCard: React.FC<PublicProductCardProps> = ({
 	const displayName = p.name || p.pdName || "Sản phẩm";
 
 	const displayImage =
-		p.thumbnail || (p.images && p.images.length > 0 ? p.images[0] : "");
+		p.thumbnail ||
+		p.matchedImage ||
+		(p.images && p.images.length > 0 ? p.images[0] : "");
 
 	// Xử lý riêng cho kết quả tìm kiếm
 	const isSearchResult = "similarity" in product;

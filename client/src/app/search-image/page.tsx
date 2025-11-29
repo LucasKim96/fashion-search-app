@@ -93,7 +93,7 @@ export default function SearchPage() {
 										Tải ảnh lên để tìm kiếm
 									</h3>
 									<p className="text-slate-400 text-sm mt-1">
-										Hỗ trợ định dạng JPG, PNG
+										Hỗ trợ định dạng JPG, PNG, WEBP
 									</p>
 									<input
 										ref={fileInputRef}
