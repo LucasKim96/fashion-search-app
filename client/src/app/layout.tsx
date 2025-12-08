@@ -18,12 +18,10 @@ export default function RootLayout({
 		<html lang="vi">
 			<body>
 				<div id="toast-root" />
-				{/* --- SỬA LẠI THỨ TỰ Ở ĐÂY --- */}
 				{/* Provider nào cung cấp "dịch vụ" cho provider khác thì phải được đặt ở ngoài */}
 				<NotificationProvider>
 					<AuthProvider>{children}</AuthProvider>
 				</NotificationProvider>
-				{/* --- KẾT THÚC PHẦN SỬA --- */}
 			</body>
 		</html>
 	);
