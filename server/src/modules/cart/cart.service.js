@@ -60,7 +60,7 @@ export const addToCart = async (accountId, productVariantId, quantity = 1) => {
 			existingItem.quantity += quantity;
 		} else {
 			cart.items.push({
-				productId: product._id,
+				// productId: product._id,
 				productVariantId: variant._id,
 				quantity,
 				attributes: variant.attributes || [],
@@ -244,7 +244,7 @@ export const bulkAdd = async (accountId, items) => {
 			if (existingItem) existingItem.quantity += quantity;
 			else {
 				cart.items.push({
-					productId: variant.productId._id,
+					// productId: variant.productId._id,
 					productVariantId: variant._id,
 					quantity,
 					attributes: variant.attributes || [],
@@ -285,7 +285,7 @@ export const refreshCart = async (accountId) => {
 		if (variant.stock <= 0) continue; // hết hàng
 
 		// Đồng bộ lại dữ liệu variant/product hiện tại
-		item.productId = product._id;
+		// item.productId = product._id;
 		item.attributes = variant.attributes || [];
 		// Không lưu snapshot, nhưng nếu boss muốn hiển thị luôn ảnh mới thì:
 		// item.image = variant.image || product.thumbnail; (nếu có field image trong cartItem)
