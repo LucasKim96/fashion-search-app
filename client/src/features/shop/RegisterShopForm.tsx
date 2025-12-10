@@ -4,7 +4,7 @@ import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Store, FileText, Loader2, LucideIcon } from "lucide-react";
 import { useAuthContext } from "@shared/features/auth/AuthProvider";
-import { createShopApi } from "./shop.api";
+import { createShopApi } from "@shared/features/shop/shop.api";
 import { useNotification } from "@shared/core/ui/NotificationProvider";
 import { ImageUploaderWithCrop } from "@/components/forms/ImageUploaderWithCrop";
 
@@ -66,9 +66,9 @@ export default function RegisterShopForm({
 
 	const handleSubmit = async (e: FormEvent) => {
 		e.preventDefault();
-		if (!shopName.trim()) return showToast("Vui lòng nhập tên shop", "error");
+		if (!shopName.trim()) return showToast("Vui lòng nhập tên shop", "warning");
 		if (!description.trim())
-			return showToast("Vui lòng nhập mô tả shop", "error");
+			return showToast("Vui lòng nhập mô tả shop", "warning");
 		if (!user?._id)
 			return showToast("Không lấy được thông tin người dùng", "error");
 

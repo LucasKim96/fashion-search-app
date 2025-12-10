@@ -12,6 +12,13 @@ export interface CartItemProduct {
 	thumbnail?: string;
 	images?: string[];
 	slug?: string;
+	shopId?:
+		| string
+		| {
+				_id: string;
+				shopName: string;
+				logoUrl?: string;
+		  };
 }
 
 /**

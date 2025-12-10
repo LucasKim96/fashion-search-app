@@ -22,6 +22,7 @@ import { formatCurrency } from "@shared/core/utils/formatCurrency";
 import { buildImageUrl } from "@shared/core/utils/image.utils";
 import ClientHeader from "@/components/layouts/ClientHeader";
 import ClientFooter from "@/components/layouts/ClientFooter";
+import { ImageWithFallback } from "@shared/core/components/ui/ImageWithFallback";
 
 // --- Interface cho Form ---
 interface CheckoutFormData {
@@ -51,7 +52,7 @@ export default function CheckoutPage() {
 		if (cartLoading || isSuccess) return;
 
 		if (!cart || cart.items.length === 0) {
-			showToast("Giỏ hàng trống, vui lòng mua sắm thêm", "error"); // Đổi thành warning cho nhẹ nhàng
+			showToast("Giỏ hàng trống, vui lòng mua sắm thêm", "warning"); // Đổi thành warning cho nhẹ nhàng
 			router.push("/cart");
 		}
 	}, [cart, cartLoading, router, showToast, isSuccess]);
@@ -250,18 +251,24 @@ export default function CheckoutPage() {
 							<div className="max-h-[400px] overflow-y-auto pr-2 space-y-4 mb-6 custom-scrollbar">
 								{cart.items.map((item) => {
 									// Logic lấy tên và ảnh tương tự CartPage
+									// 1. Logic lấy ảnh: Thử tất cả các trường có thể có
 									const displayImage =
-										item.productVariant?.image || item.product?.thumbnail || "";
-									const displayName =
-										item.product?.name || item.product?.pdName || "Sản phẩm";
+										item.productVariant?.image || // Key chuẩn variant từ Backend
+										item.productVariant?.imageUrl || // Key dự phòng variant
+										item.product?.thumbnail || // Key thumbnail sản phẩm (nếu có)
+										item.product?.images?.[0] || // Key mảng ảnh sản phẩm (Mongoose thường trả về cái này)
+										"";
 
+									// 2. Logic lấy tên: Ưu tiên pdName (tên chuẩn trong DB)
+									const displayName =
+										item.product?.pdName || item.product?.name || "Sản phẩm";
 									return (
 										<div
 											key={item.productVariantId}
 											className="flex gap-3 items-start">
 											<div className="w-16 h-16 flex-shrink-0 border border-gray-200 rounded-md overflow-hidden bg-gray-50">
-												<img
-													src={buildImageUrl(displayImage)}
+												<ImageWithFallback
+													src={displayImage}
 													alt={displayName}
 													className="w-full h-full object-cover"
 												/>
@@ -270,6 +277,8 @@ export default function CheckoutPage() {
 												<h4 className="text-sm font-semibold text-gray-800 line-clamp-2">
 													{displayName}
 												</h4>
+
+												{/* Logic hiển thị thuộc tính (Giữ nguyên vì đã ổn) */}
 												<div className="text-xs text-gray-500 mt-1 line-clamp-1">
 													{item.productVariant?.attributes
 														?.map(
@@ -280,6 +289,7 @@ export default function CheckoutPage() {
 														)
 														.join(" | ")}
 												</div>
+
 												<div className="flex justify-between items-center mt-1">
 													<span className="text-xs text-gray-500">
 														x{item.quantity}

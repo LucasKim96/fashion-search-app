@@ -31,11 +31,7 @@ export default function ProductDetailClient({
 }: ProductDetailClientProps) {
 	const router = useRouter();
 	const { isAuthenticated } = useAuth();
-
-	// 1. SỬA: Lấy đúng tên hàm addItemToCart từ useCart
 	const { addItemToCart } = useCart();
-
-	// 2. SỬA: Lấy showToast từ useNotification (thay vì notifySuccess...)
 	const { showToast } = useNotification();
 
 	// Khởi tạo Form
@@ -102,14 +98,14 @@ export default function ProductDetailClient({
 	const handleAddToCartClick = () => {
 		// 1. Kiểm tra đăng nhập
 		if (!isAuthenticated) {
-			showToast("Vui lòng đăng nhập để mua hàng", "info");
+			showToast("Vui lòng đăng nhập để mua hàng", "warning");
 			router.push("/login");
 			return;
 		}
 
 		// 2. Kiểm tra biến thể
 		if (product.variants && product.variants.length > 0 && !selectedVariant) {
-			showToast("Vui lòng chọn đầy đủ phân loại sản phẩm", "error");
+			showToast("Vui lòng chọn đầy đủ phân loại sản phẩm", "warning");
 			return;
 		}
 
@@ -120,7 +116,6 @@ export default function ProductDetailClient({
 	// --- XỬ LÝ XÁC NHẬN TRONG MODAL ---
 	const handleConfirmAddToCart = async (quantity: number) => {
 		try {
-			// SỬA: Gọi đúng hàm addItemToCart
 			// Lưu ý: Cấu trúc payload phải khớp với AddToCartRequest trong cart.types.ts
 			const res = await addItemToCart({
 				productVariantId: selectedVariant?._id || "",

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useEffect } from "react";
-import { UploadCloud, X, Check, Crop, Camera, ZoomIn } from "lucide-react";
+import { UploadCloud, X, Check, Camera, ZoomIn } from "lucide-react";
 import Cropper from "react-easy-crop";
 import { getCroppedImg } from "@shared/core/utils";
 import { ImagePreviewModal } from "@shared/core/components/ui";

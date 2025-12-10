@@ -2,8 +2,9 @@ import { Shop } from "./index.js";
 import { ApiError, withTransaction } from "../../utils/index.js";
 import { Account, Role } from "../account/index.js";
 import { Product, ProductVariant } from "../product/index.js";
+import { Order } from "../order/index.js";
 import { removeProductsFromAllCarts } from "../cart/cart.service.js";
-import fs from "fs/promises";
+import fs from "fs";
 import path from "path";
 
 const DEFAULT_LOGO = "/assets/shop/default-logo.png";
@@ -233,6 +234,66 @@ export const updateShopImage = async (
 	return await shop.save();
 };
 
+export const getShopDashboardStats = async (accountId) => {
+	// 1. Lấy ShopID từ AccountID
+	const shop = await Shop.findOne({ accountId }).select("_id");
+	if (!shop) throw ApiError.notFound("Không tìm thấy cửa hàng");
+	const shopId = shop._id;
+
+	// 2. Đếm tổng sản phẩm
+	const totalProducts = await Product.countDocuments({ shopId });
+
+	// 3. Aggregation cho Đơn hàng, Doanh thu và Khách hàng
+	const orderStats = await Order.aggregate([
+		{
+			$match: {
+				shopId: shopId, // Lọc đơn của shop này
+			},
+		},
+		{
+			$group: {
+				_id: null,
+				// Tổng đơn hàng (tất cả trạng thái trừ cancelled nếu muốn, ở đây mình đếm hết)
+				totalOrders: { $sum: 1 },
+
+				// Tổng doanh thu: Chỉ tính đơn đã giao hoặc hoàn tất
+				totalRevenue: {
+					$sum: {
+						$cond: [
+							{ $in: ["$status", ["delivered", "completed"]] }, // Điều kiện
+							"$totalAmount", // Nếu đúng thì cộng tiền
+							0, // Sai thì cộng 0
+						],
+					},
+				},
+
+				// Gom danh sách accountId khách hàng vào 1 mảng để đếm unique
+				customers: { $addToSet: "$accountId" },
+			},
+		},
+		{
+			$project: {
+				_id: 0,
+				totalOrders: 1,
+				totalRevenue: 1,
+				totalCustomers: { $size: "$customers" }, // Đếm số phần tử mảng unique
+			},
+		},
+	]);
+
+	// Nếu chưa có đơn nào thì aggregate trả về mảng rỗng
+	const stats = orderStats[0] || {
+		totalOrders: 0,
+		totalRevenue: 0,
+		totalCustomers: 0,
+	};
+
+	return {
+		...stats,
+		totalProducts,
+	};
+};
+
 // ================================================================
 // === LOGIC THAY ĐỔI TRẠNG THÁI VÀ XÓA                        ===
 // ================================================================
@@ -294,7 +355,7 @@ const deletePhysicalFiles = async (urls) => {
 		const filePath = path.join(process.cwd(), url.substring(1));
 
 		try {
-			await fs.unlink(filePath);
+			await fs.promises.unlink(filePath);
 			console.log(`🗑️ Đã xóa file: ${filePath}`);
 		} catch (error) {
 			// Bỏ qua lỗi "file not found" (ENOENT) vì có thể file đã bị xóa trước đó

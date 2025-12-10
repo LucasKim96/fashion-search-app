@@ -24,6 +24,7 @@ const sellerRouter = express.Router();
 
 sellerRouter.use(authMiddleware, isShopOrAdmin);
 sellerRouter.get("/", OrderController.getShopOrders);
+sellerRouter.get("/:id", OrderController.getShopOrderDetail);
 sellerRouter.patch("/:id/pack", OrderController.markPacking);
 sellerRouter.patch("/:id/ship", OrderController.markShipping);
 sellerRouter.patch("/:id/deliver", OrderController.markDelivered);

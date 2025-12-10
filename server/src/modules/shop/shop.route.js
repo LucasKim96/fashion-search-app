@@ -48,6 +48,7 @@ ownerRouter.put(
 ownerRouter.delete("/hard-delete/mine", ShopController.hardRemoveMyShop);
 // Route để lấy thông tin quản lý
 ownerRouter.get("/management", ShopController.getMyShopForManagement);
+ownerRouter.get("/dashboard-stats", ShopController.getDashboardStats);
 // Route để chủ shop tự đóng cửa hàng
 ownerRouter.patch("/close/mine", ShopController.closeMyShop);
 ownerRouter.patch("/reopen/mine", ShopController.reopenMyShop);

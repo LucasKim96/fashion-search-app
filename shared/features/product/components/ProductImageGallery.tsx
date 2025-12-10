@@ -19,6 +19,8 @@ import {
 	UploadCloud,
 	Sparkles,
 	Image as ImageIcon,
+	Shirt,
+	ImageOff,
 } from "lucide-react";
 import clsx from "clsx";
 import { createPortal } from "react-dom";
@@ -85,17 +87,32 @@ export const ProductImageGallery: React.FC<ProductImageGalleryProps> = ({
 
 	// --- DATA AGGREGATION ---
 	const displayImages = useMemo(() => {
+		// 1. Trường hợp tạo mới (Giữ nguyên)
 		if (createMode) return createPreviewUrls;
 
+		// 2. Kiểm tra dữ liệu
 		if (!product) return [];
 		const mainImages = product.images || [];
-		// const variantImages =
-		// 	product.variants
-		// 		?.map((v) => v.image)
-		// 		.filter((img): img is string => !!img) || [];
 
-		return [...mainImages /* , ...variantImages */];
-	}, [product, createMode, createPreviewUrls]);
+		// 3. LOGIC MỚI: TÁCH RIÊNG
+		// Nếu đang có activeImage (tức là người dùng đã chọn 1 biến thể cụ thể)
+		if (activeImage) {
+			// Kiểm tra xem ảnh biến thể này đã có trong danh sách ảnh gốc chưa
+			// (Đôi khi admin up ảnh biến thể trùng với ảnh gốc)
+			const isImageInMain = mainImages.includes(activeImage);
+
+			if (!isImageInMain) {
+				// Nếu chưa có -> Đưa ảnh biến thể lên ĐẦU TIÊN + Ảnh gốc phía sau
+				return [activeImage, ...mainImages];
+			}
+			// Nếu có rồi thì thôi, hiển thị danh sách gốc (vì ảnh đó đã nằm trong đó rồi)
+			return mainImages;
+		}
+
+		// 4. Nếu KHÔNG chọn biến thể (activeImage == null)
+		// -> Chỉ trả về danh sách ảnh gốc của sản phẩm
+		return mainImages;
+	}, [product, createMode, createPreviewUrls, activeImage]);
 
 	const editableImages = useMemo(() => {
 		if (createMode) return createPreviewUrls;
@@ -131,22 +148,16 @@ export const ProductImageGallery: React.FC<ProductImageGalleryProps> = ({
 
 	useEffect(() => {
 		if (activeImage && displayImages.length > 0) {
-			// Tìm index của ảnh này trong list ảnh đang hiển thị
-			// Lưu ý: Cần hàm buildImageUrl hoặc so sánh tương đối nếu url từ server khác format
-			// Ở đây giả định activeImage là full URL hoặc server path khớp với variants
+			// Chuẩn hóa activeImage để so sánh dễ hơn
+			const activeUrl = buildImageUrl(activeImage);
 
-			const index = displayImages.findIndex(
-				(img) =>
-					// So sánh trực tiếp hoặc qua hàm buildUrl
-					img === activeImage || buildImageUrl(img) === activeImage
-			);
+			const index = displayImages.findIndex((img) => {
+				const currentUrl = buildImageUrl(img);
+				return currentUrl === activeUrl || img === activeImage;
+			});
 
 			if (index !== -1) {
 				setCurrentIndex(index);
-			} else {
-				// Nếu ảnh variant chưa có trong list displayImages (hiếm gặp),
-				// Bạn có thể push nó vào hoặc chỉ hiển thị tạm thời.
-				// Logic đơn giản nhất ở đây là không làm gì nếu không tìm thấy.
 			}
 		}
 	}, [activeImage, displayImages]);
@@ -296,8 +307,9 @@ export const ProductImageGallery: React.FC<ProductImageGalleryProps> = ({
 		return buildImageUrl(src);
 	};
 
+	const currentSrcRaw = displayImages[currentIndex];
 	const currentImageUrl =
-		displayImages.length > 0 ? getImageUrl(displayImages[currentIndex]) : null;
+		displayImages.length > 0 ? getImageUrl(currentSrcRaw) : null;
 
 	if (isLoadingProduct) {
 		return (

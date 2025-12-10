@@ -57,3 +57,30 @@ export const searchImage = async (req, res) => {
 		});
 	}
 };
+
+// 3. API TEXT SEARCH
+export const searchText = async (req, res) => {
+	try {
+		const { query, limit } = req.query;
+
+		if (!query) {
+			return res.status(400).json({
+				success: false,
+				message: "Vui lòng nhập từ khóa tìm kiếm",
+				data: null,
+			});
+		}
+
+		const result = await SearchService.searchByTextService(query, limit);
+
+		return res.status(result.success ? 200 : 400).json(result);
+	} catch (error) {
+		console.error("Text Search Controller Error:", error);
+		return res.status(500).json({
+			success: false,
+			message: "Lỗi hệ thống (Search Controller)",
+			data: null,
+			details: error.message,
+		});
+	}
+};
