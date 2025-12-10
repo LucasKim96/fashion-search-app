@@ -74,6 +74,9 @@ adminRouter.patch(
 adminRouter.delete("/:productId", ProductController.deleteProductWithVariants);
 adminRouter.get("/", ProductController.getAllProductsAdmin);
 adminRouter.get("/:productId", ProductController.getProductDetail);
+// Re-index tất cả sản phẩm lên AI
+adminRouter.post("/reindex", ProductController.reindexAll);
+adminRouter.post("/reindex-text", ProductController.reindexTextSearch);
 
 router.use("/admin", authMiddleware, isAdminOrSuperAdmin, adminRouter);
 

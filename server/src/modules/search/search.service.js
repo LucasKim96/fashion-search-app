@@ -3,6 +3,12 @@ import axios from "axios";
 import FormData from "form-data";
 import Product from "../product/product.model.js";
 import fsPromises from "fs/promises";
+import { apiResponse } from "../../utils/index.js";
+
+// Cấu hình URL đến Python Server
+const PYTHON_HOST = process.env.AI_API_URL || "http://localhost:8000";
+const IMG_API_URL = `${PYTHON_HOST}/img2img`;
+const TXT_API_URL = `${PYTHON_HOST}/txt2img`;
 
 const MODEL_API_URL =
 	process.env.MODEL_API_URL || "http://localhost:8000/img2img";
@@ -126,5 +132,96 @@ export const searchImageService = async (file) => {
 		};
 	} finally {
 		safeUnlink(file.path);
+	}
+};
+
+/** ================= TEXT SEARCH SERVICES ================= */
+
+/**
+ * Tìm kiếm sản phẩm bằng văn bản (PhoCLIP)
+ * @param {string} query - Từ khóa tìm kiếm
+ * @param {number} limit - Số lượng kết quả
+ */
+export const searchByTextService = async (q, limit = 40) => {
+	try {
+		// 1. Gọi sang Python (PhoCLIP)
+		// Python trả về: { data: [ { id, score, image }, ... ] }
+		const aiResponse = await axios.post(`${TXT_API_URL}/search`, {
+			query: q,
+			limit: Number(limit),
+		});
+
+		const aiResults = aiResponse.data.data;
+
+		if (!aiResults || aiResults.length === 0) {
+			return {
+				success: true,
+				message: "Không tìm thấy sản phẩm nào phù hợp",
+				data: [],
+			};
+		}
+
+		// 2. Query Database
+		const productIds = aiResults.map((item) => item.id);
+
+		const productsFromDb = await Product.find({
+			_id: { $in: productIds },
+			isActive: true,
+		})
+			.populate("shopId", "shopName logoUrl")
+			.select("_id pdName basePrice images isActive shopId description")
+			.lean();
+
+		// 3. Merge & Sort theo AI Rank
+		const productMap = new Map(
+			productsFromDb.map((p) => [p._id.toString(), p])
+		);
+		const finalResults = [];
+		const rootDir = process.cwd();
+
+		for (const aiItem of aiResults) {
+			const productDb = productMap.get(aiItem.id);
+
+			if (productDb) {
+				// --- XỬ LÝ ĐƯỜNG DẪN ẢNH ---
+				let imageUrl = aiItem.image; // Đang là C:\Users\...\uploads\...
+
+				// 1. Nếu chứa đường dẫn gốc hệ thống -> Xóa đi
+				// (Giữ lại phần từ \uploads trở đi)
+				if (imageUrl.includes(rootDir)) {
+					imageUrl = imageUrl.replace(rootDir, "");
+				}
+
+				// 2. Đổi tất cả dấu gạch ngược "\" thành "/" (Chuẩn Web)
+				imageUrl = imageUrl.replace(/\\/g, "/");
+
+				// 3. Đảm bảo bắt đầu bằng "/"
+				if (!imageUrl.startsWith("/")) {
+					imageUrl = "/" + imageUrl;
+				}
+				finalResults.push({
+					...productDb,
+					// [QUAN TRỌNG] Gán ảnh mà AI tìm thấy vào thumbnail để FE hiển thị
+					thumbnail: imageUrl,
+					similarity: aiItem.score,
+				});
+			}
+		}
+
+		return {
+			success: true,
+			message: "Tìm kiếm văn bản thành công",
+			data: finalResults,
+		};
+	} catch (error) {
+		console.error(
+			"AI Text Service Error:",
+			error?.response?.data || error.message
+		);
+		return {
+			success: false,
+			message: "Lỗi kết nối với hệ thống tìm kiếm AI",
+			data: null,
+		};
 	}
 };

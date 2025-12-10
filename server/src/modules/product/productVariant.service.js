@@ -1,4 +1,5 @@
 // server/src/modules/product/productVariant.service.js
+// server/src/modules/product/productVariant.service.js
 import mongoose from "mongoose";
 import ProductVariant from "./productVariant.model.js";
 import Product from "./product.model.js";
@@ -16,6 +17,13 @@ import {
 	toObjectId,
 	generateVariantsCombinations,
 } from "../../utils/index.js";
+// 🔽 THAY ĐỔI: Import các hàm mới
+import { syncEmbeddings, removeEmbeddings } from "../../utils/ai-sync.util.js";
+import axios from "axios";
+import FormData from "form-data";
+
+// 🔽 THAY ĐỔI: Biến này không còn cần thiết
+// const TEXT_MODEL_API_URL = "http://localhost:8000/txt2img";
 
 const UPLOADS_ROOT = path.join(process.cwd(), "uploads");
 export const PRODUCT_FOLDER = path.join(UPLOADS_ROOT, "products");
@@ -168,19 +176,6 @@ export const getProductAttributesWithValues = async (productId, accountId) => {
 
 /**
  * Tạo nhiều ProductVariant cùng lúc (bulk create)
- *
- * @param {String|ObjectId} productId
- * @param {String|ObjectId} accountId  // để xác định shopId
- * @param {Array} variantsPayload - mỗi phần tử:
- *   {
- *     variantKey: "1|2",                 // chuỗi key (nên có, nếu không có thì backend có thể compute trước khi gọi)
- *     attributes: [{ attributeId, valueId }, ...],
- *     stock?: Number,
- *     priceAdjustment?: Number,
- *     image?: String
- *   }
- *
- * @returns { success, message, data } -- data = createdVariants (array)
  */
 export const createProductVariantsBulk = async (
 	productId,
@@ -262,6 +257,15 @@ export const createProductVariantsBulk = async (
 		const inserted = await ProductVariant.insertMany(toInsert, { session });
 		createdDocs = inserted;
 
+		const imagePathsToSync = createdDocs
+			.map((variant) => variant.image) // Lấy trường 'image' từ mỗi biến thể
+			.filter(Boolean); // Lọc bỏ các giá trị null, undefined hoặc chuỗi rỗng
+
+		// Nếu có ảnh để đồng bộ, gọi hàm syncEmbeddings
+		if (imagePathsToSync.length > 0) {
+			syncEmbeddings(productId, imagePathsToSync);
+		}
+
 		return {
 			success: true,
 			message: "Tạo biến thể sản phẩm hàng loạt thành công",
@@ -279,10 +283,6 @@ export const createProductVariantsBulk = async (
 
 /**
  * Cập nhật 1 biến thể sản phẩm
- * @param {ObjectId} variantId
- * @param {Object} payload - dữ liệu cập nhật (stock, priceAdjustment, image)
- * @param {ObjectId} accountId - ID tài khoản (Shop)
- * @param {File} file - file ảnh mới (nếu có)
  */
 export const updateProductVariant = async (
 	variantId,
@@ -293,8 +293,9 @@ export const updateProductVariant = async (
 	const savedFiles = []; // file mới upload
 	let backupPath = null; // file backup cũ
 	let oldPath = null; // đường dẫn file cũ
+	let oldImageRelativePath = null;
 
-	return withTransaction(async (session) => {
+	const transactionPromise = withTransaction(async (session) => {
 		try {
 			if (!variantId) throw new Error("Thiếu ID biến thể");
 			if (!mongoose.Types.ObjectId.isValid(variantId))
@@ -320,6 +321,7 @@ export const updateProductVariant = async (
 
 			// --- Backup ảnh cũ trước khi cập nhật ---
 			if (variant.image) {
+				oldImageRelativePath = variant.image;
 				oldPath = path.join(PRODUCT_FOLDER, path.basename(variant.image));
 				if (fs.existsSync(oldPath)) {
 					backupPath = backupFile(oldPath);
@@ -349,8 +351,6 @@ export const updateProductVariant = async (
 
 			await variant.save({ session });
 
-			await session.commitTransaction();
-
 			// --- Thành công: xóa ảnh cũ ---
 			if ((file || removeImage) && oldPath && fs.existsSync(oldPath))
 				fs.unlinkSync(oldPath);
@@ -361,7 +361,38 @@ export const updateProductVariant = async (
 			// rollback ảnh mới và restore ảnh cũ
 			rollbackFiles(savedFiles);
 			if (backupPath && oldPath) restoreFile(backupPath, oldPath);
-			return { success: false, message: error.message, data: null };
+			throw error;
 		}
 	});
+
+	return transactionPromise
+		.then(async (result) => {
+			// 1. Xóa file vật lý cũ (Logic cũ của bạn)
+			const removeImage = payload.image === "" && oldImageRelativePath;
+			if ((file || removeImage) && oldPath && fs.existsSync(oldPath))
+				fs.unlinkSync(oldPath);
+			if (backupPath) removeBackup(backupPath);
+
+			// 🔽 THAY ĐỔI: Đồng bộ với AI (TEXT SEARCH) bằng hàm mới
+			if (file || removeImage) {
+				const pid = result.data.productId._id.toString(); // Lấy ID sản phẩm
+
+				// A. Xóa ảnh cũ khỏi Index (Nếu có)
+				if (oldImageRelativePath) {
+					removeEmbeddings(pid, oldImageRelativePath);
+				}
+
+				// B. Thêm ảnh mới vào Index (Nếu có upload mới)
+				if (file && result.data.image) {
+					syncEmbeddings(pid, result.data.image);
+				}
+			}
+			// --- KẾT THÚC THAY ĐỔI ---
+
+			return result;
+		})
+		.catch((error) => {
+			// Trả về lỗi format chuẩn nếu transaction fail
+			return { success: false, message: error.message, data: null };
+		});
 };

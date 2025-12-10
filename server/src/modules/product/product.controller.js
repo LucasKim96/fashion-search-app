@@ -5,6 +5,7 @@ import {
 	handleValidation,
 } from "../../utils/index.js";
 import path from "path";
+import { successResponse } from "../../utils/apiResponse.js";
 
 // --- Cấu hình thư mục upload ---
 const UPLOADS_ROOT = path.join(process.cwd(), "uploads");
@@ -407,4 +408,24 @@ export const countAllProducts = (req, res) => {
 export const searchProductsShop = (req, res) =>
 	handleSearchProducts(req, res, false);
 
-//--------------AI search -----------------
+//--------------AI text search -----------------
+
+export const reindexAll = async (req, res, next) => {
+	try {
+		// Có thể kiểm tra quyền Admin ở middleware route
+		const result = await ProductService.reindexAllProductsService();
+		return successResponse(res, result, "Re-index đang chạy ngầm...");
+	} catch (error) {
+		next(error);
+	}
+};
+
+export const reindexTextSearch = async (req, res, next) => {
+	try {
+		// Gọi service vừa viết
+		const result = await ProductService.reindexTextSearchService();
+		return successResponse(res, result, "Re-index Text Search đang chạy...");
+	} catch (error) {
+		next(error);
+	}
+};

@@ -2,6 +2,7 @@ fastapi
 uvicorn
 faiss-cpu
 sentence-transformers
+transformers>=4.30.0
 numpy
 ultralytics
 opencv-python-headless

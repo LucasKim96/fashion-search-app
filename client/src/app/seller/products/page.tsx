@@ -9,13 +9,13 @@ import {
 	ProductSearchRequest,
 	ProductCard,
 	Product,
+	ProductToolbar,
 } from "@shared/features/product";
 
 import {
 	SellerProductDetailModal,
 	CreateProductModal,
 } from "@/features/products";
-import { ProductToolbar } from "@shared/features/product";
 export default function SellerProductPage() {
 	// --- Hooks ---
 	const { searchShopProducts, shopProductsState, fetchShopCount } =
