@@ -2,10 +2,6 @@ import cv2
 import numpy as np
 from app.config import YOLO_CLASS_GROUPS, INPUT_SIZE, YOLO_CONF_THRESHOLD
 
-# def preprocess_text(text: str):
-#     # replace bằng tokenizer / embedding code thật
-#     return torch.tensor([1,2,3])  # dummy
-
 # --- 1. CÁC HÀM CƠ BẢN (Resize, Center Crop) ---
 
 def resize_with_padding(img_np, target_size=None, color=(255, 255, 255)):
@@ -59,35 +55,6 @@ def get_center_crop(img_np, crop_ratio=0.8):
     return img_np[y1 : y1+new_h, x1 : x1+new_w]
 
 # --- 2. LOGIC CHO NGƯỜI BÁN (SHOP - INDEXING) ---
-
-# def auto_crop_for_seller(yolo_model, img_np, target_group: str):
-#     """
-#     Logic thông minh cho người bán:
-#     1. Tìm box tốt nhất theo target_group (conf chuẩn).
-#     2. Nếu không thấy -> Hạ conf xuống 0.2 tìm lại.
-#     3. Nếu vẫn không thấy -> Cắt 80% trung tâm (Center Crop).
-    
-#     Trả về: (cropped_img_np, method_used)
-#     """
-#     if target_group not in YOLO_CLASS_GROUPS:
-#         # Nếu group không hợp lệ hoặc là 'none', dùng ảnh gốc resize
-#         return img_np, "original"
-
-#     # --- Bước 1: Thử với Confidence chuẩn (Ví dụ 0.4 - 0.5) ---
-#     best_box = _find_best_box(yolo_model, img_np, target_group, conf=YOLO_CONF_THRESHOLD)
-    
-#     if best_box is not None:
-#         return _crop_by_box(img_np, best_box), "yolo_high_conf"
-
-#     # --- Bước 2: Thử với Confidence thấp (Retry - 0.15) ---
-#     # Giúp bắt được các ảnh mờ, chụp xa
-#     best_box_retry = _find_best_box(yolo_model, img_np, target_group, conf=0.15)
-    
-#     if best_box_retry is not None:
-#         return _crop_by_box(img_np, best_box_retry), "yolo_low_conf"
-
-#     # --- Bước 3: Đường cùng -> Center Crop 80% ---
-#     return get_center_crop(img_np, crop_ratio=0.8), "center_crop_fallback"
 
 def auto_crop_for_seller(yolo_model, img_np, target_group: str):
     """
@@ -181,14 +148,6 @@ def _crop_by_coords(img, coords):
     x2, y2 = min(w, x2), min(h, y2)
     return img[y1:y2, x1:x2]
 
-# def _crop_by_box(img, box):
-#     """Hàm phụ trợ cắt ảnh theo box YOLO"""
-#     x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
-#     h, w = img.shape[:2]
-#     # Kẹp tọa độ trong khung hình
-#     x1, y1 = max(0, x1), max(0, y1)
-#     x2, y2 = min(w, x2), min(h, y2)
-#     return img[y1:y2, x1:x2]
 def _crop_by_box(img, box):
     """Hàm phụ trợ cắt ảnh theo box YOLO object"""
     coords = list(map(int, box.xyxy[0].tolist()))
@@ -233,8 +192,8 @@ def detect_candidates_for_buyer(yolo_model, img_np):
             
             # Cập nhật nếu tìm thấy box tốt hơn trong nhóm
             if label and conf > best_matches[label]["score"]:
-                 best_matches[label]["score"] = conf
-                 best_matches[label]["box"] = coords
+                best_matches[label]["score"] = conf
+                best_matches[label]["box"] = coords
 
     # Đưa các box detected vào list kết quả
     for label, data in best_matches.items():
@@ -268,7 +227,16 @@ def detect_candidates_for_buyer(yolo_model, img_np):
         
     return candidates
 
-    
+
+# def _crop_by_box(img, box):
+#     """Hàm phụ trợ cắt ảnh theo box YOLO"""
+#     x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
+#     h, w = img.shape[:2]
+#     # Kẹp tọa độ trong khung hình
+#     x1, y1 = max(0, x1), max(0, y1)
+#     x2, y2 = min(w, x2), min(h, y2)
+#     return img[y1:y2, x1:x2]
+
 # def detect_candidates_for_buyer(yolo_model, img_np):
 #     """
 #     Logic cho Client chọn vùng tìm kiếm:
