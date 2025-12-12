@@ -118,23 +118,51 @@ class Img2ImgService:
         return img_np
 
     def extract_feature(self, img_pil):
-        """Trích xuất feature vector (đã bao gồm timer)"""
-        if self.backbone is None:
-            raise RuntimeError("ArcFace model is not loaded!")
+        """Trích xuất feature vector chuẩn hóa L2, hỗ trợ mọi backbone."""
 
-        # Chuyển sang Tensor
+        if self.backbone is None:
+            raise RuntimeError("Backbone model is not loaded!")
+
+        # Chuyển ảnh sang Tensor
         img_tensor = self.transform(img_pil).unsqueeze(0).to(self.device)
-        
+
         with torch.no_grad():
-            feature = self.backbone(img_tensor).squeeze()
-            feature = feature.cpu().numpy()
+            # Nếu class có định nghĩa forward() → đây là FULL MODEL (VD: ResNet, ViT_EvoLVe)
+            # thì dùng forward() để lấy embedding cuối.
+            if hasattr(self, "forward"):
+                feat = self.forward(img_tensor)
+
+            # Nếu class này chỉ là "wrapper" có backbone riêng thì dùng backbone
+            else:
+                feat = self.backbone(img_tensor)
+
+            # Bỏ batch -> shape [C]
+            feat = feat.squeeze(0)
+
+            # L2 Normalize trên torch
+            feat = feat / (feat.norm(p=2) + 1e-12)
+
+        # Trả numpy float32 để dùng FAISS hoặc cosine similarity
+        return feat.cpu().numpy().astype("float32")
+
+    # def extract_feature(self, img_pil):
+    #     """Trích xuất feature vector"""
+    #     if self.backbone is None:
+    #         raise RuntimeError("ArcFace model is not loaded!")
+
+    #     # Chuyển sang Tensor
+    #     img_tensor = self.transform(img_pil).unsqueeze(0).to(self.device)
+        
+    #     with torch.no_grad():
+    #         feature = self.backbone(img_tensor).squeeze()
+    #         feature = feature.cpu().numpy()
             
-            # L2 Normalize
-            norm = np.linalg.norm(feature)
-            if norm > 0:
-                feature = feature / norm
+    #         # L2 Normalize
+    #         norm = np.linalg.norm(feature)
+    #         if norm > 0:
+    #             feature = feature / norm
                 
-        return feature.astype(np.float32)
+    #     return feature.astype(np.float32)
 
     # --- LOGIC CHO SHOP (TẠO SẢN PHẨM) ---
     def process_image_for_indexing(self, image_bytes, target_group):

@@ -48,7 +48,7 @@ DEVICE = os.getenv("DEVICE", "cuda" if torch.cuda.is_available() else "cpu")
 # --- PREPROCESSING CONFIG ---
 # --- ADDED: Lựa chọn backbone cho Image-to-Image Search ---
 # Hỗ trợ: 'ResNet_50', 'ResNet_101', 'ViT'
-IMG2IMG_BACKBONE = os.getenv("IMG2IMG_BACKBONE", "ResNet_101")
+IMG2IMG_BACKBONE = os.getenv("IMG2IMG_BACKBONE", "ResNet_50")
 INPUT_SIZE = [224, 224]
 RGB_MEAN = [0.5, 0.5, 0.5]
 RGB_STD = [0.5, 0.5, 0.5]

@@ -116,7 +116,7 @@ class IndexService:
         except Exception as e:
             logger.error(f"Failed to save index: {e}")
 
-    def search(self, query_emb, k=20):
+    def search(self, query_emb, k=15):
         if self.index.ntotal == 0: return []
 
         query_emb = np.array([query_emb]).astype('float32')
