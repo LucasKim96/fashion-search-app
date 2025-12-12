@@ -244,7 +244,7 @@ class Img2ImgService:
 
     # === PHIÊN BẢN MỚI: Đã loại bỏ logic load YOLO ===
     def load_models(self):
-        with Timer("Load Models"):
+        with Timer("Img2Img Load Models"):
             logger.info("--- LOADING IMG2IMG MODELS ---")
             
             # 1. Load YOLO (Giữ nguyên)
@@ -420,57 +420,58 @@ class Img2ImgService:
     #     logger.info(f"Indexing Done. Method: {method_used}")
     #     return vector, method_used
 
-    def process_image_for_indexing(self, image_bytes, target_group, product_id: str, image_id: str):
-        """
-        Quy trình: Decode -> Auto Crop (High->Low->Center) -> Resize -> Embed
-        """
-        logger.info(f"Processing indexing for group: {target_group}")
+    # def process_image_for_indexing(self, image_bytes, target_group, product_id: str, image_id: str):
+    #     """
+    #     Quy trình: Decode -> Auto Crop (High->Low->Center) -> Resize -> Embed
+    #     """
+    #     task_metadata = {
+    #         "service": "img2img", "product_id": product_id,
+    #         "image_id": image_id, "group": target_group
+    #     }
+    #     with Timer("Img2Img Indexing", metadata=task_metadata) as t:
+
+    #     img_np = self._decode_image(image_bytes)
+
+    #     with Timer("Shop Auto Crop"):
+    #         # === THAY ĐỔI: Sử dụng model từ service dùng chung ===
+    #         final_img_np, method_used = auto_crop_for_seller(
+    #             yolo_service.model, img_np, target_group
+    #         )
         
-        if not yolo_service or not yolo_service.model:
-            raise RuntimeError("YOLO service is not available.")
+    #     # <<< THÊM MỚI: Gọi hàm lưu ảnh crop ngay sau khi crop xong
+    #     self._save_cropped_image_for_debug(final_img_np, product_id, image_id, method_used)
 
-        img_np = self._decode_image(image_bytes)
+    #     # 3. Resize Padding
+    #     with Timer("Resize Padding"):
+    #         img_padded = resize_with_padding(final_img_np, target_size=INPUT_SIZE)
+    #         if img_padded is None:
+    #             raise ValueError("Resize failed (Image too small or invalid)")
 
-        with Timer("Shop Auto Crop"):
-            # === THAY ĐỔI: Sử dụng model từ service dùng chung ===
-            final_img_np, method_used = auto_crop_for_seller(
-                yolo_service.model, img_np, target_group
-            )
+    #     with Timer("Backbone Extraction"):
+    #         img_pil = Image.fromarray(cv2.cvtColor(img_padded, cv2.COLOR_BGR2RGB))
+    #         vector = self.extract_feature(img_pil)
         
-        # <<< THÊM MỚI: Gọi hàm lưu ảnh crop ngay sau khi crop xong
-        self._save_cropped_image_for_debug(final_img_np, product_id, image_id, method_used)
+    #     logger.info(f"Indexing Done. Method: {method_used}")
+    #     return vector, method_used
 
-        # 3. Resize Padding
-        with Timer("Resize Padding"):
-            img_padded = resize_with_padding(final_img_np, target_size=INPUT_SIZE)
-            if img_padded is None:
-                raise ValueError("Resize failed (Image too small or invalid)")
-
-        with Timer("Backbone Extraction"):
-            img_pil = Image.fromarray(cv2.cvtColor(img_padded, cv2.COLOR_BGR2RGB))
-            vector = self.extract_feature(img_pil)
-        
-        logger.info(f"Indexing Done. Method: {method_used}")
-        return vector, method_used
-
-    # --- LOGIC CHO KHÁCH HÀNG (DETECT) ---
-    def detect_search_candidates(self, image_bytes):
-        """
-        Quy trình: Decode -> YOLO Detect All -> Merge Boxes -> Trả về Coordinates
-        """
-        if not yolo_service or not yolo_service.model:
-            raise RuntimeError("YOLO service is not available.")
+    # # --- LOGIC CHO KHÁCH HÀNG (DETECT) ---
+    # def detect_search_candidates(self, image_bytes):
+    #     """
+    #     Quy trình: Decode -> YOLO Detect All -> Merge Boxes -> Trả về Coordinates
+    #     """
+    #     if not yolo_service or not yolo_service.model:
+    #         raise RuntimeError("YOLO service is not available.")
             
-        img_np = self._decode_image(image_bytes)
+    #     img_np = self._decode_image(image_bytes)
         
-        with Timer("Buyer Detection & Merge"):
-            # === THAY ĐỔI: Sử dụng model từ service dùng chung ===
-            candidates = detect_candidates_for_buyer(yolo_service.model, img_np)
+    #     with Timer("Buyer Detection & Merge"):
+    #         # === THAY ĐỔI: Sử dụng model từ service dùng chung ===
+    #         candidates = detect_candidates_for_buyer(yolo_service.model, img_np)
             
-        return candidates
+    #     return candidates
 
-    # --- LOGIC CHO KHÁCH HÀNG (SEARCH - SAU KHI CHỌN BOX) ---
-    def process_image_for_search(self, image_bytes):
+    # # --- LOGIC CHO KHÁCH HÀNG (SEARCH - SAU KHI CHỌN BOX) ---
+    # def process_image_for_search(self, image_bytes):
         """
         Quy trình: Nhận ảnh đã được FE crop -> Resize -> Embed
         """
@@ -485,40 +486,60 @@ class Img2ImgService:
             
         return vector
 
-    # def load_models(self):
-    #     with Timer("Load Models"):
-    #         logger.info("--- LOADING IMG2IMG MODELS ---")
-            
-    #         # 1. Load YOLO
-    #         if os.path.exists(YOLO_WEIGHT_PATH):
-    #             try:
-    #                 self.yolo_model = YOLO(str(YOLO_WEIGHT_PATH))
-    #                 logger.info(f"YOLO Loaded from {YOLO_WEIGHT_PATH}")
-    #             except Exception as e:
-    #                 logger.error(f"Failed to load YOLO: {e}")
-    #         else:
-    #             logger.error(f"YOLO weights not found at {YOLO_WEIGHT_PATH}")
+    def process_image_for_indexing(self, image_bytes, target_group, product_id: str, image_id: str):
+        task_metadata = {
+            "service": "img2img",
+            "action": "indexing", # <-- PHÂN BIỆT RÕ HÀNH ĐỘNG
+            # "product_id": product_id,
+            # "image_id": image_id,
+            # "group": target_group
+        }
+        # Tên task cũng rõ ràng hơn
+        with Timer("Img2Img_Indexing", metadata=task_metadata) as t:
+            img_np = self._decode_image(image_bytes)
 
-    #         # 2. Load ArcFace (ResNet50)
-    #         if os.path.exists(ARCFACE_WEIGHT_PATH):
-    #             try:
-    #                 self.backbone = ResNet_50(INPUT_SIZE)
-    #                 ckpt = torch.load(ARCFACE_WEIGHT_PATH, map_location=self.device, weights_only=False)
-                    
-    #                 if 'backbone_state_dict' in ckpt:
-    #                     sd = ckpt['backbone_state_dict']
-    #                 else:
-    #                     sd = ckpt 
-                    
-    #                 new_sd = OrderedDict()
-    #                 for k, v in sd.items():
-    #                     if k.startswith("module."): k = k[7:]
-    #                     new_sd[k] = v
-                    
-    #                 self.backbone.load_state_dict(new_sd, strict=False)
-    #                 self.backbone.to(self.device).eval()
-    #                 logger.info(f"ArcFace ResNet Loaded from {ARCFACE_WEIGHT_PATH}")
-    #             except Exception as e:
-    #                 logger.error(f"Failed to load ArcFace: {e}")
-    #         else:
-    #             logger.error(f"ArcFace weights not found at {ARCFACE_WEIGHT_PATH}")
+            if not yolo_service or not yolo_service.model:
+                raise RuntimeError("YOLO service is not available.")
+            
+            final_img_np, method_used = auto_crop_for_seller(
+                yolo_service.model, img_np, target_group
+            )
+            
+            t.metadata["method"] = method_used
+            
+            self._save_cropped_image_for_debug(final_img_np, product_id, image_id, method_used)
+
+            img_padded = resize_with_padding(final_img_np, target_size=INPUT_SIZE)
+            if img_padded is None:
+                raise ValueError("Resize failed")
+
+            img_pil = Image.fromarray(cv2.cvtColor(img_padded, cv2.COLOR_BGR2RGB))
+            vector = self.extract_feature(img_pil)
+        
+            logger.info(f"Indexing Done. Method: {method_used}")
+            return vector, method_used
+
+    def detect_search_candidates(self, image_bytes):
+        task_metadata = {
+            "service": "img2img",
+            "action": "search_detect" # <-- PHÂN BIỆT RÕ HÀNH ĐỘNG
+        }
+        with Timer("Img2Img_DetectCandidates", metadata=task_metadata):
+            if not yolo_service or not yolo_service.model:
+                raise RuntimeError("YOLO service is not available.")
+            
+            img_np = self._decode_image(image_bytes)
+            candidates = detect_candidates_for_buyer(yolo_service.model, img_np)
+            return candidates
+
+    def process_image_for_search(self, image_bytes):
+        task_metadata = {
+            "service": "img2img",
+            "action": "search_embedding" # <-- PHÂN BIỆT RÕ HÀNH ĐỘNG
+        }
+        with Timer("Img2Img_SearchEmbedding", metadata=task_metadata):
+            img_np = self._decode_image(image_bytes)
+            img_padded = resize_with_padding(img_np, target_size=INPUT_SIZE)
+            img_pil = Image.fromarray(cv2.cvtColor(img_padded, cv2.COLOR_BGR2RGB))
+            vector = self.extract_feature(img_pil)
+            return vector

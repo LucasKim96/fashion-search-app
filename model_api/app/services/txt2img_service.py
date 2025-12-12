@@ -222,8 +222,8 @@ class Text2ImgService:
 
     # === HÀM load_model ĐÃ ĐƯỢC CẬP NHẬT ===
     def load_model(self):
-        with Timer("Load PhoCLIP Model"):
-            logger.info(f"--- LOADING TEXT2IMG MODEL (Custom PhoCLIP) ---")
+        with Timer("Txt2Img Load Model"):
+            logger.info("--- LOADING TEXT2IMG MODEL (Custom PhoCLIP) ---")
             try:
                 # Load Tokenizer trước
                 self.tokenizer = AutoTokenizer.from_pretrained(TEXT2IMG_BASE_ARCH, use_fast=False)
@@ -266,25 +266,30 @@ class Text2ImgService:
             logger.warning("PhoCLIP model is not available. Skipping text embedding.")
             # Trả về None thay vì gây lỗi
             return None
-
-        try:
-            tokens = self.tokenizer(
-                text, padding="max_length", truncation=True, 
-                max_length=64, return_tensors="pt"
-            ).to(self.device)
-            
-            with torch.no_grad():
-                features = self.model.text_encoder(tokens["input_ids"], tokens["attention_mask"])
-            
-            vector = features.cpu().numpy().astype('float32')
-            norm = np.linalg.norm(vector)
-            if norm > 0: vector = vector / norm
+        task_metadata = {
+            "service": "txt2img",
+            "action": "search_embedding", # <-- PHÂN BIỆT RÕ HÀNH ĐỘNG
+            "text_length": len(text)
+        }
+        with Timer("Txt2Img_TextEmbedding_ForSearch", metadata=task_metadata):
+            try:
+                tokens = self.tokenizer(
+                    text, padding="max_length", truncation=True, 
+                    max_length=64, return_tensors="pt"
+                ).to(self.device)
                 
-            return vector
-        except Exception as e:
-            logger.error(f"Text embed error: {e}", exc_info=True)
-            # Trả về None trong trường hợp có lỗi runtime
-            return None
+                with torch.no_grad():
+                    features = self.model.text_encoder(tokens["input_ids"], tokens["attention_mask"])
+                
+                vector = features.cpu().numpy().astype('float32')
+                norm = np.linalg.norm(vector)
+                if norm > 0: vector = vector / norm
+                    
+                return vector
+            except Exception as e:
+                logger.error(f"Text embed error: {e}", exc_info=True)
+                # Trả về None trong trường hợp có lỗi runtime
+                return None
 
     # === HÀM embed_image ĐÃ ĐƯỢC CẬP NHẬT ===
     def embed_image(self, image_data: Union[str, IO], target_group: str):
@@ -294,43 +299,50 @@ class Text2ImgService:
             logger.warning("PhoCLIP model is not available. Skipping image embedding.")
             return None
 
-        try:
-            image_pil = Image.open(image_data).convert("RGB")
-            image_np_rgb = np.array(image_pil)
-            
-            yolo_model = yolo_service.model
-            if not yolo_model:
-                raise RuntimeError("YOLO model is not available for cropping.")
+        task_metadata = {
+            "service": "txt2img",
+            "action": "indexing", # <-- PHÂN BIỆT RÕ HÀNH ĐỘNG
+            # "group": target_group
+        }
+        with Timer("Txt2Img_ImageEmbedding_ForIndex", metadata=task_metadata) as t:
 
-            logger.info(f"[Txt2Img] Running auto_crop for group: '{target_group}'")
-            cropped_np, method = auto_crop_for_seller(yolo_model, image_np_rgb, target_group)
-            
-            logger.info(f"[Txt2Img] Image cropped using method: '{method}'")
-            if cropped_np is None or cropped_np.size == 0:
-                logger.error("[Txt2Img] Cropping failed.")
-                return None
-
-            img_padded = resize_with_padding(cropped_np, target_size=INPUT_SIZE)
-            if img_padded is None:
-                logger.error("[Txt2Img] Resize with padding failed.")
-                return None
-
-            final_pil_image = Image.fromarray(img_padded)
-
-            image_tensor = self.transform(final_pil_image).unsqueeze(0).to(self.device)
-            
-            with torch.no_grad():
-                features = self.model.image_encoder(image_tensor)
-            
-            vector = features.cpu().numpy().astype('float32')
-            norm = np.linalg.norm(vector)
-            if norm > 0: vector = vector / norm
+            try:
+                image_pil = Image.open(image_data).convert("RGB")
+                image_np_rgb = np.array(image_pil)
                 
-            return vector
-            
-        except Exception as e:
-            logger.error(f"Error embedding image for Txt2Img: {e}", exc_info=True)
-            return None
+                yolo_model = yolo_service.model
+                if not yolo_model:
+                    raise RuntimeError("YOLO model is not available for cropping.")
+
+                logger.info(f"[Txt2Img] Running auto_crop for group: '{target_group}'")
+                cropped_np, method = auto_crop_for_seller(yolo_model, image_np_rgb, target_group)
+                
+                logger.info(f"[Txt2Img] Image cropped using method: '{method}'")
+                if cropped_np is None or cropped_np.size == 0:
+                    logger.error("[Txt2Img] Cropping failed.")
+                    return None
+
+                img_padded = resize_with_padding(cropped_np, target_size=INPUT_SIZE)
+                if img_padded is None:
+                    logger.error("[Txt2Img] Resize with padding failed.")
+                    return None
+
+                final_pil_image = Image.fromarray(img_padded)
+
+                image_tensor = self.transform(final_pil_image).unsqueeze(0).to(self.device)
+                
+                with torch.no_grad():
+                    features = self.model.image_encoder(image_tensor)
+                
+                vector = features.cpu().numpy().astype('float32')
+                norm = np.linalg.norm(vector)
+                if norm > 0: vector = vector / norm
+                    
+                return vector
+                
+            except Exception as e:
+                logger.error(f"Error embedding image for Txt2Img: {e}", exc_info=True)
+                return None
 
 # Singleton Instance
 txt2img_service = Text2ImgService()

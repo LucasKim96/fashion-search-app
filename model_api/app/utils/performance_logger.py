@@ -4,7 +4,6 @@ import os
 from datetime import datetime
 from threading import Lock
 
-# === IMPORT CỜ TỪ CONFIG ===
 from app.config import ENABLE_PERFORMANCE_LOGGING
 
 # --- CẤU HÌNH ---
