@@ -37,7 +37,7 @@ def resize_with_padding(img_np, target_size=None, color=(255, 255, 255)):
     )
     return img_padded
 
-def get_center_crop(img_np, crop_ratio=0.8):
+def get_center_crop(img_np, crop_ratio=0.6):
     """
     Cắt lấy vùng trung tâm ảnh (Fallback khi YOLO thất bại).
     crop_ratio=0.8 nghĩa là lấy 80% ảnh ở giữa.

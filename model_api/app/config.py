@@ -62,7 +62,7 @@ YOLO_CLASS_NAMES = [
 YOLO_CLASS_GROUPS = {
     "upper_body": [
         YOLO_CLASS_NAMES.index(cls) for cls in
-        ["shirt, blouse", "top, t-shirt, sweatshirt", "sweater", "cardigan", "jacket", "vest", "coat"]
+        ["shirt, blouse", "top, t-shirt, sweatshirt", "sweater", "cardigan", "jacket", "vest", "coat", "dress"]
     ],
     "lower_body": [
         YOLO_CLASS_NAMES.index(cls) for cls in
@@ -75,3 +75,6 @@ YOLO_CLASS_GROUPS = {
 }
 
 ENABLE_PERFORMANCE_LOGGING = os.getenv("ENABLE_PERFORMANCE_LOGGING", "false").lower() == "true"
+# --- CONFIG CHO DEBUGGING ---
+SAVE_CROPPED_IMAGES = True 
+CROPPED_IMAGE_SAVE_PATH = "image_crop_product"

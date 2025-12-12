@@ -57,11 +57,8 @@ class Timer:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         elapsed = time.time() - self.start_time
-        
-        # 1. Log ra console (như cũ)
-        logger.info(f"[{self.task_name}] took: {elapsed:.4f}s")
-        # Dòng print này có thể bị lặp, bạn có thể comment lại nếu logger đã in ra console
-        # print(f"[{self.task_name}] Elapsed time: {elapsed:.4f} seconds")
+        # logger.info(f"[{self.name}] took: {elapsed:.4f}s")
+        print(f"[{self.name}] Elapsed time: {elapsed:.4f} seconds")
 
         # 2. Ghi ra performance log file
         performance_logger.log(
