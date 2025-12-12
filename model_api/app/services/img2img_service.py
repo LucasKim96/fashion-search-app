@@ -211,7 +211,7 @@ import torchvision.transforms as transforms
 
 # Import Config và Utils
 from app.config import (
-    RESNET_WEIGHT_PATH, VIT_WEIGHT_PATH, DEVICE,
+    YOLO_WEIGHT_PATH, RESNET_WEIGHT_PATH, VIT_WEIGHT_PATH, DEVICE,
     INPUT_SIZE, RGB_MEAN, RGB_STD,
     IMG2IMG_BACKBONE, EMBEDDING_SIZE 
 )
@@ -245,6 +245,17 @@ class Img2ImgService:
         with Timer("Load Models"):
             logger.info("--- LOADING IMG2IMG MODELS ---")
             
+            # 1. Load YOLO (Giữ nguyên)
+            if os.path.exists(YOLO_WEIGHT_PATH):
+                try:
+                    self.yolo_model = YOLO(str(YOLO_WEIGHT_PATH))
+                    logger.info(f"YOLO Loaded from {YOLO_WEIGHT_PATH}")
+                except Exception as e:
+                    logger.error(f"Failed to load YOLO: {e}")
+            else:
+                logger.error(f"YOLO weights not found at {YOLO_WEIGHT_PATH}")
+
+            # 2. Load Backbone (ResNet hoặc ViT) một cách linh hoạt
             try:
                 logger.info(f"Loading backbone: {IMG2IMG_BACKBONE}")
                 self.backbone = get_backbone(
@@ -304,19 +315,12 @@ class Img2ImgService:
         return img_np
 
     def extract_feature(self, img_pil):
-<<<<<<< HEAD
-        """Trích xuất feature vector (đã bao gồm timer)"""
-        if self.backbone is None:
-            raise RuntimeError("Backbone model (ResNet/ViT) is not loaded!")
-
-=======
         """Trích xuất feature vector chuẩn hóa L2, hỗ trợ mọi backbone."""
 
         if self.backbone is None:
             raise RuntimeError("Backbone model is not loaded!")
 
         # Chuyển ảnh sang Tensor
->>>>>>> f640e1a5804ea1ab52f7e579af6b0950c408f120
         img_tensor = self.transform(img_pil).unsqueeze(0).to(self.device)
 
         with torch.no_grad():
@@ -350,16 +354,10 @@ class Img2ImgService:
     #         feature = self.backbone(img_tensor).squeeze()
     #         feature = feature.cpu().numpy()
             
-<<<<<<< HEAD
-            norm = np.linalg.norm(feature)
-            if norm > 0:
-                feature = feature / norm
-=======
     #         # L2 Normalize
     #         norm = np.linalg.norm(feature)
     #         if norm > 0:
     #             feature = feature / norm
->>>>>>> f640e1a5804ea1ab52f7e579af6b0950c408f120
                 
     #     return feature.astype(np.float32)
 
@@ -418,8 +416,6 @@ class Img2ImgService:
         
         with Timer("Search Resize"):
             img_padded = resize_with_padding(img_np, target_size=INPUT_SIZE)
-            if img_padded is None:
-                raise ValueError("Resize failed for search image")
             
         with Timer("Search Embedding"):
             img_pil = Image.fromarray(cv2.cvtColor(img_padded, cv2.COLOR_BGR2RGB))
@@ -427,3 +423,40 @@ class Img2ImgService:
             
         return vector
 
+    # def load_models(self):
+    #     with Timer("Load Models"):
+    #         logger.info("--- LOADING IMG2IMG MODELS ---")
+            
+    #         # 1. Load YOLO
+    #         if os.path.exists(YOLO_WEIGHT_PATH):
+    #             try:
+    #                 self.yolo_model = YOLO(str(YOLO_WEIGHT_PATH))
+    #                 logger.info(f"YOLO Loaded from {YOLO_WEIGHT_PATH}")
+    #             except Exception as e:
+    #                 logger.error(f"Failed to load YOLO: {e}")
+    #         else:
+    #             logger.error(f"YOLO weights not found at {YOLO_WEIGHT_PATH}")
+
+    #         # 2. Load ArcFace (ResNet50)
+    #         if os.path.exists(ARCFACE_WEIGHT_PATH):
+    #             try:
+    #                 self.backbone = ResNet_50(INPUT_SIZE)
+    #                 ckpt = torch.load(ARCFACE_WEIGHT_PATH, map_location=self.device, weights_only=False)
+                    
+    #                 if 'backbone_state_dict' in ckpt:
+    #                     sd = ckpt['backbone_state_dict']
+    #                 else:
+    #                     sd = ckpt 
+                    
+    #                 new_sd = OrderedDict()
+    #                 for k, v in sd.items():
+    #                     if k.startswith("module."): k = k[7:]
+    #                     new_sd[k] = v
+                    
+    #                 self.backbone.load_state_dict(new_sd, strict=False)
+    #                 self.backbone.to(self.device).eval()
+    #                 logger.info(f"ArcFace ResNet Loaded from {ARCFACE_WEIGHT_PATH}")
+    #             except Exception as e:
+    #                 logger.error(f"Failed to load ArcFace: {e}")
+    #         else:
+    #             logger.error(f"ArcFace weights not found at {ARCFACE_WEIGHT_PATH}")

@@ -89,6 +89,7 @@ export const searchImageService = async (file) => {
 		// --- BƯỚC 2: Truy vấn Database ---
 		const productIds = aiResults.map((item) => item.product_id);
 
+		// [SỬA ĐỔI]: Chỉ select các trường CÓ THẬT trong DB Product Schema
 		const products = await Product.find({
 			_id: { $in: productIds },
 			isActive: true,

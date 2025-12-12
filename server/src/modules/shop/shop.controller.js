@@ -62,6 +62,50 @@ export const getMyShopDetails = async (req, res, next) => {
 /**
  * Tạo shop mới
  */
+// export const createShop = async (req, res, next) => {
+// 	try {
+// 		const { shopName, description } = req.body;
+// 		const accountId = req.user?.id;
+
+// 		// 3. Xử lý đường dẫn file (Phần quan trọng nhất)
+// 		let logoUrl = null; // Khởi tạo là null
+// 		let coverUrl = null;
+
+// 		// Chỉ tạo URL nếu file thực sự tồn tại trong request
+// 		if (req.files?.logo?.[0]) {
+// 			logoUrl = path
+// 				.join("/uploads/shops", req.files.logo[0].filename)
+// 				.replace(/\\/g, "/");
+// 		}
+
+// 		if (req.files?.cover?.[0]) {
+// 			coverUrl = path
+// 				.join("/uploads/shops", req.files.cover[0].filename)
+// 				.replace(/\\/g, "/");
+// 		}
+
+// 		// 4. DEBUG: KIỂM TRA URL ĐƯỢC TẠO RA
+// 		// Xem các URL này có đúng định dạng bạn mong muốn không.
+// 		console.log("Generated Logo URL:", logoUrl);
+// 		console.log("Generated Cover URL:", coverUrl);
+
+// 		// 5. Gói dữ liệu để gửi vào service
+// 		const shopData = {
+// 			shopName,
+// 			description,
+// 			accountId,
+// 			logoUrl, // Truyền URL đã được xử lý (hoặc null)
+// 			coverUrl, // Truyền URL đã được xử lý (hoặc null)
+// 		};
+
+// 		const result = await ShopService.createShop(shopData);
+
+// 		return successResponse(res, result, "Tạo shop thành công");
+// 	} catch (error) {
+// 		next(error);
+// 	}
+// };
+
 export const createShop = async (req, res, next) => {
 	try {
 		const { shopName, description } = req.body;

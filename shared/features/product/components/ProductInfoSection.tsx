@@ -663,7 +663,6 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({
 	);
 };
 // Component phụ cho đẹp code Dashboard
-// Component phụ cho đẹp code Dashboard
 const DashboardBox: React.FC<{
 	color: "emerald" | "blue" | "orange" | "purple";
 	icon: any;
