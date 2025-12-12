@@ -226,6 +226,7 @@ from app.services.preprocess import (
 from app.services.yolo_service import yolo_service
 from app.utils.logger import logger
 from app.utils.timer import Timer
+from ultralytics import YOLO
 
 class Img2ImgService:
     def __init__(self, device=DEVICE):
