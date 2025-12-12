@@ -1,3 +1,4 @@
+# model_api\app\services\index_service.py
 import faiss
 import numpy as np
 import os
@@ -39,6 +40,7 @@ class IndexService:
 
     def _create_new_index(self):
         """Tạo index hỗ trợ ID tùy chỉnh"""
+        logger.info(f"Creating a new, empty index at {self.index_path}")
         quantizer = faiss.IndexFlatIP(self.dim)
         self.index = faiss.IndexIDMap2(quantizer)
         self.id_map = {}

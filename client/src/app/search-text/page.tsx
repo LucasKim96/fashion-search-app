@@ -106,7 +106,7 @@ export default function SearchPage() {
 								"w-full pl-16 pr-14 py-5 rounded-full border-0 bg-transparent text-lg placeholder:text-gray-400",
 								"focus:ring-2 focus:ring-primary/30 outline-none transition-all"
 							)}
-							placeholder="Nhập mô tả sản phẩm (VD: Áo sơ mi đi biển màu vàng...)"
+							placeholder="Nhập mô tả sản phẩm (VD: Áo sơ tay ngắn màu vàng...)"
 							value={query}
 							onChange={(e) => setQuery(e.target.value)}
 							onKeyDown={onKeyDown}

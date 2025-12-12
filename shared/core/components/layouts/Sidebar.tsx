@@ -62,7 +62,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
 			{/* Logo */}
 			<div className="flex flex-col items-center border-b border-white/40 p-4">
 				<img
-					src={collapsed ? "/logo-small.png" : "/logo-full.jpg"}
+					src={collapsed ? "/logo-small.png" : "/logo-full.png"}
 					alt="Admin Logo"
 					className={clsx(
 						"transition-all duration-300 drop-shadow-sm",

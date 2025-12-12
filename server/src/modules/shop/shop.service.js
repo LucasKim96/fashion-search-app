@@ -155,13 +155,22 @@ export const createShop = async (data) => {
 		if (!shopOwnerRole)
 			throw ApiError.internal("Không tìm thấy role 'Chủ shop'");
 
-		await Account.updateOne(
-			{ _id: accountId },
+		const updatedAccount = await Account.findByIdAndUpdate(
+			accountId,
 			{ $addToSet: { roles: shopOwnerRole._id } },
-			{ session }
-		);
+			{ new: true, session } // 'new: true' là rất quan trọng
+		).populate({
+			path: "roles",
+			select: "roleName level permissions", // Populate để lấy thông tin chi tiết của roles
+		});
 
-		return finalShop;
+		if (!updatedAccount) {
+			// Thêm một lớp bảo vệ
+			throw ApiError.internal("Không thể cập nhật role cho tài khoản.");
+		}
+
+		// THAY ĐỔI 2: Trả về một object chứa cả hai thông tin
+		return { shop: finalShop, updatedAccount };
 	});
 };
 

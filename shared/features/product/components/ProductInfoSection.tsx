@@ -534,8 +534,8 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({
 										<Layers size={14} className="text-gray-400" />
 										<span className="text-sm font-semibold text-gray-700 capitalize">
 											{label}:
-											{/* Hiện giá trị đang chọn bên cạnh label cho dễ nhìn */}
-											{selectedOptions[label] && (
+											{/* Hiện giá trị đang chọn bên cạnh label cho dễ nhìn (chỉ khách hàng) */}
+											{selectedOptions[label] && !isShop && !isAdmin && (
 												<span className="ml-1 text-blue-600 font-bold">
 													{selectedOptions[label]}
 												</span>
@@ -546,17 +546,36 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({
 									{/* Danh sách nút bấm */}
 									<div className="flex flex-wrap gap-2">
 										{values.map((val, idx) => {
-											const isSelected = selectedOptions[label] === val;
+											// Biến isClickable sẽ quyết định nút có thể bấm hay không
+											const isClickable = !isShop && !isAdmin;
+											const isSelected =
+												isClickable && selectedOptions[label] === val;
+
 											return (
 												<button
 													key={idx}
-													type="button" // Quan trọng để không submit form
-													onClick={() => handleOptionClick(label, val)}
+													type="button"
+													// Nếu không phải khách hàng thì disable nút
+													disabled={!isClickable}
+													onClick={() => {
+														// Chỉ gọi handler khi nút có thể click
+														if (isClickable) {
+															handleOptionClick(label, val);
+														}
+													}}
 													className={clsx(
 														"px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 border select-none flex items-center gap-2",
-														isSelected
-															? "bg-blue-600 border-blue-600 text-white shadow-md scale-105"
-															: "bg-white border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50"
+														// --- Logic style mới ---
+														// 1. Style khi được chọn (chỉ áp dụng cho khách hàng)
+														isSelected &&
+															"bg-blue-600 border-blue-600 text-white shadow-md scale-105",
+														// 2. Style mặc định cho khách hàng (có hover effect)
+														isClickable &&
+															!isSelected &&
+															"bg-white border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50",
+														// 3. Style cho Shop/Admin (read-only, không hover)
+														!isClickable &&
+															"bg-gray-100 border-gray-200 text-gray-500 cursor-default"
 													)}>
 													{val}
 													{isSelected && <Check size={14} strokeWidth={3} />}
@@ -569,46 +588,41 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({
 						</div>
 					</div>
 				)}
-				{/* --- BỔ SUNG 1: HIỂN THỊ TỒN KHO --- */}
+				{/* KHỐI CODE MỚI: Layout Grid 2 cột */}
 				{!isShop && !isAdmin && currentMode === "view" && (
-					<div className="flex items-center gap-3 mt-2 p-3 bg-gray-50 rounded-xl border border-gray-200 w-fit">
-						<div className="p-2 bg-white rounded-lg shadow-sm text-blue-500">
-							<Box size={20} />
+					<div className="mt-4 pt-4 border-t border-gray-100 grid grid-cols-2 items-center gap-4">
+						{/* --- Cột 1: Tồn kho --- */}
+						<div className="flex items-center gap-3">
+							<div className="p-2 bg-gray-100 rounded-lg text-blue-500 shrink-0">
+								<Box size={20} />
+							</div>
+							<div>
+								<p className="text-xs text-gray-400 font-bold uppercase tracking-wider">
+									Tồn kho
+								</p>
+								<p className="text-lg font-bold text-gray-800">
+									{new Intl.NumberFormat("vi-VN").format(displayStock)}{" "}
+									<span className="text-sm font-normal text-gray-500">
+										sản phẩm
+									</span>
+								</p>
+							</div>
 						</div>
-						<div>
-							<p className="text-xs text-gray-400 font-bold uppercase tracking-wider">
-								{/* Logic đổi text: Đã chọn đủ option chưa? */}
-								{Object.keys(selectedOptions).length > 0 &&
-								Object.keys(selectedOptions).length ===
-									Object.keys(groupedAttributes).length
-									? "Tồn kho phiên bản này"
-									: "Tổng tồn kho"}
-							</p>
-							<p className="text-lg font-bold text-gray-800">
-								{new Intl.NumberFormat("vi-VN").format(displayStock)}{" "}
-								<span className="text-sm font-normal text-gray-500">
-									sản phẩm
-								</span>
-							</p>
+
+						{/* --- Cột 2: Nút Thêm vào giỏ hàng --- */}
+						<div className="flex justify-center">
+							<button
+								onClick={onAddToCart}
+								disabled={displayStock === 0}
+								className={clsx(
+									"w-full max-w-xs py-3 font-bold text-base rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2",
+									"disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0",
+									"bg-primary hover:bg-primary-light text-black"
+								)}>
+								<ShoppingCart size={22} />
+								{displayStock === 0 ? "Hết hàng" : "Thêm vào giỏ"}
+							</button>
 						</div>
-					</div>
-				)}
-				{/* GIỎ HÀNG */}
-				{/* Chỉ hiện khi: KHÔNG phải Shop, KHÔNG phải Admin, và đang ở chế độ View */}
-				{!isShop && !isAdmin && currentMode === "view" && (
-					<div className="mt-6 pt-6 border-t border-gray-100">
-						<button
-							onClick={onAddToCart}
-							disabled={displayStock === 0} // Hết hàng thì disable
-							className={clsx(
-								"w-full py-4 font-bold text-lg rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all flex items-center justify-center gap-3",
-								"disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0",
-								// Style: Màu vàng (Primary) chữ đen
-								"bg-primary hover:bg-primary-light text-black"
-							)}>
-							<ShoppingCart size={24} />
-							{displayStock === 0 ? "Hết hàng" : "Thêm vào giỏ hàng"}
-						</button>
 					</div>
 				)}
 
@@ -650,29 +664,47 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({
 };
 // Component phụ cho đẹp code Dashboard
 const DashboardBox: React.FC<{
-	color: string;
+	color: "emerald" | "blue" | "orange" | "purple";
 	icon: any;
 	label: React.ReactNode;
 	value: React.ReactNode;
 }> = ({ color, icon: Icon, label, value }) => {
+	// 1. Tạo một object để map màu với các class Tailwind đầy đủ
+	const colorClasses = {
+		emerald: {
+			circle: "bg-emerald-400",
+			box: "from-emerald-50 to-emerald-100",
+			text: "text-emerald-600",
+		},
+		blue: {
+			circle: "bg-blue-400",
+			box: "from-blue-50 to-blue-100",
+			text: "text-blue-600",
+		},
+		orange: {
+			circle: "bg-orange-400",
+			box: "from-orange-50 to-orange-100",
+			text: "text-orange-600",
+		},
+		purple: {
+			circle: "bg-purple-400",
+			box: "from-purple-50 to-purple-100",
+			text: "text-purple-600",
+		},
+		// Thêm các màu khác nếu cần
+	};
+
+	// 2. Lấy ra bộ class tương ứng với màu được truyền vào.
+	// Cung cấp một giá trị mặc định để tránh lỗi nếu color không tồn tại
+	const selectedColor = colorClasses[color] || colorClasses.blue;
+
+	// 3. Sử dụng các class đã được chọn
 	const outerClass =
 		"group relative overflow-hidden p-4 bg-white rounded-2xl border border-gray-100 shadow-md hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-1";
 
-	const circleClass =
-		"absolute top-0 right-0 w-24 h-24 " +
-		"bg-" +
-		color +
-		"-400 rounded-full -mr-10 -mt-10 opacity-20 transition-transform duration-500 group-hover:scale-125";
+	const circleClass = `absolute top-0 right-0 w-24 h-24 ${selectedColor.circle} rounded-full -mr-10 -mt-10 opacity-20 transition-transform duration-500 group-hover:scale-125`;
 
-	const boxInnerClass =
-		"w-14 h-14 rounded-2xl bg-gradient-to-br " +
-		"from-" +
-		color +
-		"-50 to-" +
-		color +
-		"-100 text-" +
-		color +
-		"-600 flex items-center justify-center shadow-inner";
+	const boxInnerClass = `w-14 h-14 rounded-2xl bg-gradient-to-br ${selectedColor.box} ${selectedColor.text} flex items-center justify-center shadow-inner`;
 
 	return (
 		<div className={outerClass}>
@@ -693,3 +725,47 @@ const DashboardBox: React.FC<{
 		</div>
 	);
 };
+// const DashboardBox: React.FC<{
+// 	color: string;
+// 	icon: any;
+// 	label: React.ReactNode;
+// 	value: React.ReactNode;
+// }> = ({ color, icon: Icon, label, value }) => {
+// 	const outerClass =
+// 		"group relative overflow-hidden p-4 bg-white rounded-2xl border border-gray-100 shadow-md hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-1";
+
+// 	const circleClass =
+// 		"absolute top-0 right-0 w-24 h-24 " +
+// 		"bg-" +
+// 		color +
+// 		"-400 rounded-full -mr-10 -mt-10 opacity-20 transition-transform duration-500 group-hover:scale-125";
+
+// 	const boxInnerClass =
+// 		"w-14 h-14 rounded-2xl bg-gradient-to-br " +
+// 		"from-" +
+// 		color +
+// 		"-50 to-" +
+// 		color +
+// 		"-100 text-" +
+// 		color +
+// 		"-600 flex items-center justify-center shadow-inner";
+
+// 	return (
+// 		<div className={outerClass}>
+// 			<div className={circleClass} />
+// 			<div className="relative flex items-center gap-4">
+// 				<div className={boxInnerClass}>
+// 					<Icon size={24} strokeWidth={2} className="drop-shadow-sm" />
+// 				</div>
+// 				<div className="flex flex-col">
+// 					<span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest mb-0.5">
+// 						{label}
+// 					</span>
+// 					<span className="text-base font-black text-gray-800 tracking-tight">
+// 						{value}
+// 					</span>
+// 				</div>
+// 			</div>
+// 		</div>
+// 	);
+// };

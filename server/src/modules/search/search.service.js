@@ -3,7 +3,7 @@ import axios from "axios";
 import FormData from "form-data";
 import Product from "../product/product.model.js";
 import fsPromises from "fs/promises";
-import { apiResponse } from "../../utils/index.js";
+// import { apiResponse } from "../../utils/index.js";
 
 // Cấu hình URL đến Python Server
 const PYTHON_HOST = process.env.AI_API_URL || "http://localhost:8000";

@@ -82,21 +82,25 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
 				return {
 					iconBg: "bg-red-100",
 					iconColor: "text-red-600",
-					btnBg: "bg-red-600 hover:bg-red-700",
+					// SỬA: Thêm class màu chữ "text-white" để đảm bảo luôn hiển thị
+					btnBg: "bg-red-600 hover:bg-red-700 text-white",
 					icon: <XCircle className="w-8 h-8" />,
 				};
 			case "warning":
 				return {
 					iconBg: "bg-yellow-100",
 					iconColor: "text-yellow-600",
-					btnBg: "bg-yellow-600 hover:bg-yellow-700",
+					// SỬA: Thêm class màu chữ "text-white"
+					btnBg: "bg-yellow-600 hover:bg-yellow-700 text-white",
 					icon: <AlertTriangle className="w-8 h-8" />,
 				};
 			default: // info
 				return {
 					iconBg: "bg-blue-100",
 					iconColor: "text-blue-600",
-					btnBg: "bg-primary hover:bg-primary-dark text-black", // Dùng màu brand của bạn
+					// SỬA: Đảm bảo màu chữ và màu nền luôn tương phản
+					// Thay vì dùng bg-primary có thể không chắc chắn, dùng màu cụ thể
+					btnBg: "bg-blue-600 hover:bg-blue-700 text-white",
 					icon: <Info className="w-8 h-8" />,
 				};
 		}
