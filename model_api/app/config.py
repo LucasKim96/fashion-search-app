@@ -79,3 +79,5 @@ YOLO_CLASS_GROUPS = {
         ["dress", "jumpsuit"]
     ]
 }
+
+ENABLE_PERFORMANCE_LOGGING = os.getenv("ENABLE_PERFORMANCE_LOGGING", "false").lower() == "true"
