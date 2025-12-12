@@ -611,7 +611,7 @@ export const ProductVariantSection: React.FC<ProductVariantSectionProps> = ({
 
 			if (res.data.length === 0) {
 				showToast(
-					"Không có biến thể mới nào được sinh ra (Tất cả tổ hợp đã tồn tại)",
+					"Không sinh được biến thể mới nào. Vui lòng kiểm tra lại các thuộc tính và giá trị đã chọn.",
 					"error"
 				);
 				return;

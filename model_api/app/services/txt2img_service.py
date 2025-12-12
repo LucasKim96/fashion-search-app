@@ -1,5 +1,7 @@
 # model_api/app/services/txt2img_service.py
 import os
+# model_api/app/services/txt2img_service.py
+import os
 import torch
 import numpy as np
 from PIL import Image

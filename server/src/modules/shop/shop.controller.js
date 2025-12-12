@@ -16,7 +16,13 @@ const DEFAULT_COVER = "assets/shop/default-cover.jpg";
 export const getShops = async (req, res, next) => {
 	try {
 		const { page, limit, status, shopName } = req.query;
+	try {
+		const { page, limit, status, shopName } = req.query;
 
+		// Parse filters
+		const filters = {};
+		if (status) filters.status = status;
+		if (shopName) filters.shopName = shopName;
 		// Parse filters
 		const filters = {};
 		if (status) filters.status = status;
@@ -26,7 +32,17 @@ export const getShops = async (req, res, next) => {
 		const options = {};
 		if (page) options.page = page;
 		if (limit) options.limit = limit;
+		// Parse options
+		const options = {};
+		if (page) options.page = page;
+		if (limit) options.limit = limit;
 
+		const result = await ShopService.getShops(filters, options);
+		return successResponse(res, result, "Lấy danh sách shop thành công");
+	} catch (error) {
+		// ApiError sẽ được xử lý bởi errorHandler middleware
+		next(error);
+	}
 		const result = await ShopService.getShops(filters, options);
 		return successResponse(res, result, "Lấy danh sách shop thành công");
 	} catch (error) {
@@ -41,13 +57,36 @@ export const getShops = async (req, res, next) => {
 export const getShop = async (req, res, next) => {
 	try {
 		const { id } = req.params;
+	try {
+		const { id } = req.params;
 
+		validateObjectId(id, "ID shop");
 		validateObjectId(id, "ID shop");
 
 		const shop = await ShopService.getShopById(id);
 		return successResponse(res, shop, "Lấy thông tin shop thành công");
 	} catch (error) {
 		// ApiError sẽ được xử lý bởi errorHandler middleware
+		next(error);
+	}
+		const shop = await ShopService.getShopById(id);
+		return successResponse(res, shop, "Lấy thông tin shop thành công");
+	} catch (error) {
+		// ApiError sẽ được xử lý bởi errorHandler middleware
+		next(error);
+	}
+};
+
+export const getMyShopDetails = async (req, res, next) => {
+	try {
+		const accountId = req.user?.id; // Lấy ID từ middleware xác thực
+		// Gọi đến service layer thay vì query trực tiếp
+		const shop = await ShopService.getShopByAccountId(accountId);
+
+		// Sử dụng successResponse để có cấu trúc đồng nhất
+		return successResponse(res, shop, "Lấy thông tin shop thành công");
+	} catch (error) {
+		// Lỗi (bao gồm cả lỗi NOT_FOUND từ service) sẽ được chuyển đến errorHandler
 		next(error);
 	}
 };
@@ -201,10 +240,24 @@ export const editShop = async (req, res, next) => {
 		const updateData = req.body;
 		const forbidden = ["accountId", "status"];
 		forbidden.forEach((f) => delete updateData[f]);
+	try {
+		const { id } = req.params;
+		const accountId = req.user?.id; // || req.body.accountId;
+		const updateData = req.body;
+		const forbidden = ["accountId", "status"];
+		forbidden.forEach((f) => delete updateData[f]);
 
 		validateObjectId(id, "ID shop");
 		validateObjectId(accountId, "accID");
+		validateObjectId(id, "ID shop");
+		validateObjectId(accountId, "accID");
 
+		const updatedShop = await ShopService.updateShop(id, accountId, updateData);
+		return successResponse(res, updatedShop, "Cập nhật shop thành công");
+	} catch (error) {
+		// ApiError sẽ được xử lý bởi errorHandler middleware
+		next(error);
+	}
 		const updatedShop = await ShopService.updateShop(id, accountId, updateData);
 		return successResponse(res, updatedShop, "Cập nhật shop thành công");
 	} catch (error) {
@@ -217,10 +270,17 @@ export const updateLogo = async (req, res, next) => {
 	try {
 		const { id } = req.params;
 		const accountId = req.user?.id;
+	try {
+		const { id } = req.params;
+		const accountId = req.user?.id;
 
 		if (!req.file) throw ApiError.badRequest("Chưa upload file");
 		const logoUrl = `/uploads/shops/${req.file.filename}`;
+		if (!req.file) throw ApiError.badRequest("Chưa upload file");
+		const logoUrl = `/uploads/shops/${req.file.filename}`;
 
+		validateObjectId(id, "shopID");
+		validateObjectId(accountId, "accID");
 		validateObjectId(id, "shopID");
 		validateObjectId(accountId, "accID");
 
@@ -230,7 +290,17 @@ export const updateLogo = async (req, res, next) => {
 			logoUrl,
 			"logo"
 		);
+		const updatedShop = await ShopService.updateShopImage(
+			id,
+			accountId,
+			logoUrl,
+			"logo"
+		);
 
+		return successResponse(res, updatedShop, "Cập nhật logo shop thành công");
+	} catch (error) {
+		next(error);
+	}
 		return successResponse(res, updatedShop, "Cập nhật logo shop thành công");
 	} catch (error) {
 		next(error);
@@ -243,10 +313,31 @@ export const updateCover = async (req, res, next) => {
 		const accountId = req.user?.id;
 		if (!req.file) throw ApiError.badRequest("Chưa upload file cover");
 		const coverUrl = `/uploads/shops/${req.file.filename}`;
+	try {
+		const { id } = req.params;
+		const accountId = req.user?.id;
+		if (!req.file) throw ApiError.badRequest("Chưa upload file cover");
+		const coverUrl = `/uploads/shops/${req.file.filename}`;
 
 		validateObjectId(id, "shopID");
 		validateObjectId(accountId, "accID");
+		validateObjectId(id, "shopID");
+		validateObjectId(accountId, "accID");
 
+		const updatedShop = await ShopService.updateShopImage(
+			id,
+			accountId,
+			coverUrl,
+			"cover"
+		);
+		return successResponse(
+			res,
+			updatedShop,
+			"Cập nhật cover image shop thành công"
+		);
+	} catch (error) {
+		next(error);
+	}
 		const updatedShop = await ShopService.updateShopImage(
 			id,
 			accountId,
@@ -267,9 +358,17 @@ export const updateDefaultLogo = async (req, res, next) => {
 	try {
 		if (!req.file)
 			return next(ApiError.badRequest("Up cái logo lên coi bro 😎"));
+	try {
+		if (!req.file)
+			return next(ApiError.badRequest("Up cái logo lên coi bro 😎"));
 
 		const targetPath = path.join(process.cwd(), DEFAULT_LOGO);
+		const targetPath = path.join(process.cwd(), DEFAULT_LOGO);
 
+		// 1. Xóa file cũ nếu tồn tại
+		if (fs.existsSync(targetPath)) {
+			fs.unlinkSync(targetPath);
+		}
 		// 1. Xóa file cũ nếu tồn tại
 		if (fs.existsSync(targetPath)) {
 			fs.unlinkSync(targetPath);
@@ -277,7 +376,19 @@ export const updateDefaultLogo = async (req, res, next) => {
 
 		// 2. Ghi đè file mới vào đúng tên
 		fs.renameSync(req.file.path, targetPath);
+		// 2. Ghi đè file mới vào đúng tên
+		fs.renameSync(req.file.path, targetPath);
 
+		return successResponse(
+			res,
+			{
+				logoUrl: DEFAULT_LOGO,
+			},
+			"Logo mới fresh như bug-free code 💅"
+		);
+	} catch (err) {
+		next(err);
+	}
 		return successResponse(
 			res,
 			{
@@ -293,9 +404,16 @@ export const updateDefaultLogo = async (req, res, next) => {
 export const updateDefaultCover = async (req, res, next) => {
 	try {
 		if (!req.file) throw ApiError.badRequest("Up cover đi bạn eyyy");
+	try {
+		if (!req.file) throw ApiError.badRequest("Up cover đi bạn eyyy");
 
 		const targetPath = path.join(process.cwd(), DEFAULT_COVER);
+		const targetPath = path.join(process.cwd(), DEFAULT_COVER);
 
+		// Delete old one
+		if (fs.existsSync(targetPath)) {
+			fs.unlinkSync(targetPath);
+		}
 		// Delete old one
 		if (fs.existsSync(targetPath)) {
 			fs.unlinkSync(targetPath);
@@ -303,7 +421,19 @@ export const updateDefaultCover = async (req, res, next) => {
 
 		// Replace new image with fixed filename
 		fs.renameSync(req.file.path, targetPath);
+		// Replace new image with fixed filename
+		fs.renameSync(req.file.path, targetPath);
 
+		return successResponse(
+			res,
+			{
+				coverUrl: DEFAULT_COVER,
+			},
+			"Ảnh cover default mới đã được cập nhật 🎉"
+		);
+	} catch (err) {
+		next(err);
+	}
 		return successResponse(
 			res,
 			{
@@ -326,9 +456,53 @@ export const getDashboardStats = async (req, res, next) => {
 	}
 };
 
+export const getDashboardStats = async (req, res, next) => {
+	try {
+		const accountId = req.user?.id;
+		const stats = await ShopService.getShopDashboardStats(accountId);
+		return successResponse(res, stats, "Lấy thống kê thành công");
+	} catch (error) {
+		next(error);
+	}
+};
+
 /**
  * Xóa vĩnh viễn shop (hard delete) của user đang đăng nhập
+ * Xóa vĩnh viễn shop (hard delete) của user đang đăng nhập
  */
+export const hardRemoveMyShop = async (req, res, next) => {
+	try {
+		const accountId = req.user?.id;
+		if (!accountId) throw ApiError.unauthorized("Chưa đăng nhập");
+
+		const result = await ShopService.hardDeleteShopByAccount(accountId);
+		return successResponse(res, result, result.message);
+	} catch (error) {
+		next(error);
+	}
+};
+
+export const getMyShopForManagement = async (req, res, next) => {
+	try {
+		const accountId = req.user?.id;
+		const shop = await ShopService.getMyShopForManagement(accountId);
+		return successResponse(res, shop, "Lấy thông tin quản lý shop thành công");
+	} catch (error) {
+		next(error);
+	}
+};
+
+/**
+ * Chủ shop tự khôi phục shop
+ */
+export const restoreMyShop = async (req, res, next) => {
+	try {
+		const accountId = req.user?.id;
+		const result = await ShopService.restoreMyShopByAccount(accountId);
+		return successResponse(res, result, result.message);
+	} catch (error) {
+		next(error);
+	}
 export const hardRemoveMyShop = async (req, res, next) => {
 	try {
 		const accountId = req.user?.id;
@@ -374,6 +548,12 @@ export const changeStatus = async (req, res, next) => {
 		const { status } = req.body;
 		validateObjectId(id, "shopID");
 		validateObjectId(accountId, "accID");
+	try {
+		const { id } = req.params;
+		const accountId = req.user?.id; // || req.body.accountId;
+		const { status } = req.body;
+		validateObjectId(id, "shopID");
+		validateObjectId(accountId, "accID");
 
 		// Gọi xuống service xử lý logic
 		const updatedShop = await ShopService.updateShopStatus(
@@ -381,7 +561,21 @@ export const changeStatus = async (req, res, next) => {
 			accountId,
 			status
 		);
+		// Gọi xuống service xử lý logic
+		const updatedShop = await ShopService.updateShopStatus(
+			id,
+			accountId,
+			status
+		);
 
+		return successResponse(
+			res,
+			updatedShop,
+			"Cập nhật trạng thái shop thành công"
+		);
+	} catch (error) {
+		next(error); // để middleware errorHandler xử lý
+	}
 		return successResponse(
 			res,
 			updatedShop,
@@ -399,11 +593,27 @@ export const deleteNullShops = async (req, res, next) => {
 	try {
 		const adminAccountId = req.user?.id; // || req.body.accountId;
 		validateObjectId(adminAccountId, "adminID");
+	try {
+		const adminAccountId = req.user?.id; // || req.body.accountId;
+		validateObjectId(adminAccountId, "adminID");
 
 		if (!adminAccountId) {
 			return errorResponse(res, "Chưa đăng nhập", 401);
 		}
+		if (!adminAccountId) {
+			return errorResponse(res, "Chưa đăng nhập", 401);
+		}
 
+		const result = await ShopService.deleteShopsWithNullAccount(adminAccountId);
+		return successResponse(
+			res,
+			result,
+			`Super Admin đã xóa ${result.deletedShops} shop null hoặc có accountId không tồn tại khỏi hệ thống và ${result.deletedProducts} sản phẩm thành công`
+		);
+	} catch (error) {
+		// ApiError sẽ được xử lý bởi errorHandler middleware
+		next(error);
+	}
 		const result = await ShopService.deleteShopsWithNullAccount(adminAccountId);
 		return successResponse(
 			res,
@@ -420,10 +630,20 @@ export const restoreShop = async (req, res, next) => {
 	try {
 		const { id } = req.params;
 		const adminAccountId = req.user?.id; // || req.body.accountId;
+	try {
+		const { id } = req.params;
+		const adminAccountId = req.user?.id; // || req.body.accountId;
 
 		validateObjectId(id, "shopID");
 		validateObjectId(adminAccountId, "adminID");
+		validateObjectId(id, "shopID");
+		validateObjectId(adminAccountId, "adminID");
 
+		const result = await ShopService.restoreShop(id, adminAccountId);
+		return successResponse(res, result, "Khôi phục shop thành công");
+	} catch (error) {
+		next(error);
+	}
 		const result = await ShopService.restoreShop(id, adminAccountId);
 		return successResponse(res, result, "Khôi phục shop thành công");
 	} catch (error) {

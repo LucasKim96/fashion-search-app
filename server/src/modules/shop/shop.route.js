@@ -6,6 +6,10 @@ import {
 	uploadShopImage,
 	authMiddleware,
 	uploadShopDefaultImage,
+	validateShop,
+	uploadShopImage,
+	authMiddleware,
+	uploadShopDefaultImage,
 } from "../../middlewares/index.js";
 import { isAdminOrSuperAdmin } from "../../middlewares/role.middleware.js";
 
@@ -35,12 +39,25 @@ ownerRouter.put(
 	"/:id/logo",
 	uploadShopImage.single("logo"),
 	ShopController.updateLogo
+	"/:id/logo",
+	uploadShopImage.single("logo"),
+	ShopController.updateLogo
 );
 ownerRouter.put(
 	"/:id/cover",
 	uploadShopImage.single("cover"),
 	ShopController.updateCover
+	"/:id/cover",
+	uploadShopImage.single("cover"),
+	ShopController.updateCover
 );
+ownerRouter.delete("/hard-delete/mine", ShopController.hardRemoveMyShop);
+// Route để lấy thông tin quản lý
+ownerRouter.get("/management", ShopController.getMyShopForManagement);
+ownerRouter.get("/dashboard-stats", ShopController.getDashboardStats);
+// Route để chủ shop tự đóng cửa hàng
+ownerRouter.patch("/close/mine", ShopController.closeMyShop);
+ownerRouter.patch("/reopen/mine", ShopController.reopenMyShop);
 ownerRouter.delete("/hard-delete/mine", ShopController.hardRemoveMyShop);
 // Route để lấy thông tin quản lý
 ownerRouter.get("/management", ShopController.getMyShopForManagement);
@@ -61,8 +78,14 @@ adminRouter.put(
 	"/default-logo",
 	uploadShopDefaultImage.single("defaultLogo"),
 	ShopController.updateDefaultLogo
+	"/default-logo",
+	uploadShopDefaultImage.single("defaultLogo"),
+	ShopController.updateDefaultLogo
 );
 adminRouter.put(
+	"/default-cover",
+	uploadShopDefaultImage.single("defaultCover"),
+	ShopController.updateDefaultCover
 	"/default-cover",
 	uploadShopDefaultImage.single("defaultCover"),
 	ShopController.updateDefaultCover

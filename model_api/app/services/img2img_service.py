@@ -229,6 +229,7 @@ from app.utils.timer import Timer
 
 class Img2ImgService:
     def __init__(self, device=DEVICE):
+    def __init__(self, device=DEVICE):
         self.device = device
         self.backbone = None
         
