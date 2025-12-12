@@ -9,6 +9,7 @@ env/
 
 # --- Model Weights ---
 weights/
+model_api/*.zip
 models/
 *.pt
 *.pth
