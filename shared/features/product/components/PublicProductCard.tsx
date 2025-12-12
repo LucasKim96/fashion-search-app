@@ -21,14 +21,32 @@ export const PublicProductCard: React.FC<PublicProductCardProps> = ({
 
 	const displayName = p.name || p.pdName || "Sản phẩm";
 
-	const displayImage =
-		p.thumbnail || (p.images && p.images.length > 0 ? p.images[0] : "");
+	// const displayImage =
+	// 	p.thumbnail || (p.images && p.images.length > 0 ? p.images[0] : "");
 
-	// Xử lý riêng cho kết quả tìm kiếm
-	const isSearchResult = "similarity" in product;
+	// // Xử lý riêng cho kết quả tìm kiếm
+	// const isSearchResult = "similarity" in product;
+	// const similarity = isSearchResult
+	// 	? (product as ProductSearchResult).similarity
+	// 	: 0;
+
+	const isSearchResult = "similarity" in product && "matchedImage" in product;
 	const similarity = isSearchResult
 		? (product as ProductSearchResult).similarity
 		: 0;
+
+	let displayImage = "";
+
+	// Ưu tiên 1: Nếu là kết quả tìm kiếm và có matchedImage, hãy dựng URL đầy đủ
+	if (isSearchResult && p.matchedImage && p._id) {
+		// Dựng đường dẫn ảnh dựa trên product ID và tên file ảnh đã khớp
+		displayImage = `/uploads/products/${p.matchedImage}`;
+	}
+	// Ưu tiên 2: Nếu không, dùng logic cũ (thumbnail hoặc ảnh đầu tiên)
+	else {
+		displayImage =
+			p.thumbnail || (p.images && p.images.length > 0 ? p.images[0] : "");
+	}
 
 	return (
 		<Link
