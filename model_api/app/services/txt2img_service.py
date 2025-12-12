@@ -21,6 +21,12 @@ from app.utils.timer import Timer
 # Import kiến trúc model vừa tạo
 from app.backbones.phoclip_arch import PhoCLIP 
 
+import cv2 # Thêm thư viện OpenCV để xử lý ảnh NumPy
+
+# THÊM CÁC IMPORT CẦN THIẾT
+from app.services.yolo_service import yolo_service
+from app.services.preprocess import auto_crop_for_seller, resize_with_padding
+
 class Text2ImgService:
     def __init__(self):
         self.device = DEVICE
@@ -99,16 +105,67 @@ class Text2ImgService:
             logger.error(f"Text embed error: {e}")
             raise e
 
-    def embed_image(self, image_data: Union[str, IO]):
+    # def embed_image(self, image_data: Union[str, IO]):
+    #     """
+    #     Chuyển Ảnh -> Vector.
+    #     Có thể nhận vào đường dẫn file (str) hoặc file-like object (IO).
+    #     """
+    #     try:
+    #         # Mở ảnh trực tiếp từ dữ liệu được truyền vào
+    #         image = Image.open(image_data).convert("RGB")
+
+    #         image_tensor = self.transform(image).unsqueeze(0).to(self.device)
+            
+    #         with torch.no_grad():
+    #             features = self.model.image_encoder(image_tensor)
+            
+    #         vector = features.cpu().numpy().astype('float32')
+    #         norm = np.linalg.norm(vector)
+    #         if norm > 0: vector = vector / norm
+                
+    #         return vector
+    #     except Exception as e:
+    #         # Sửa log để không bị lỗi nếu image_data không phải là string
+    #         logger.error(f"Error embedding image: {e}")
+    #         return None
+
+    def embed_image(self, image_data: Union[str, IO], target_group: str):
         """
-        Chuyển Ảnh -> Vector.
-        Có thể nhận vào đường dẫn file (str) hoặc file-like object (IO).
+        Chuyển Ảnh -> Vector, CÓ ÁP DỤNG SMART CROP VÀ RESIZE PADDING.
+        - image_data: Đường dẫn hoặc file object.
+        - target_group: Nhóm sản phẩm người bán chọn ('upper_body', 'full_body', ...).
         """
         try:
-            # Mở ảnh trực tiếp từ dữ liệu được truyền vào
-            image = Image.open(image_data).convert("RGB")
+            # BƯỚC 1: Mở ảnh bằng PIL và chuyển sang NumPy (định dạng RGB)
+            image_pil = Image.open(image_data).convert("RGB")
+            image_np_rgb = np.array(image_pil)
+            
+            # Lấy model YOLO đã được load sẵn từ service
+            yolo_model = yolo_service.model
+            if not yolo_model:
+                raise RuntimeError("YOLO model is not available.")
 
-            image_tensor = self.transform(image).unsqueeze(0).to(self.device)
+            # BƯỚC 2: Áp dụng logic AUTO CROP y hệt như img2img_service
+            logger.info(f"[Txt2Img] Running auto_crop for group: '{target_group}'")
+            cropped_np, method = auto_crop_for_seller(yolo_model, image_np_rgb, target_group)
+            
+            logger.info(f"[Txt2Img] Image cropped using method: '{method}'")
+            if cropped_np is None or cropped_np.size == 0:
+                logger.error("[Txt2Img] Cropping failed, returned an empty image.")
+                return None
+
+            # BƯỚC 3: Áp dụng RESIZE WITH PADDING y hệt như img2img_service
+            img_padded = resize_with_padding(cropped_np, target_size=INPUT_SIZE)
+            if img_padded is None:
+                logger.error("[Txt2Img] Resize with padding failed.")
+                return None
+
+            # BƯỚC 4: Chuyển ảnh đã xử lý (NumPy) trở lại dạng PIL để đưa vào transform
+            # Vì đầu vào là RGB nên đầu ra của các bước trên cũng là RGB, không cần cvtColor
+            final_pil_image = Image.fromarray(img_padded)
+
+            # BƯỚC 5: Áp dụng transform và tính toán embedding (logic cũ)
+            image_tensor = self.transform(final_pil_image).unsqueeze(0).to(self.device)
             
             with torch.no_grad():
                 features = self.model.image_encoder(image_tensor)
@@ -118,9 +175,9 @@ class Text2ImgService:
             if norm > 0: vector = vector / norm
                 
             return vector
+            
         except Exception as e:
-            # Sửa log để không bị lỗi nếu image_data không phải là string
-            logger.error(f"Error embedding image: {e}")
+            logger.error(f"Error embedding image with smart crop for Txt2Img: {e}", exc_info=True)
             return None
 
 # Singleton Instance

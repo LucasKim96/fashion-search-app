@@ -1,3 +1,4 @@
+# model_api\app\services\index_service.py
 import faiss
 import numpy as np
 import os
