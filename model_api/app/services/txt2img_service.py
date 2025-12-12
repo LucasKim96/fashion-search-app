@@ -183,6 +183,7 @@
 # # Singleton Instance
 # txt2img_service = Text2ImgService()
 
+
 # /model_api/app/services/txt2img_service.py
 
 import os

@@ -482,7 +482,7 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({
 													? "text-indigo-700"
 													: "text-indigo-500"
 											)}>
-											Quần/Váy
+											Quần/Chân váy
 										</span>
 									</button>
 
@@ -510,7 +510,7 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({
 													? "text-indigo-700"
 													: "text-indigo-500"
 											)}>
-											Cả bộ
+											Toàn thân
 										</span>
 									</button>
 								</div>
