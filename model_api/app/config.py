@@ -15,6 +15,7 @@ UPLOAD_ROOT_DIR = BASE_DIR.parent / "server"
 YOLO_WEIGHT_PATH = os.getenv("YOLO_WEIGHT_PATH", str(BASE_DIR / "weights/best.pt"))
 # ARCFACE_WEIGHT_PATH = os.getenv("ARCFACE_WEIGHT_PATH", str(BASE_DIR / "weights/checkpoint_epoch_200.pth"))
 RESNET_WEIGHT_PATH = os.getenv("RESNET_WEIGHT_PATH", str(BASE_DIR / "weights/resnet50_checkpoint_epoch_200.pth"))
+RESNET101_WEIGHT_PATH = os.getenv("RESNET101_WEIGHT_PATH", str(BASE_DIR / "weights/resnet101_checkpoint_epoch_200.pth"))
 VIT_WEIGHT_PATH = os.getenv("VIT_WEIGHT_PATH", str(BASE_DIR / "weights/vit_arcface_checkpoint_epoch_200.pth"))
 
 # Index Paths
@@ -47,7 +48,7 @@ DEVICE = os.getenv("DEVICE", "cuda" if torch.cuda.is_available() else "cpu")
 # --- PREPROCESSING CONFIG ---
 # --- ADDED: Lựa chọn backbone cho Image-to-Image Search ---
 # Hỗ trợ: 'ResNet_50', 'ResNet_101', 'ViT'
-IMG2IMG_BACKBONE = os.getenv("IMG2IMG_BACKBONE", "ResNet_50")
+IMG2IMG_BACKBONE = os.getenv("IMG2IMG_BACKBONE", "ResNet_101")
 INPUT_SIZE = [224, 224]
 RGB_MEAN = [0.5, 0.5, 0.5]
 RGB_STD = [0.5, 0.5, 0.5]
@@ -57,9 +58,7 @@ YOLO_CONF_THRESHOLD = 0.5
 YOLO_CLASS_NAMES = [
     "shirt, blouse", "top, t-shirt, sweatshirt", "sweater", "cardigan",
     "jacket", "vest", "pants", "shorts", "skirt", "coat", "dress",
-    "jumpsuit", "cape", "glasses", "hat", "headband", "tie", "glove",
-    "watch", "belt", "leg warmer", "tights, stockings", "sock", "shoe",
-    "bag, wallet", "scarf", "umbrella"
+    "jumpsuit"
 ]
 
 YOLO_CLASS_GROUPS = {

@@ -3,7 +3,7 @@ import os
 import torch
 import numpy as np
 from PIL import Image
-from transformers import AutoTokenizer # Dùng Tokenizer thay vì Processor
+from transformers import AutoTokenizer
 from torchvision import transforms
 from typing import Union, IO
 
@@ -13,12 +13,10 @@ from app.config import (
     TEXT2IMG_BASE_ARCH, 
     TEXT2IMG_EMBEDDING_DIM, 
     DEVICE,
-    RGB_MEAN, RGB_STD, INPUT_SIZE, UPLOAD_ROOT_DIR
+    RGB_MEAN, RGB_STD, INPUT_SIZE
 )
 from app.utils.logger import logger
 from app.utils.timer import Timer
-
-# Import kiến trúc model vừa tạo
 from app.backbones.phoclip_arch import PhoCLIP 
 
 class Text2ImgService:
@@ -26,8 +24,9 @@ class Text2ImgService:
         self.device = DEVICE
         self.model = None
         self.tokenizer = None
-        
-        # Transform (Giữ nguyên)
+        # 🔽 THÊM DÒNG NÀY: Cờ trạng thái để kiểm tra model đã sẵn sàng chưa 🔽
+        self.is_ready = False 
+
         self.transform = transforms.Compose([
             transforms.Resize((INPUT_SIZE[0], INPUT_SIZE[1])),
             transforms.ToTensor(),
@@ -38,88 +37,85 @@ class Text2ImgService:
 
     def load_model(self):
         with Timer("Load PhoCLIP Model"):
-            logger.info(f"--- LOADING TEXT2IMG MODEL (Custom PhoCLIP) ---")
+            logger.info("--- LOADING TEXT2IMG MODEL (Custom PhoCLIP) ---")
             try:
-                # 1. Load Tokenizer (Vẫn dùng của HuggingFace cho text)
+                # 🔽 THAY ĐỔI: Kiểm tra file tồn tại trước 🔽
+                if not os.path.exists(TEXT2IMG_MODEL_PATH):
+                    # Ném lỗi cụ thể để khối except bên dưới có thể bắt
+                    raise FileNotFoundError(f"Checkpoint not found at {TEXT2IMG_MODEL_PATH}")
+
+                # Các dòng dưới chỉ chạy nếu file tồn tại
                 self.tokenizer = AutoTokenizer.from_pretrained(TEXT2IMG_BASE_ARCH, use_fast=False)
-
-                # 2. Khởi tạo Model từ Class Custom (Đảm bảo cấu trúc y hệt lúc train)
                 self.model = PhoCLIP(embed_dim=TEXT2IMG_EMBEDDING_DIM).to(self.device)
-
-                # 3. Load Weights
-                if os.path.exists(TEXT2IMG_MODEL_PATH):
-                    logger.info(f"Loading weights from {TEXT2IMG_MODEL_PATH}")
-                    checkpoint = torch.load(TEXT2IMG_MODEL_PATH, map_location=self.device)
-                    
-                    # Lấy state_dict
-                    state_dict = checkpoint.get("model_state", checkpoint)
-                    
-                    # Load vào model (Bây giờ cấu trúc khớp 100% nên strict=True cũng được)
-                    self.model.load_state_dict(state_dict, strict=False)
-                    
-                    # Load temperature nếu có
-                    if "temperature" in checkpoint:
-                        self.model.temperature.data = torch.tensor(checkpoint["temperature"]).to(self.device)
-                else:
-                    logger.error(f"❌ Checkpoint not found at {TEXT2IMG_MODEL_PATH}!")
-                    raise FileNotFoundError("Model file missing")
+                
+                logger.info(f"Loading weights from {TEXT2IMG_MODEL_PATH}")
+                checkpoint = torch.load(TEXT2IMG_MODEL_PATH, map_location=self.device)
+                state_dict = checkpoint.get("model_state", checkpoint)
+                self.model.load_state_dict(state_dict, strict=False)
+                
+                if "temperature" in checkpoint:
+                    self.model.temperature.data = torch.tensor(checkpoint["temperature"]).to(self.device)
 
                 self.model.eval()
                 
-                # --- KIỂM TRA LẠI ---
+                # 🔽 THÊM DÒNG NÀY: Đặt cờ thành True khi load thành công 🔽
+                self.is_ready = True 
                 logger.info(f"✅ PhoCLIP loaded successfully. Dim: {TEXT2IMG_EMBEDDING_DIM}")
 
+            # 🔽 THAY ĐỔI: Xóa `raise RuntimeError` và thay bằng khối `except` chi tiết 🔽
+            except FileNotFoundError as e:
+                # Nếu không tìm thấy file, ghi cảnh báo và tiếp tục chạy (KHÔNG CRASH)
+                logger.warning("--- ⚠️  TEXT2IMG MODEL NOT FOUND ---")
+                logger.warning(str(e))
+                logger.warning("Text-to-Image search feature will be DISABLED.")
+# Đảm bảo is_ready là False
+                self.is_ready = False
+            
             except Exception as e:
-                logger.error(f"Failed to load PhoCLIP: {e}")
-                raise RuntimeError("PhoCLIP load failed")
+                # Bắt các lỗi khác có thể xảy ra khi load model (ví dụ file hỏng)
+                logger.error(f"--- ❌ FAILED TO LOAD TEXT2IMG MODEL ---")
+                logger.error(f"An unexpected error occurred: {e}")
+                logger.error("Text-to-Image search feature will be DISABLED.")
+                # Đảm bảo is_ready là False
+                self.is_ready = False
+
 
     def embed_text(self, text: str):
         """Chuyển Text -> Vector"""
+        # 🔽 THÊM KHỐI NÀY: Kiểm tra xem model đã sẵn sàng chưa 🔽
+        if not self.is_ready:
+            logger.error("Text2Img model is not available. Cannot embed text.")
+            raise RuntimeError("Text2Img service is unavailable.")
+        
         try:
-            # Tokenize
-            tokens = self.tokenizer(
-                text, 
-                padding="max_length", 
-                truncation=True, 
-                max_length=64, # Khớp với MAX_LEN lúc train
-                return_tensors="pt"
-            ).to(self.device)
-            
+            tokens = self.tokenizer(text, padding="max_length", truncation=True, max_length=64, return_tensors="pt").to(self.device)
             with torch.no_grad():
-                # Gọi text_encoder của PhoCLIP
                 features = self.model.text_encoder(tokens["input_ids"], tokens["attention_mask"])
-            
             vector = features.cpu().numpy().astype('float32')
-            # Normalize (Code train có F.normalize ở forward, nên ở đây mình cũng phải normalize)
             norm = np.linalg.norm(vector)
             if norm > 0: vector = vector / norm
-                
             return vector
         except Exception as e:
             logger.error(f"Text embed error: {e}")
             raise e
 
     def embed_image(self, image_data: Union[str, IO]):
-        """
-        Chuyển Ảnh -> Vector.
-        Có thể nhận vào đường dẫn file (str) hoặc file-like object (IO).
-        """
+        """Chuyển Ảnh -> Vector."""
+        # 🔽 THÊM KHỐI NÀY: Kiểm tra xem model đã sẵn sàng chưa 🔽
+        if not self.is_ready:
+            logger.error("Text2Img model is not available. Cannot embed image.")
+            return None # Trả về None để báo hiệu cho router
+        
         try:
-            # Mở ảnh trực tiếp từ dữ liệu được truyền vào
             image = Image.open(image_data).convert("RGB")
-
             image_tensor = self.transform(image).unsqueeze(0).to(self.device)
-            
             with torch.no_grad():
                 features = self.model.image_encoder(image_tensor)
-            
             vector = features.cpu().numpy().astype('float32')
             norm = np.linalg.norm(vector)
             if norm > 0: vector = vector / norm
-                
             return vector
         except Exception as e:
-            # Sửa log để không bị lỗi nếu image_data không phải là string
             logger.error(f"Error embedding image: {e}")
             return None
 

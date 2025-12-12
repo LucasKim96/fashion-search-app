@@ -114,6 +114,7 @@ export const SellerProductDetailModal: React.FC<
 						<ProductDescSection
 							shopInfo={shopInfo}
 							isShop={false}
+							isAdmin={true}
 							currentMode={"view"}
 						/>
 					}

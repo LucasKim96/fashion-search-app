@@ -75,8 +75,7 @@ async def delete_batch(payload: TextBatchDeleteRequest):
     except Exception as e:
         logger.error(f"[TextBatchDelete] Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-# 4. API DELETE PRODUCT (Xóa toàn bộ SP)
+        # 4. API DELETE PRODUCT (Xóa toàn bộ SP)
 @router.post("/delete", response_model=BaseResponse)
 async def delete_product(payload: TextDeleteRequest):
     try:
