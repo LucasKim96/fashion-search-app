@@ -183,6 +183,38 @@ export const verifyToken = (token) => {
 	}
 };
 
+/**
+ * TÁI SỬ DỤNG LOGIC TẠO ACCESS TOKEN
+ * Hàm này nhận vào một đối tượng `account` (đã được populate `roles`)
+ * và trả về một accessToken mới.
+ */
+export const generateAccessToken = (account) => {
+	// Đảm bảo account và roles hợp lệ trước khi tạo token
+	if (
+		!account ||
+		!account.roles ||
+		!Array.isArray(account.roles) ||
+		account.roles.length === 0
+	) {
+		throw new Error(
+			"Đối tượng account không hợp lệ hoặc chưa populate roles để tạo token."
+		);
+	}
+
+	// Sao chép y hệt logic tạo payload từ hàm login
+	const payload = {
+		id: account._id,
+		userInfoId: account.userInfoId,
+		roleNames: account.roles.map((r) => r.roleName),
+		maxLevel: Math.max(...account.roles.map((r) => r.level)),
+	};
+
+	// Ký và trả về token
+	return jwt.sign(payload, JWT_SECRET, {
+		expiresIn: JWT_EXPIRES_IN,
+	});
+};
+
 // Đổi mật khẩu
 export const changePassword = async (userId, oldPassword, newPassword) => {
 	try {
