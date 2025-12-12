@@ -664,29 +664,47 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({
 };
 // Component phụ cho đẹp code Dashboard
 const DashboardBox: React.FC<{
-	color: string;
+	color: "emerald" | "blue" | "orange" | "purple";
 	icon: any;
 	label: React.ReactNode;
 	value: React.ReactNode;
 }> = ({ color, icon: Icon, label, value }) => {
+	// 1. Tạo một object để map màu với các class Tailwind đầy đủ
+	const colorClasses = {
+		emerald: {
+			circle: "bg-emerald-400",
+			box: "from-emerald-50 to-emerald-100",
+			text: "text-emerald-600",
+		},
+		blue: {
+			circle: "bg-blue-400",
+			box: "from-blue-50 to-blue-100",
+			text: "text-blue-600",
+		},
+		orange: {
+			circle: "bg-orange-400",
+			box: "from-orange-50 to-orange-100",
+			text: "text-orange-600",
+		},
+		purple: {
+			circle: "bg-purple-400",
+			box: "from-purple-50 to-purple-100",
+			text: "text-purple-600",
+		},
+		// Thêm các màu khác nếu cần
+	};
+
+	// 2. Lấy ra bộ class tương ứng với màu được truyền vào.
+	// Cung cấp một giá trị mặc định để tránh lỗi nếu color không tồn tại
+	const selectedColor = colorClasses[color] || colorClasses.blue;
+
+	// 3. Sử dụng các class đã được chọn
 	const outerClass =
 		"group relative overflow-hidden p-4 bg-white rounded-2xl border border-gray-100 shadow-md hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-1";
 
-	const circleClass =
-		"absolute top-0 right-0 w-24 h-24 " +
-		"bg-" +
-		color +
-		"-400 rounded-full -mr-10 -mt-10 opacity-20 transition-transform duration-500 group-hover:scale-125";
+	const circleClass = `absolute top-0 right-0 w-24 h-24 ${selectedColor.circle} rounded-full -mr-10 -mt-10 opacity-20 transition-transform duration-500 group-hover:scale-125`;
 
-	const boxInnerClass =
-		"w-14 h-14 rounded-2xl bg-gradient-to-br " +
-		"from-" +
-		color +
-		"-50 to-" +
-		color +
-		"-100 text-" +
-		color +
-		"-600 flex items-center justify-center shadow-inner";
+	const boxInnerClass = `w-14 h-14 rounded-2xl bg-gradient-to-br ${selectedColor.box} ${selectedColor.text} flex items-center justify-center shadow-inner`;
 
 	return (
 		<div className={outerClass}>
@@ -707,3 +725,47 @@ const DashboardBox: React.FC<{
 		</div>
 	);
 };
+// const DashboardBox: React.FC<{
+// 	color: string;
+// 	icon: any;
+// 	label: React.ReactNode;
+// 	value: React.ReactNode;
+// }> = ({ color, icon: Icon, label, value }) => {
+// 	const outerClass =
+// 		"group relative overflow-hidden p-4 bg-white rounded-2xl border border-gray-100 shadow-md hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-1";
+
+// 	const circleClass =
+// 		"absolute top-0 right-0 w-24 h-24 " +
+// 		"bg-" +
+// 		color +
+// 		"-400 rounded-full -mr-10 -mt-10 opacity-20 transition-transform duration-500 group-hover:scale-125";
+
+// 	const boxInnerClass =
+// 		"w-14 h-14 rounded-2xl bg-gradient-to-br " +
+// 		"from-" +
+// 		color +
+// 		"-50 to-" +
+// 		color +
+// 		"-100 text-" +
+// 		color +
+// 		"-600 flex items-center justify-center shadow-inner";
+
+// 	return (
+// 		<div className={outerClass}>
+// 			<div className={circleClass} />
+// 			<div className="relative flex items-center gap-4">
+// 				<div className={boxInnerClass}>
+// 					<Icon size={24} strokeWidth={2} className="drop-shadow-sm" />
+// 				</div>
+// 				<div className="flex flex-col">
+// 					<span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest mb-0.5">
+// 						{label}
+// 					</span>
+// 					<span className="text-base font-black text-gray-800 tracking-tight">
+// 						{value}
+// 					</span>
+// 				</div>
+// 			</div>
+// 		</div>
+// 	);
+// };

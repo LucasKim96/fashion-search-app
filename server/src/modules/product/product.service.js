@@ -539,7 +539,7 @@ export const deleteProductWithVariantsService = async (productId) => {
 					fs.unlinkSync(filePath);
 				}
 			}
-
+			await ProductAIConfig.deleteOne({ productId }).session(session);
 			await ProductVariant.deleteMany({ productId }).session(session);
 			await Product.findByIdAndDelete(productId).session(session);
 		});

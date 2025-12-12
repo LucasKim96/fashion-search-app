@@ -18,12 +18,14 @@ interface ShopInfo {
 interface ProductDescSectionProps {
 	currentMode: "view" | "create" | "edit";
 	isShop?: boolean;
+	isAdmin?: boolean;
 	shopInfo?: ShopInfo | null;
 }
 
 export const ProductDescSection: React.FC<ProductDescSectionProps> = ({
 	shopInfo,
 	isShop = false,
+	isAdmin = false,
 	currentMode,
 }) => {
 	const {
@@ -33,11 +35,15 @@ export const ProductDescSection: React.FC<ProductDescSectionProps> = ({
 	} = useFormContext();
 	const [imageError, setImageError] = useState(false);
 
-	// ✨ 2. Khởi tạo router
+	// 2. Khởi tạo router
 	const router = useRouter();
 
 	// Lấy giá trị mô tả hiện tại từ form để hiển thị ở chế độ View
 	const descriptionValue = watch("description");
+
+	const shopRoute = isAdmin
+		? `/admin/shop/${shopInfo?._id}`
+		: `/shop/${shopInfo?._id}`;
 
 	return (
 		<div className="space-y-8">
@@ -49,7 +55,7 @@ export const ProductDescSection: React.FC<ProductDescSectionProps> = ({
 
 					<div className="relative flex items-center gap-5 p-5 border-l-4 border-blue-500">
 						{/* Avatar */}
-						{/* ✨ 3. Thêm onClick vào khung Avatar */}
+						{/* 3. Thêm onClick vào khung Avatar */}
 						<div
 							className="relative cursor-pointer"
 							onClick={() => router.push(`/shop/${shopInfo._id}`)}>
@@ -80,7 +86,7 @@ export const ProductDescSection: React.FC<ProductDescSectionProps> = ({
 								Nhà cung cấp
 							</span>
 
-							{/* ✨ 4. Thêm onClick và style hover vào Tên Shop */}
+							{/* 4. Thêm onClick và style hover vào Tên Shop */}
 							<h4
 								className="font-extrabold text-gray-800 text-xl truncate leading-tight cursor-pointer hover:text-blue-600 transition-colors"
 								onClick={() => router.push(`/shop/${shopInfo._id}`)}>
@@ -109,17 +115,19 @@ export const ProductDescSection: React.FC<ProductDescSectionProps> = ({
 							</div>
 						</div>
 
-						{/* ✨ 5. Thêm onClick và type="button" vào Nút Xem Shop */}
-						<button
-							type="button" // Quan trọng: Để không bị submit form nếu đang trong form
-							onClick={() => router.push(`/shop/${shopInfo._id}`)}
-							className="group/btn flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-50 text-blue-600 font-bold text-sm hover:bg-blue-600 hover:text-white transition-all duration-300">
-							Xem Shop
-							<ExternalLink
-								size={16}
-								className="group-hover/btn:translate-x-0.5 transition-transform"
-							/>
-						</button>
+						{/* 5. Thêm onClick và type="button" vào Nút Xem Shop */}
+						{!isAdmin && (
+							<button
+								type="button" // Quan trọng: Để không bị submit form nếu đang trong form
+								onClick={() => router.push(shopRoute)}
+								className="group/btn flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-50 text-blue-600 font-bold text-sm hover:bg-blue-600 hover:text-white transition-all duration-300">
+								Xem Shop
+								<ExternalLink
+									size={16}
+									className="group-hover/btn:translate-x-0.5 transition-transform"
+								/>
+							</button>
+						)}
 					</div>
 				</div>
 			)}

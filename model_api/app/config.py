@@ -15,6 +15,7 @@ UPLOAD_ROOT_DIR = BASE_DIR.parent / "server"
 YOLO_WEIGHT_PATH = os.getenv("YOLO_WEIGHT_PATH", str(BASE_DIR / "weights/best.pt"))
 # ARCFACE_WEIGHT_PATH = os.getenv("ARCFACE_WEIGHT_PATH", str(BASE_DIR / "weights/checkpoint_epoch_200.pth"))
 RESNET_WEIGHT_PATH = os.getenv("RESNET_WEIGHT_PATH", str(BASE_DIR / "weights/resnet50_checkpoint_epoch_200.pth"))
+RESNET101_WEIGHT_PATH = os.getenv("RESNET101_WEIGHT_PATH", str(BASE_DIR / "weights/resnet101_checkpoint_epoch_200.pth"))
 VIT_WEIGHT_PATH = os.getenv("VIT_WEIGHT_PATH", str(BASE_DIR / "weights/vit_arcface_checkpoint_epoch_200.pth"))
 
 # Index Paths
@@ -56,10 +57,7 @@ YOLO_CONF_THRESHOLD = 0.5
 
 YOLO_CLASS_NAMES = [
     "shirt, blouse", "top, t-shirt, sweatshirt", "sweater", "cardigan",
-    "jacket", "vest", "pants", "shorts", "skirt", "coat", "dress",
-    "jumpsuit", "cape", "glasses", "hat", "headband", "tie", "glove",
-    "watch", "belt", "leg warmer", "tights, stockings", "sock", "shoe",
-    "bag, wallet", "scarf", "umbrella"
+    "jacket", "vest", "pants", "shorts", "skirt", "coat", "dress", "jumpsuit"
 ]
 
 YOLO_CLASS_GROUPS = {

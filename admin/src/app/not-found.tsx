@@ -108,7 +108,7 @@ export default function NotFoundPage() {
 	useEffect(() => {
 		// Nếu đếm về 0 thì chuyển trang
 		if (countdown === 0) {
-			router.push("/");
+			router.push("/admin/dashboard");
 			return;
 		}
 
@@ -161,7 +161,7 @@ export default function NotFoundPage() {
 
 				{/* Button về ngay lập tức */}
 				<button
-					onClick={() => router.push("/")}
+					onClick={() => router.push("/admin/dashboard")}
 					className="mt-8 px-8 py-3 bg-white text-purple-900 font-bold rounded-full shadow-[0_0_20px_rgba(255,255,255,0.3)] hover:scale-105 hover:shadow-[0_0_30px_rgba(255,255,255,0.5)] transition-all duration-300 active:scale-95">
 					Về trang chủ ngay
 				</button>
