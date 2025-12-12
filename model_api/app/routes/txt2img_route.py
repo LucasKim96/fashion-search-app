@@ -36,35 +36,70 @@ async def search_by_text(payload: TextSearchRequest):
         logger.error(f"[TextSearch] Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# 2. API INDEX (ADD/UPDATE)
+# # 2. API INDEX (ADD/UPDATE)
+# @router.post("/index", response_model=BaseResponse)
+# async def index_product(
+#     product_id: str = Form(...),
+#     image_path: str = Form(...),
+#     image: UploadFile = File(...) # Đây là cách FastAPI nhận file
+# ):
+#     try:
+#         # B1: Service Model -> Đọc nội dung file ảnh VÀ chuyển thành vector
+#         #     Chúng ta sẽ truyền trực tiếp nội dung file, không phải đường dẫn
+#         vector = txt2img_service.embed_image(image.file) # Truyền image.file (một file-like object)
+        
+#         if vector is None:
+#             # Thông báo lỗi rõ hơn
+#             raise HTTPException(status_code=400, detail=f"Could not process the uploaded image for {image_path}")
+
+#         # B2: Service Index -> Lưu Vector + ID + Path vào FAISS & Map
+#         #     Hàm này vẫn nhận 3 tham số như cũ
+#         text_index_service.add_product(vector, product_id, image_path)
+        
+#         return {
+#             "success": True, 
+#             "message": f"Product {product_id} with image {image_path} indexed successfully"
+#         }
+#     except HTTPException as he:
+#         raise he
+#     except Exception as e:
+#         logger.error(f"[TextIndex] Error: {e}")
+#         raise HTTPException(status_code=500, detail=str(e))
+
 @router.post("/index", response_model=BaseResponse)
 async def index_product(
     product_id: str = Form(...),
     image_path: str = Form(...),
-    image: UploadFile = File(...) # Đây là cách FastAPI nhận file
+    # THÊM MỚI: Nhận 'target_group' từ request của client
+    target_group: str = Form(...),
+    image: UploadFile = File(...)
 ):
     try:
-        # B1: Service Model -> Đọc nội dung file ảnh VÀ chuyển thành vector
-        #     Chúng ta sẽ truyền trực tiếp nội dung file, không phải đường dẫn
-        vector = txt2img_service.embed_image(image.file) # Truyền image.file (một file-like object)
+        # SỬA ĐỔI: Truyền cả image.file và target_group vào hàm embed_image
+        vector = txt2img_service.embed_image(
+            image_data=image.file, 
+            target_group=target_group # <-- Đã thêm tham số còn thiếu
+        )
         
         if vector is None:
-            # Thông báo lỗi rõ hơn
-            raise HTTPException(status_code=400, detail=f"Could not process the uploaded image for {image_path}")
+            raise HTTPException(status_code=400, detail=f"Could not process the uploaded image for {image_path}. Vector generation failed.")
 
-        # B2: Service Index -> Lưu Vector + ID + Path vào FAISS & Map
-        #     Hàm này vẫn nhận 3 tham số như cũ
-        text_index_service.add_product(vector, product_id, image_path)
+        success = text_index_service.add_product(vector, product_id, image_path)
         
+        if not success:
+            raise HTTPException(status_code=500, detail=f"Failed to add product {product_id} to index.")
+
         return {
             "success": True, 
-            "message": f"Product {product_id} with image {image_path} indexed successfully"
+            "message": f"Product {product_id} with image {image_path} indexed successfully for Txt2Img"
         }
     except HTTPException as he:
+        # Ném lại các lỗi HTTPException đã được xử lý (như 400, 500 ở trên)
         raise he
     except Exception as e:
-        logger.error(f"[TextIndex] Error: {e}")
+        logger.error(f"[TextIndex] Unhandled error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
     
 # 3. API BATCH DELETE (Xóa nhiều ảnh cụ thể)
 @router.post("/delete-batch", response_model=BaseResponse)

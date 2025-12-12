@@ -293,6 +293,15 @@ export const createProductWithVariantsService = async (
 			}
 		});
 
+		// console.log("--- AI Sync Debug ---");
+		// console.log("Product created successfully. Checking what to sync...");
+		// console.log("Value of targetGroup:", targetGroup);
+		// console.log("Value of createdProduct.images:", createdProduct?.images);
+		// console.log(
+		// 	"Value of createdVariants:",
+		// 	createdVariants.map((v) => v.image)
+		// );
+
 		// Đồng bộ AI cho Img2Img
 		if (createdProduct && createdProduct.images?.length > 0) {
 			indexImagesInBackground(
@@ -308,7 +317,9 @@ export const createProductWithVariantsService = async (
 			...createdVariants.map((v) => v.image).filter(Boolean),
 		];
 		if (createdProduct && allImagePaths.length > 0) {
-			syncEmbeddings(createdProduct._id, allImagePaths);
+			syncEmbeddings(createdProduct._id, allImagePaths, targetGroup);
+		} else {
+			console.log(">>> Condition NOT MET for Txt2Img.");
 		}
 
 		return {
@@ -838,7 +849,7 @@ export const reindexTextSearchService = async () => {
 
 		const validImages = imagesToIndex.filter(isFileExist);
 		if (validImages.length > 0) {
-			syncEmbeddings(pid, validImages);
+			syncEmbeddings(pid, validImages, targetGroup);
 			count += validImages.length;
 		}
 	}
