@@ -309,6 +309,8 @@ export const createProductWithVariantsService = async (
 				createdProduct.images,
 				targetGroup
 			);
+		} else {
+			console.log(">>> Condition NOT MET for Img2Img.");
 		}
 
 		// Đồng bộ AI cho Txt2Img
@@ -567,9 +569,9 @@ export const deleteProductWithVariantsService = async (productId) => {
 					data: form,
 					headers: form.getHeaders(),
 				});
-				console.log(`[Img2Img] Deleted vector: ${pid}`);
+				console.log(`[AI Img2Img] Deleted vector: ${pid}`);
 			} catch (e) {
-				console.error("[Img2Img] Delete error:", e.message);
+				console.error("[AI Img2Img] Delete error:", e.message);
 			}
 		})();
 
