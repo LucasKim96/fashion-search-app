@@ -1,9 +1,5 @@
 import os
 from pathlib import Path
-
-import torch 
-from pathlib import Path
-
 import torch 
 
 PORT = int(os.getenv("PORT", 8000))
@@ -45,8 +41,6 @@ TEXT2IMG_BASE_ARCH = "vinai/phobert-base"
 TEXT2IMG_INDEX_PATH = os.getenv("TEXT2IMG_INDEX_PATH", str(BASE_DIR / "index/txt2img_index.faiss"))
 TEXT2IMG_EMBEDDING_DIM  = 256
 
-# Device
-DEVICE = os.getenv("DEVICE", "cuda" if torch.cuda.is_available() else "cpu")
 # Device
 DEVICE = os.getenv("DEVICE", "cuda" if torch.cuda.is_available() else "cpu")
 
