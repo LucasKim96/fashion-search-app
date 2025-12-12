@@ -16,7 +16,7 @@ class Timer:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         elapsed = time.time() - self.start_time
-        logger.info(f"[{self.name}] took: {elapsed:.4f}s")
+        # logger.info(f"[{self.name}] took: {elapsed:.4f}s")
         print(f"[{self.name}] Elapsed time: {elapsed:.4f} seconds")
 
 
