@@ -48,7 +48,10 @@ export const PublicProductCard: React.FC<PublicProductCardProps> = ({
 					/>
 				</div>
 
+<<<<<<< HEAD
 				{/* Badge độ giống (Chỉ hiện khi search bằng ảnh) */}
+=======
+>>>>>>> f640e1a5804ea1ab52f7e579af6b0950c408f120
 				{isSearchResult && (
 					<div className="absolute top-2 right-2 z-10 flex items-center gap-1 rounded-full bg-green-600 px-2 py-1 text-[10px] font-bold text-white shadow-md">
 						<BadgeCheck size={12} />
