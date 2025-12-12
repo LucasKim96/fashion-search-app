@@ -74,3 +74,7 @@ YOLO_CLASS_GROUPS = {
         ["dress", "jumpsuit"]
     ]
 }
+
+# --- CONFIG CHO DEBUGGING ---
+SAVE_CROPPED_IMAGES = True 
+CROPPED_IMAGE_SAVE_PATH = "image_crop_product"

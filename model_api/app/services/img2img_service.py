@@ -11,7 +11,8 @@ from ultralytics import YOLO
 from app.config import (
     YOLO_WEIGHT_PATH, RESNET_WEIGHT_PATH, VIT_WEIGHT_PATH, DEVICE,
     INPUT_SIZE, RGB_MEAN, RGB_STD,
-    IMG2IMG_BACKBONE, EMBEDDING_SIZE 
+    IMG2IMG_BACKBONE, EMBEDDING_SIZE,
+    SAVE_CROPPED_IMAGES, CROPPED_IMAGE_SAVE_PATH
 )
 from app.backbones import get_backbone
 # Import các hàm logic xử lý ảnh mới
@@ -117,6 +118,33 @@ class Img2ImgService:
             raise ValueError("Cannot decode image bytes")
         return img_np
 
+    def _save_cropped_image_for_debug(self, img_np, product_id, image_id, method_used):
+        """
+        Lưu ảnh đã crop vào thư mục chỉ định nếu config được bật.
+        Cấu trúc: <path>/<product_id>/<image_id>_<method>.jpg
+        """
+        # Chỉ thực thi nếu công tắc đang bật
+        if not SAVE_CROPPED_IMAGES:
+            return
+
+        try:
+            # 1. Tạo thư mục cho sản phẩm nếu chưa có
+            product_dir = os.path.join(CROPPED_IMAGE_SAVE_PATH, str(product_id))
+            os.makedirs(product_dir, exist_ok=True)
+            
+            # 2. Tạo tên file duy nhất (bao gồm cả phương pháp crop để dễ nhận biết)
+            # Ví dụ: image_abc_yolo_high_conf_upper_body.jpg
+            filename = f"{image_id}_{method_used}.jpg"
+            filepath = os.path.join(product_dir, filename)
+            
+            # 3. Lưu ảnh
+            cv2.imwrite(filepath, img_np)
+            logger.info(f"Saved cropped image for debug at: {filepath}")
+
+        except Exception as e:
+            logger.error(f"Failed to save cropped image for debug: {e}")
+
+
     def extract_feature(self, img_pil):
         """Trích xuất feature vector chuẩn hóa L2, hỗ trợ mọi backbone."""
 
@@ -165,7 +193,36 @@ class Img2ImgService:
     #     return feature.astype(np.float32)
 
     # --- LOGIC CHO SHOP (TẠO SẢN PHẨM) ---
-    def process_image_for_indexing(self, image_bytes, target_group):
+    # def process_image_for_indexing(self, image_bytes, target_group):
+    #     """
+    #     Quy trình: Decode -> Auto Crop (High->Low->Center) -> Resize -> Embed
+    #     """
+    #     logger.info(f"Processing indexing for group: {target_group}")
+        
+    #     # 1. Decode
+    #     img_np = self._decode_image(image_bytes)
+
+    #     # 2. Auto Crop
+    #     with Timer("Shop Auto Crop"):
+    #         final_img_np, method_used = auto_crop_for_seller(
+    #             self.yolo_model, img_np, target_group
+    #         )
+        
+    #     # 3. Resize Padding
+    #     with Timer("Resize Padding"):
+    #         img_padded = resize_with_padding(final_img_np, target_size=INPUT_SIZE)
+    #         if img_padded is None:
+    #             raise ValueError("Resize failed (Image too small or invalid)")
+
+    #     # 4. Extract Feature
+    #     with Timer("ArcFace Extraction"):
+    #         img_pil = Image.fromarray(cv2.cvtColor(img_padded, cv2.COLOR_BGR2RGB))
+    #         vector = self.extract_feature(img_pil)
+        
+    #     logger.info(f"Indexing Done. Method: {method_used}")
+    #     return vector, method_used
+
+    def process_image_for_indexing(self, image_bytes, target_group, product_id: str, image_id: str):
         """
         Quy trình: Decode -> Auto Crop (High->Low->Center) -> Resize -> Embed
         """
@@ -180,6 +237,9 @@ class Img2ImgService:
                 self.yolo_model, img_np, target_group
             )
         
+        # <<< THÊM MỚI: Gọi hàm lưu ảnh crop ngay sau khi crop xong
+        self._save_cropped_image_for_debug(final_img_np, product_id, image_id, method_used)
+
         # 3. Resize Padding
         with Timer("Resize Padding"):
             img_padded = resize_with_padding(final_img_np, target_size=INPUT_SIZE)
