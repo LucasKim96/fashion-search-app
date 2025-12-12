@@ -48,13 +48,13 @@ export const PublicProductCard: React.FC<PublicProductCardProps> = ({
 					/>
 				</div>
 
-				{/* Badge độ giống (Chỉ hiện khi search bằng ảnh)
+				{/* Badge độ giống (Chỉ hiện khi search bằng ảnh) */}
 				{isSearchResult && (
 					<div className="absolute top-2 right-2 z-10 flex items-center gap-1 rounded-full bg-green-600 px-2 py-1 text-[10px] font-bold text-white shadow-md">
 						<BadgeCheck size={12} />
 						{Math.round(similarity * 100)}%
 					</div>
-				)} */}
+				)}
 			</div>
 
 			{/* --- PRODUCT INFO --- */}
