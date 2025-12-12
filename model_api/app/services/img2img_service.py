@@ -208,6 +208,7 @@ import cv2
 from PIL import Image
 from collections import OrderedDict
 import torchvision.transforms as transforms
+from ultralytics import YOLO
 
 # Import Config và Utils
 from app.config import (
