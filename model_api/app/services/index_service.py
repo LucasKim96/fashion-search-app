@@ -4,6 +4,7 @@ import numpy as np
 import os
 import json
 from app.utils.logger import logger
+from app.utils.timer import Timer
 
 class IndexService:
     def __init__(self, index_path, mapping_path, dim=512):
@@ -98,24 +99,25 @@ class IndexService:
 
     def save(self):
         """Lưu Index và Map xuống đĩa"""
-        try:
-            # Lưu Index
-            faiss.write_index(self.index, self.index_path)
-            
-            # Lưu Map
-            data = {
-                "next_id": self.next_id,
-                "mapping": self.id_map
-            }
-            # Tạo thư mục cha nếu chưa có (đề phòng)
-            os.makedirs(os.path.dirname(self.mapping_path), exist_ok=True)
-            
-            with open(self.mapping_path, 'w', encoding='utf-8') as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-            
-            logger.info("Index and Mapping saved successfully.")
-        except Exception as e:
-            logger.error(f"Failed to save index: {e}")
+        with Timer("Save FAISS Index & Mapping"):
+            try:
+                # Lưu Index
+                faiss.write_index(self.index, self.index_path)
+                
+                # Lưu Map
+                data = {
+                    "next_id": self.next_id,
+                    "mapping": self.id_map
+                }
+                # Tạo thư mục cha nếu chưa có (đề phòng)
+                os.makedirs(os.path.dirname(self.mapping_path), exist_ok=True)
+                
+                with open(self.mapping_path, 'w', encoding='utf-8') as f:
+                    json.dump(data, f, ensure_ascii=False, indent=2)
+                
+                logger.info("Index and Mapping saved successfully.")
+            except Exception as e:
+                logger.error(f"Failed to save index: {e}")
 
     def search(self, query_emb, k=20):
         if self.index.ntotal == 0: return []
@@ -124,34 +126,35 @@ class IndexService:
         
         # Lấy gấp 10 lần k để lọc trùng sản phẩm
         fetch_k = min(k * 10, self.index.ntotal)
+        with Timer("FAISS Search"):
+            # Search (Cosine Similarity dùng IndexFlatIP)
+            D, I = self.index.search(query_emb, fetch_k)
         
-        # Search (Cosine Similarity dùng IndexFlatIP)
-        D, I = self.index.search(query_emb, fetch_k)
-        
-        unique_results = []
-        seen_product_ids = set()
-        
-        for rank, (idx, score) in enumerate(zip(I[0], D[0])):
-            if idx == -1: continue 
+        with Timer("Process Search Results"):
+            unique_results = []
+            seen_product_ids = set()
             
-            info = self.id_map.get(idx)
-            if not info: continue
-            
-            p_id = info['product_id']
-            
-            # Chỉ lấy ảnh đại diện có điểm cao nhất của mỗi sản phẩm
-            if p_id not in seen_product_ids:
-                seen_product_ids.add(p_id)
+            for rank, (idx, score) in enumerate(zip(I[0], D[0])):
+                if idx == -1: continue 
                 
-                unique_results.append({
-                    "product_id": p_id,
-                    "image_id": info['image_id'],
-                    "score": float(score),
-                    "rank": len(unique_results) + 1
-                })
-            
-            # Kiểm tra điều kiện dừng với biến k
-            if len(unique_results) >= k:
-                break
+                info = self.id_map.get(idx)
+                if not info: continue
+                
+                p_id = info['product_id']
+                
+                # Chỉ lấy ảnh đại diện có điểm cao nhất của mỗi sản phẩm
+                if p_id not in seen_product_ids:
+                    seen_product_ids.add(p_id)
+                    
+                    unique_results.append({
+                        "product_id": p_id,
+                        "image_id": info['image_id'],
+                        "score": float(score),
+                        "rank": len(unique_results) + 1
+                    })
+                
+                # Kiểm tra điều kiện dừng với biến k
+                if len(unique_results) >= k:
+                    break
                 
         return unique_results

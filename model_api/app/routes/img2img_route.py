@@ -9,6 +9,7 @@ from app.schemas.img2img_response import SearchResponse, SearchResultItem, Detec
 # Import Services & Utils
 # from app.dependencies import img2img_service, img2img_index
 from app.utils.logger import logger
+from app.utils.timer import Timer
 
 router = APIRouter(prefix="/img2img", tags=["Image Search"])
 
@@ -27,29 +28,30 @@ async def index_product(
     """
     Dùng cho Shop: Tự động tìm đối tượng trong ảnh theo Group, Crop, Resize và Lưu Vector.
     """
-    try:
-        img2img_service = request.app.state.img2img_service
-        img2img_index = request.app.state.index_service
+    with Timer("Total time for the product image indexing request"):
+        try:
+            img2img_service = request.app.state.img2img_service
+            img2img_index = request.app.state.index_service
 
-        content = await file.read()
-        
-        # 1. Gọi Service xử lý (Auto Crop High->Low->Center)
-        vector, method_used = img2img_service.process_image_for_indexing(content, group.value, product_id=product_id, image_id=image_id)
-        
-        # 2. Lưu vào Index
-        img2img_index.add_item(vector, product_id, image_id) 
-        img2img_index.save() # Lưu ngay để an toàn dữ liệu
+            content = await file.read()
+            
+            # 1. Gọi Service xử lý (Auto Crop High->Low->Center)
+            vector, method_used = img2img_service.process_image_for_indexing(content, group.value, product_id=product_id, image_id=image_id)
+            
+            # 2. Lưu vào Index
+            img2img_index.add_item(vector, product_id, image_id) 
+            img2img_index.save() # Lưu ngay để an toàn dữ liệu
 
-        return {
-            "status": "success", 
-            "message": f"Added {image_id} for {product_id}",
-            "crop_method": method_used
-        }
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"Index error: {e}")
-        raise HTTPException(status_code=500, detail="Internal Server Error")
+            return {
+                "status": "success", 
+                "message": f"Added {image_id} for {product_id}",
+                "crop_method": method_used
+            }
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        except Exception as e:
+            logger.error(f"Index error: {e}")
+            raise HTTPException(status_code=500, detail="Internal Server Error")
 
 @router.post("/delete-batch", summary="Xóa nhiều ảnh cùng lúc")
 async def delete_batch_images(
@@ -114,44 +116,45 @@ async def search_product(
     """
     Nhận ảnh đã crop -> Resize -> Embed -> Search FAISS (Cosine Similarity).
     """
-    try:
-        img2img_service = request.app.state.img2img_service
-        img2img_index = request.app.state.index_service
-        
-        content = await file.read()
-        
-        # Trích xuất vector
-        vector = img2img_service.process_image_for_search(content)
-        
-        # Tìm kiếm
-        raw_results = img2img_index.search(vector, k=k)
-        
-        # Format kết quả & Lọc rác (Cosine Score)
-        formatted_results = []
-        for rank, item in enumerate(raw_results):
-            score = float(item['score'])
+    with Timer(f"Total time for image search request (k={k})"):
+        try:
+            img2img_service = request.app.state.img2img_service
+            img2img_index = request.app.state.index_service
             
-            # Cosine Similarity (IndexFlatIP): Score càng cao càng tốt
-            # Lọc bỏ các kết quả quá thấp (ví dụ < 0.5)
-            if score < 0.2: 
-                continue
+            content = await file.read()
+            
+            # Trích xuất vector
+            vector = img2img_service.process_image_for_search(content)
+            
+            # Tìm kiếm
+            raw_results = img2img_index.search(vector, k=k)
+            
+            # Format kết quả & Lọc rác (Cosine Score)
+            formatted_results = []
+            for rank, item in enumerate(raw_results):
+                score = float(item['score'])
+                
+                # Cosine Similarity (IndexFlatIP): Score càng cao càng tốt
+                # Lọc bỏ các kết quả quá thấp (ví dụ < 0.5)
+                if score < 0.2: 
+                    continue
 
-            formatted_results.append(SearchResultItem(
-                rank=item['rank'], # Rank đã tính trong index_service
-                product_id=item['product_id'],
-                image_id=item['image_id'], # Trả về ID ảnh đại diện
-                similarity=score
-            ))
+                formatted_results.append(SearchResultItem(
+                    rank=item['rank'], # Rank đã tính trong index_service
+                    product_id=item['product_id'],
+                    image_id=item['image_id'], # Trả về ID ảnh đại diện
+                    similarity=score
+                ))
 
-        return SearchResponse(
-            status="success",
-            total_results=len(formatted_results),
-            results=formatted_results,
-            message="Tìm kiếm thành công"
-        )
+            return SearchResponse(
+                status="success",
+                total_results=len(formatted_results),
+                results=formatted_results,
+                message="Tìm kiếm thành công"
+            )
 
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"Search error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        except Exception as e:
+            logger.error(f"Search error: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
