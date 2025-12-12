@@ -1,6 +1,5 @@
 import os
 from pathlib import Path
-
 import torch 
 
 PORT = int(os.getenv("PORT", 8000))
@@ -75,6 +74,7 @@ YOLO_CLASS_GROUPS = {
     ]
 }
 
+ENABLE_PERFORMANCE_LOGGING = True
 # --- CONFIG CHO DEBUGGING ---
 SAVE_CROPPED_IMAGES = True 
 CROPPED_IMAGE_SAVE_PATH = "image_crop_product"
