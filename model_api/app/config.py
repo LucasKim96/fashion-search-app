@@ -2,6 +2,9 @@ import os
 from pathlib import Path
 
 import torch 
+from pathlib import Path
+
+import torch 
 
 PORT = int(os.getenv("PORT", 8000))
 HOST = os.getenv("HOST", "0.0.0.0")
@@ -44,6 +47,8 @@ TEXT2IMG_EMBEDDING_DIM  = 256
 
 # Device
 DEVICE = os.getenv("DEVICE", "cuda" if torch.cuda.is_available() else "cpu")
+# Device
+DEVICE = os.getenv("DEVICE", "cuda" if torch.cuda.is_available() else "cpu")
 
 # --- PREPROCESSING CONFIG ---
 # --- ADDED: Lựa chọn backbone cho Image-to-Image Search ---
@@ -63,7 +68,7 @@ YOLO_CLASS_NAMES = [
 YOLO_CLASS_GROUPS = {
     "upper_body": [
         YOLO_CLASS_NAMES.index(cls) for cls in
-        ["shirt, blouse", "top, t-shirt, sweatshirt", "sweater", "cardigan", "jacket", "vest", "coat"]
+        ["shirt, blouse", "top, t-shirt, sweatshirt", "sweater", "cardigan", "jacket", "vest", "coat", "dress"]
     ],
     "lower_body": [
         YOLO_CLASS_NAMES.index(cls) for cls in
@@ -74,3 +79,7 @@ YOLO_CLASS_GROUPS = {
         ["dress", "jumpsuit"]
     ]
 }
+
+# --- CONFIG CHO DEBUGGING ---
+SAVE_CROPPED_IMAGES = True 
+CROPPED_IMAGE_SAVE_PATH = "image_crop_product"

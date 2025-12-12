@@ -195,6 +195,38 @@ class TextIndexService:
             logger.error(f"[TextIndex] REMOVE BATCH CRASHED:\n{traceback.format_exc()}")
             return 0
 
+    # def search(self, vector, k=20):
+    #     try:
+    #         if self.index.ntotal == 0: return []
+
+    #         if len(vector.shape) == 1:
+    #             vector = np.expand_dims(vector, axis=0)
+
+    #         D, I = self.index.search(vector, k)
+            
+    #         results = []
+    #         seen_products = set()
+
+    #         for score, idx in zip(D[0], I[0]):
+    #             if idx == -1: continue
+                
+    #             info = self.id_map.get(idx)
+    #             if info and isinstance(info, dict):
+    #                 p_id = info.get('product_id')
+    #                 img_path = info.get('image_path')
+                    
+    #                 if p_id and p_id not in seen_products:
+    #                     seen_products.add(p_id)
+    #                     results.append({
+    #                         "id": p_id,
+    #                         "score": float(score),
+    #                         "image": img_path
+    #                     })
+    #         return results
+    #     except Exception:
+    #         logger.error(f"[TextIndex] SEARCH CRASHED:\n{traceback.format_exc()}")
+    #         return []
+
     def search(self, vector, k=20):
         try:
             if self.index.ntotal == 0: return []
@@ -208,8 +240,14 @@ class TextIndexService:
             seen_products = set()
 
             for score, idx in zip(D[0], I[0]):
+                # BƯỚC 1: Bỏ qua các kết quả không hợp lệ hoặc không liên quan
                 if idx == -1: continue
                 
+                # === THÊM DÒNG NÀY: Chỉ lấy kết quả có độ tương đồng > 0 ===
+                if score <= 0: continue
+                # ==========================================================
+                
+                # BƯỚC 2: Lấy thông tin sản phẩm và lọc trùng lặp (giữ nguyên)
                 info = self.id_map.get(idx)
                 if info and isinstance(info, dict):
                     p_id = info.get('product_id')

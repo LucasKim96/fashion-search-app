@@ -34,7 +34,7 @@ async def index_product(
         content = await file.read()
         
         # 1. Gọi Service xử lý (Auto Crop High->Low->Center)
-        vector, method_used = img2img_service.process_image_for_indexing(content, group.value)
+        vector, method_used = img2img_service.process_image_for_indexing(content, group.value, product_id=product_id, image_id=image_id)
         
         # 2. Lưu vào Index
         img2img_index.add_item(vector, product_id, image_id) 
