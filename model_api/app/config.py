@@ -34,12 +34,30 @@ VIT_MAP_PATH = os.getenv("VIT_MAP_PATH", str(BASE_DIR / "index/vit_fashion_paths
 RESNET101_INDEX_PATH = os.getenv("RESNET101_INDEX_PATH", str(BASE_DIR / "index/resnet101_fashion.faiss"))
 RESNET101_MAP_PATH = os.getenv("RESNET101_MAP_PATH", str(BASE_DIR / "index/resnet101_fashion_paths.json"))
 
+# ----------------------------------------------------------------
+# Đặt biến môi trường USE_ALTERNATIVE_PHOCLIP=True (hoặc 1) để bật model thay thế
+USE_ALTERNATIVE_PHOCLIP = os.getenv("USE_ALTERNATIVE_PHOCLIP", "False").lower() in ('true', '1')
 
-# Text-to-Image Model Configurations
-TEXT2IMG_MODEL_PATH = os.getenv("TEXT2IMG_MODEL_PATH", str(BASE_DIR / "models/phoclip_deploy.pt"))
+# 1. Định nghĩa hai đường dẫn model có thể có
+TEXT2IMG_DEFAULT_MODEL_PATH = os.getenv("TEXT2IMG_DEFAULT_MODEL_PATH", str(BASE_DIR / "models/phoclip_deploy.pt"))
+TEXT2IMG_ALT_MODEL_PATH = os.getenv("TEXT2IMG_ALT_MODEL_PATH", str(BASE_DIR / "models/_phoclip.pt")) # Đặt tên model thay thế ở đây
+
+# 2. Dùng flag để chọn đường dẫn cuối cùng sẽ được sử dụng trong toàn bộ ứng dụng
+if USE_ALTERNATIVE_PHOCLIP:
+    TEXT2IMG_MODEL_PATH = TEXT2IMG_ALT_MODEL_PATH
+    print("🚀 [CONFIG] Flag 'USE_ALTERNATIVE_PHOCLIP' is ON. Using ALTERNATIVE PhoCLIP model.")
+else:
+    TEXT2IMG_MODEL_PATH = TEXT2IMG_DEFAULT_MODEL_PATH
+    print("🚀 [CONFIG] Flag 'USE_ALTERNATIVE_PHOCLIP' is OFF. Using DEFAULT PhoCLIP model.")
+
+print(f"   -> Model Path: {TEXT2IMG_MODEL_PATH}")
+# ----------------------------------------------------------------
+
+# Text-to-Image Model Configurations (Giữ nguyên các config còn lại)
 TEXT2IMG_BASE_ARCH = "vinai/phobert-base"
 TEXT2IMG_INDEX_PATH = os.getenv("TEXT2IMG_INDEX_PATH", str(BASE_DIR / "index/txt2img_index.faiss"))
 TEXT2IMG_EMBEDDING_DIM  = 256
+
 
 # Device
 DEVICE = os.getenv("DEVICE", "cuda" if torch.cuda.is_available() else "cpu")
