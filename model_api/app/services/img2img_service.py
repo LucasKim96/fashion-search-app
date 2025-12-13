@@ -371,6 +371,86 @@ class Img2ImgService:
         # Trả numpy float32 để dùng FAISS hoặc cosine similarity
         return feat.cpu().numpy().astype("float32")
 
+
+    # # --- LOGIC CHO KHÁCH HÀNG (SEARCH - SAU KHI CHỌN BOX) ---
+    def process_image_for_search(self, image_bytes):
+        """
+        Quy trình: Nhận ảnh đã được FE crop -> Resize -> Embed
+        """
+        img_np = self._decode_image(image_bytes)
+        
+        with Timer("Search Resize"):
+            img_padded = resize_with_padding(img_np, target_size=INPUT_SIZE)
+            
+        with Timer("Search Embedding"):
+            img_pil = Image.fromarray(cv2.cvtColor(img_padded, cv2.COLOR_BGR2RGB))
+            vector = self.extract_feature(img_pil)
+            
+        return vector
+
+    def process_image_for_indexing(self, image_bytes, target_group, product_id: str, image_id: str):
+        task_metadata = {
+            "service": "img2img",
+            "action": "indexing", # <-- PHÂN BIỆT RÕ HÀNH ĐỘNG
+            # "product_id": product_id,
+            # "image_id": image_id,
+            # "group": target_group
+        }
+        # Tên task cũng rõ ràng hơn
+        with Timer("Indexing_Total", metadata=task_metadata) as t:
+            img_np = self._decode_image(image_bytes)
+
+            if not yolo_service or not yolo_service.model:
+                raise RuntimeError("YOLO service is not available.")
+            
+            with Timer("Indexing_Crop", metadata=task_metadata):
+                final_img_np, method_used = auto_crop_for_seller(
+                    yolo_service.model, img_np, target_group
+                )
+            
+            t.metadata["method"] = method_used
+            
+            self._save_cropped_image_for_debug(final_img_np, product_id, image_id, method_used)
+
+            with Timer("Indexing_Resize", metadata=task_metadata):
+                img_padded = resize_with_padding(final_img_np, target_size=INPUT_SIZE)
+                if img_padded is None:
+                    raise ValueError("Resize failed")
+
+            with Timer("Indexing_Extraction", metadata=task_metadata):
+                img_pil = Image.fromarray(cv2.cvtColor(img_padded, cv2.COLOR_BGR2RGB))
+                vector = self.extract_feature(img_pil)
+        
+            logger.info(f"Indexing Done. Method: {method_used}")
+            return vector, method_used
+
+    def detect_search_candidates(self, image_bytes):
+        task_metadata = {
+            "service": "img2img",
+            "action": "search"
+        }
+        with Timer("Search_Detect", metadata=task_metadata):
+            if not yolo_service or not yolo_service.model:
+                raise RuntimeError("YOLO service is not available.")
+            
+            img_np = self._decode_image(image_bytes)
+            candidates = detect_candidates_for_buyer(yolo_service.model, img_np)
+            return candidates
+
+    def process_image_for_search(self, image_bytes):
+        task_metadata = {
+            "service": "img2img",
+            "action": "search" 
+        }
+        with Timer("Search_Embedding_Total", metadata=task_metadata):
+            img_np = self._decode_image(image_bytes)
+            with Timer("Search_Resize", metadata=task_metadata):
+                img_padded = resize_with_padding(img_np, target_size=INPUT_SIZE)
+            with Timer("Search_Extraction", metadata=task_metadata):
+                img_pil = Image.fromarray(cv2.cvtColor(img_padded, cv2.COLOR_BGR2RGB))
+                vector = self.extract_feature(img_pil)
+            return vector
+
     # def extract_feature(self, img_pil):
     #     """Trích xuất feature vector"""
     #     if self.backbone is None:
@@ -469,77 +549,3 @@ class Img2ImgService:
     #         candidates = detect_candidates_for_buyer(yolo_service.model, img_np)
             
     #     return candidates
-
-    # # --- LOGIC CHO KHÁCH HÀNG (SEARCH - SAU KHI CHỌN BOX) ---
-    def process_image_for_search(self, image_bytes):
-        """
-        Quy trình: Nhận ảnh đã được FE crop -> Resize -> Embed
-        """
-        img_np = self._decode_image(image_bytes)
-        
-        with Timer("Search Resize"):
-            img_padded = resize_with_padding(img_np, target_size=INPUT_SIZE)
-            
-        with Timer("Search Embedding"):
-            img_pil = Image.fromarray(cv2.cvtColor(img_padded, cv2.COLOR_BGR2RGB))
-            vector = self.extract_feature(img_pil)
-            
-        return vector
-
-    def process_image_for_indexing(self, image_bytes, target_group, product_id: str, image_id: str):
-        task_metadata = {
-            "service": "img2img",
-            "action": "indexing", # <-- PHÂN BIỆT RÕ HÀNH ĐỘNG
-            # "product_id": product_id,
-            # "image_id": image_id,
-            # "group": target_group
-        }
-        # Tên task cũng rõ ràng hơn
-        with Timer("Img2Img_Indexing", metadata=task_metadata) as t:
-            img_np = self._decode_image(image_bytes)
-
-            if not yolo_service or not yolo_service.model:
-                raise RuntimeError("YOLO service is not available.")
-            
-            final_img_np, method_used = auto_crop_for_seller(
-                yolo_service.model, img_np, target_group
-            )
-            
-            t.metadata["method"] = method_used
-            
-            self._save_cropped_image_for_debug(final_img_np, product_id, image_id, method_used)
-
-            img_padded = resize_with_padding(final_img_np, target_size=INPUT_SIZE)
-            if img_padded is None:
-                raise ValueError("Resize failed")
-
-            img_pil = Image.fromarray(cv2.cvtColor(img_padded, cv2.COLOR_BGR2RGB))
-            vector = self.extract_feature(img_pil)
-        
-            logger.info(f"Indexing Done. Method: {method_used}")
-            return vector, method_used
-
-    def detect_search_candidates(self, image_bytes):
-        task_metadata = {
-            "service": "img2img",
-            "action": "search_detect" # <-- PHÂN BIỆT RÕ HÀNH ĐỘNG
-        }
-        with Timer("Img2Img_DetectCandidates", metadata=task_metadata):
-            if not yolo_service or not yolo_service.model:
-                raise RuntimeError("YOLO service is not available.")
-            
-            img_np = self._decode_image(image_bytes)
-            candidates = detect_candidates_for_buyer(yolo_service.model, img_np)
-            return candidates
-
-    def process_image_for_search(self, image_bytes):
-        task_metadata = {
-            "service": "img2img",
-            "action": "search_embedding" # <-- PHÂN BIỆT RÕ HÀNH ĐỘNG
-        }
-        with Timer("Img2Img_SearchEmbedding", metadata=task_metadata):
-            img_np = self._decode_image(image_bytes)
-            img_padded = resize_with_padding(img_np, target_size=INPUT_SIZE)
-            img_pil = Image.fromarray(cv2.cvtColor(img_padded, cv2.COLOR_BGR2RGB))
-            vector = self.extract_feature(img_pil)
-            return vector
