@@ -22,9 +22,12 @@ index/*
 !index/.gitkeep
 
 # --- Logs & System ---
-*.log
 .DS_Store
 .vscode/
 .idea/
 
 requirements.txt.bak
+
+!model_api/logs/
+
+/scripts/*.py

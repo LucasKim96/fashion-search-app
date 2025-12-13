@@ -248,14 +248,14 @@ class Img2ImgService:
             logger.info("--- LOADING IMG2IMG MODELS ---")
             
             # 1. Load YOLO (Giữ nguyên)
-            if os.path.exists(YOLO_WEIGHT_PATH):
-                try:
-                    self.yolo_model = YOLO(str(YOLO_WEIGHT_PATH))
-                    logger.info(f"YOLO Loaded from {YOLO_WEIGHT_PATH}")
-                except Exception as e:
-                    logger.error(f"Failed to load YOLO: {e}")
-            else:
-                logger.error(f"YOLO weights not found at {YOLO_WEIGHT_PATH}")
+            # if os.path.exists(YOLO_WEIGHT_PATH):
+            #     try:
+            #         self.yolo_model = YOLO(str(YOLO_WEIGHT_PATH))
+            #         logger.info(f"YOLO Loaded from {YOLO_WEIGHT_PATH}")
+            #     except Exception as e:
+            #         logger.error(f"Failed to load YOLO: {e}")
+            # else:
+            #     logger.error(f"YOLO weights not found at {YOLO_WEIGHT_PATH}")
 
             # 2. Load Backbone (ResNet hoặc ViT) một cách linh hoạt
             try:
@@ -471,7 +471,7 @@ class Img2ImgService:
     #     return candidates
 
     # # --- LOGIC CHO KHÁCH HÀNG (SEARCH - SAU KHI CHỌN BOX) ---
-    # def process_image_for_search(self, image_bytes):
+    def process_image_for_search(self, image_bytes):
         """
         Quy trình: Nhận ảnh đã được FE crop -> Resize -> Embed
         """
