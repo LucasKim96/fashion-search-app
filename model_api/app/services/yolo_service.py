@@ -21,9 +21,9 @@ class YoloService:
                 logger.info(f"--- LOADING YOLO MODEL from {YOLO_WEIGHT_PATH} ---")
                 # Khởi tạo model YOLO từ file trọng số
                 self.model = YOLO(YOLO_WEIGHT_PATH)
-                logger.info("✅ YOLO model loaded successfully and is ready to use.")
+                logger.info("YOLO model loaded successfully and is ready to use.")
             except Exception as e:
-                logger.error(f"❌ FATAL: Failed to load YOLO model: {e}", exc_info=True)
+                logger.error(f"FATAL: Failed to load YOLO model: {e}", exc_info=True)
                 # Nếu YOLO không load được, ứng dụng không thể hoạt động đúng
                 raise RuntimeError("YOLO model load failed")
 
