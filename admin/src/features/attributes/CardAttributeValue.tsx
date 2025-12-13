@@ -83,15 +83,27 @@ export const CardAttributeValue: React.FC<CardAttributeValueProps> = ({
 		);
 	};
 
+	const handleRemoveImage = () => {
+		if (previewUrl && editFile) {
+			URL.revokeObjectURL(previewUrl); // Dọn dẹp URL cũ
+		}
+		setEditFile(null); // Đặt file về null
+		setPreviewUrl(null); // Đặt URL preview về null
+	};
 	const handleSaveEdit = async () => {
 		let payload: UpdateAttributeValueRequest | FormData;
+		const isImageRemoved = !previewUrl && value.image; // Cờ mới để nhận biết ảnh bị xóa
 
 		if (editFile) {
 			payload = new FormData();
 			payload.append("value", editValue);
 			payload.append("image", editFile);
-		} else if (editValue !== value.value) {
+		} else if (editValue !== value.value || isImageRemoved) {
 			payload = { value: editValue };
+			if (isImageRemoved) {
+				// === THÊM DÒNG NÀY ĐỂ BÁO CHO SERVER XÓA ẢNH ===
+				(payload as UpdateAttributeValueRequest).image = "";
+			}
 		} else {
 			setEditing(false);
 			return;
@@ -103,6 +115,26 @@ export const CardAttributeValue: React.FC<CardAttributeValueProps> = ({
 			if (onEdit) onEdit(); // callback layout
 		}
 	};
+	// const handleSaveEdit = async () => {
+	// 	let payload: UpdateAttributeValueRequest | FormData;
+
+	// 	if (editFile) {
+	// 		payload = new FormData();
+	// 		payload.append("value", editValue);
+	// 		payload.append("image", editFile);
+	// 	} else if (editValue !== value.value) {
+	// 		payload = { value: editValue };
+	// 	} else {
+	// 		setEditing(false);
+	// 		return;
+	// 	}
+
+	// 	const res = await updateAdminAttributeValue(value._id, payload);
+	// 	if (res.success) {
+	// 		setEditing(false);
+	// 		if (onEdit) onEdit(); // callback layout
+	// 	}
+	// };
 
 	const handleCancelEdit = () => {
 		setEditing(false);
@@ -189,6 +221,14 @@ export const CardAttributeValue: React.FC<CardAttributeValueProps> = ({
 					) : (
 						<span className="text-sm font-medium select-none">No Image</span>
 					)}
+					{editing && previewUrl && (
+						<button
+							onClick={handleRemoveImage}
+							className="absolute top-1 right-1 z-10 w-5 h-5 flex items-center justify-center bg-red-500 text-white rounded-full shadow-md transition-transform duration-200 hover:scale-110 active:scale-95"
+							aria-label="Xóa ảnh">
+							<X size={12} strokeWidth={3} />
+						</button>
+					)}
 				</div>
 			) : null}
 
@@ -226,23 +266,6 @@ export const CardAttributeValue: React.FC<CardAttributeValueProps> = ({
 							{value.value}
 						</span>
 					)}
-
-					{/* {!compact && !mini && showStatus && !editing && (
-						<div className="relative flex-shrink-0 ml-auto">
-							<span
-								className={clsx(
-									"block w-2 h-2 rounded-full transition-all duration-300",
-									value.isActive
-										? "bg-green-600 ring-1 ring-green-300 hover:ring-green-500"
-										: "bg-red-600 ring-1 ring-red-300 hover:ring-red-500"
-								)}
-							/>
-							<SidebarTooltip
-								label={value.isActive ? "Hoạt động" : "Không hoạt động"}
-								position="right"
-							/>
-						</div>
-					)} */}
 				</div>
 				{/* Nút action */}
 				{!compact && !mini && showActions && (

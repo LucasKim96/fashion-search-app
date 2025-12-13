@@ -29,7 +29,7 @@ export default function AttributePage() {
 		<div className="p-6 space-y-4 h-screen flex flex-col">
 			{/* Header với search */}
 			<SearchHeader
-				title="THUỘC TÍNH TOÀN HỆ THỐNG"
+				title="THUỘC TÍNH SẢN PHẨM"
 				searchPlaceholder="Tìm kiếm thuộc tính..."
 				searchValue={search}
 				onSearchChange={setSearch}
