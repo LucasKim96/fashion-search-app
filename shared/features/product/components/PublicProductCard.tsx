@@ -15,8 +15,6 @@ interface PublicProductCardProps {
 export const PublicProductCard: React.FC<PublicProductCardProps> = ({
 	product,
 }) => {
-	// --- XỬ LÝ DỮ LIỆU ĐA HÌNH ---
-	// Ép kiểu an toàn để lấy tên và ảnh từ các loại object khác nhau
 	const p = product as any;
 
 	const displayName = p.name || p.pdName || "Sản phẩm";

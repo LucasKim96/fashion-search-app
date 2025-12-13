@@ -74,16 +74,27 @@ export const CardAttributeValue: React.FC<CardAttributeValueProps> = ({
 				: (value.image ? buildImageUrl(value.image) : null) ?? null
 		);
 	};
-
+	const handleRemoveImage = () => {
+		if (previewUrl && editFile) {
+			URL.revokeObjectURL(previewUrl); // Dọn dẹp URL cũ
+		}
+		setEditFile(null); // Đặt file về null
+		setPreviewUrl(null); // Đặt URL preview về null
+	};
 	const handleSaveEdit = async () => {
 		let payload: UpdateAttributeValueRequest | FormData;
+		const isImageRemoved = !previewUrl && value.image;
 
 		if (editFile) {
 			payload = new FormData();
 			payload.append("value", editValue);
 			payload.append("image", editFile);
-		} else if (editValue !== value.value) {
+		} else if (editValue !== value.value || isImageRemoved) {
 			payload = { value: editValue };
+			if (isImageRemoved) {
+				// === THÊM DÒNG NÀY ĐỂ BÁO CHO SERVER XÓA ẢNH ===
+				(payload as UpdateAttributeValueRequest).image = "";
+			}
 		} else {
 			setEditing(false);
 			return;
@@ -161,6 +172,14 @@ export const CardAttributeValue: React.FC<CardAttributeValueProps> = ({
 						/>
 					) : (
 						<span className="text-sm font-medium select-none">No Image</span>
+					)}
+					{editing && previewUrl && (
+						<button
+							onClick={handleRemoveImage}
+							className="absolute top-1 right-1 z-10 w-5 h-5 flex items-center justify-center bg-red-500 text-white rounded-full shadow-md transition-transform duration-200 hover:scale-110 active:scale-95"
+							aria-label="Xóa ảnh">
+							<X size={12} strokeWidth={3} />
+						</button>
 					)}
 				</div>
 			) : null}
