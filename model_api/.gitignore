@@ -29,3 +29,5 @@ index/*
 requirements.txt.bak
 
 !model_api/logs/
+
+/scripts/*.py
