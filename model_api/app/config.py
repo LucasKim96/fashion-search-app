@@ -40,7 +40,7 @@ USE_ALTERNATIVE_PHOCLIP = os.getenv("USE_ALTERNATIVE_PHOCLIP", "False").lower() 
 
 # 1. Định nghĩa hai đường dẫn model có thể có
 TEXT2IMG_DEFAULT_MODEL_PATH = os.getenv("TEXT2IMG_DEFAULT_MODEL_PATH", str(BASE_DIR / "models/phoclip_deploy.pt"))
-TEXT2IMG_ALT_MODEL_PATH = os.getenv("TEXT2IMG_ALT_MODEL_PATH", str(BASE_DIR / "models/_phoclip.pt")) # Đặt tên model thay thế ở đây
+TEXT2IMG_ALT_MODEL_PATH = os.getenv("TEXT2IMG_ALT_MODEL_PATH", str(BASE_DIR / "models/s_phoclip.pt")) # Đặt tên model thay thế ở đây
 
 # 2. Dùng flag để chọn đường dẫn cuối cùng sẽ được sử dụng trong toàn bộ ứng dụng
 if USE_ALTERNATIVE_PHOCLIP:
