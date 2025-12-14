@@ -134,6 +134,30 @@ class TextIndexService:
             except Exception:
                 logger.error(f"[TextIndex] REMOVE BATCH CRASHED:\n{traceback.format_exc()}")
                 return 0
+            
+    def remove_product(self, product_id: str) -> int:
+        """
+        Xóa TẤT CẢ các entry của một product_id.
+        Hàm này sẽ tìm tất cả các image_path của sản phẩm đó và gọi remove_list_images.
+        """
+        task_metadata = {"product_id": product_id}
+        with Timer("TextIndex_RemoveFullProduct", metadata=task_metadata):
+            # 1. Tìm tất cả các image_path thuộc về product_id này
+            paths_to_remove = []
+            
+            # Phải duyệt qua một bản copy để tránh lỗi thay đổi dict trong lúc duyệt
+            for info in list(self.id_map.values()):
+                if isinstance(info, dict) and str(info.get('product_id')) == str(product_id):
+                    paths_to_remove.append(info.get('image_path'))
+
+            if not paths_to_remove:
+                logger.info(f"[TextIndex] No entries found for product '{product_id}'. Nothing to remove.")
+                return 0
+            
+            # 2. Tái sử dụng hàm remove_list_images để xóa
+            # Điều này giúp tập trung logic xóa và ghi file ở một nơi duy nhất.
+            logger.info(f"[TextIndex] Found {len(paths_to_remove)} entries. Requesting removal for product '{product_id}'.")
+            return self.remove_list_images(product_id, paths_to_remove)
 
     def search(self, vector: np.ndarray, k: int = 20) -> list:
         task_metadata = {"k": k, "index_total": self.index.ntotal if self.index else 0}

@@ -70,30 +70,53 @@ async def index_product(
         logger.error(f"[TextIndex] Unhandled error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="An internal server error occurred during indexing.")
     
-# 3. API BATCH DELETE
-# Áp dụng decorator: Endpoint này chỉ cần index
-@router.post("/delete-batch", response_model=BaseResponse)
-@ensure_services_are_ready(check_model=False, check_index=True)
-async def delete_batch(payload: TextBatchDeleteRequest):
-    try:
-        count = text_index_service.remove_list_images(payload.product_id, payload.image_paths)
-        return {"success": True, "message": f"Processed request. Deleted {count} image entries."}
-    except Exception as e:
-        logger.error(f"[TextBatchDelete] Unhandled error: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="An internal server error occurred.")
+# # 3. API BATCH DELETE
+# # Áp dụng decorator: Endpoint này chỉ cần index
+# @router.post("/delete-batch", response_model=BaseResponse)
+# @ensure_services_are_ready(check_model=False, check_index=True)
+# async def delete_batch(payload: TextBatchDeleteRequest):
+#     try:
+#         count = text_index_service.remove_list_images(payload.product_id, payload.image_paths)
+#         return {"success": True, "message": f"Processed request. Deleted {count} image entries."}
+#     except Exception as e:
+#         logger.error(f"[TextBatchDelete] Unhandled error: {e}", exc_info=True)
+#         raise HTTPException(status_code=500, detail="An internal server error occurred.")
 
-# 4. API DELETE PRODUCT
-# Áp dụng decorator: Endpoint này chỉ cần index
+# # 4. API DELETE PRODUCT
+# # Áp dụng decorator: Endpoint này chỉ cần index
+# @router.post("/delete", response_model=BaseResponse)
+# @ensure_services_are_ready(check_model=False, check_index=True)
+# async def delete_product(payload: TextDeleteRequest):
+#     try:
+#         # Giả sử bạn có hàm remove_product trong service
+#         count = text_index_service.remove_product(payload.product_id)
+#         return {"success": True, "message": f"Processed request. Deleted {count} entries for product."}
+#     except Exception as e:
+#         logger.error(f"[TextDelete] Unhandled error: {e}", exc_info=True)
+#         raise HTTPException(status_code=500, detail="An internal server error occurred.")
+    
 @router.post("/delete", response_model=BaseResponse)
-@ensure_services_are_ready(check_model=False, check_index=True)
-async def delete_product(payload: TextDeleteRequest):
+async def delete_entries(payload: TextBatchDeleteRequest): # Dùng lại schema của batch delete
+    """
+    Xóa các entry khỏi index.
+    - Nếu `image_paths` được cung cấp và không rỗng: chỉ xóa các ảnh đó.
+    - Nếu `image_paths` không được cung cấp hoặc là mảng rỗng: xóa TOÀN BỘ sản phẩm.
+    """
     try:
-        # Giả sử bạn có hàm remove_product trong service
-        count = text_index_service.remove_product(payload.product_id)
-        return {"success": True, "message": f"Processed request. Deleted {count} entries for product."}
+        count = 0
+        if payload.image_paths and len(payload.image_paths) > 0:
+            # Kịch bản 1: Xóa các ảnh cụ thể
+            count = text_index_service.remove_list_images(payload.product_id, payload.image_paths)
+            message = f"Removed {count} specific image entries for product '{payload.product_id}'."
+        else:
+            # Kịch bản 2: Xóa toàn bộ sản phẩm
+            count = text_index_service.remove_product(payload.product_id)
+            message = f"Removed all {count} entries for product '{payload.product_id}'."
+            
+        return {"success": True, "message": message}
     except Exception as e:
-        logger.error(f"[TextDelete] Unhandled error: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="An internal server error occurred.")
+        logger.error(f"[TextDelete] Error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An internal error occurred during deletion.")
     
 # 5. API CLEAR INDEX
 # Áp dụng decorator: Endpoint này chỉ cần index
