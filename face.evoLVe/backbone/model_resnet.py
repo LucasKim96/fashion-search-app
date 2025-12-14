@@ -104,26 +104,25 @@ class ResNet(Module):
         self.layer3 = self._make_layer(block, 256, layers[2], stride = 2)
         self.layer4 = self._make_layer(block, 512, layers[3], stride = 2)
 
+        # self.bn_o1 = BatchNorm2d(2048)
+        # # Thêm Global Average Pooling 2D
+        # # Sử dụng AdaptiveAvgPool2d(1) để luôn thu về 1x1, bất kể input size là gì
+        # self.gap = nn.AdaptiveAvgPool2d((1, 1))
+        # self.dropout = nn.Dropout(p=0.6)
+        # # Vì GAP luôn cho output 2048x1x1, Flatten Dim luôn là 2048
+
+        # self.fc = Linear(2048, 512)
+        # self.bn_o2 = BatchNorm1d(512)
+
         self.bn_o1 = BatchNorm2d(2048)
-        self.dropout = nn.Dropout(p=0.6)
-
-
-        # Tính số feature tự động dựa trên input_size
-        with torch.no_grad():
-            dummy = torch.zeros(1, 3, input_size[0], input_size[1])
-            x = self.conv1(dummy)
-            x = self.bn1(x)
-            x = self.relu(x)
-            x = self.maxpool(x)
-            x = self.layer1(x)
-            x = self.layer2(x)
-            x = self.layer3(x)
-            x = self.layer4(x)
-            x = self.dropout(x)
-            flatten_dim = x.numel() // x.size(0)
-
-        self.fc = Linear(flatten_dim, 512)
+        self.dropout = Dropout()
+        if input_size[0] == 112:
+            self.fc = Linear(2048 * 4 * 4, 512)
+        else:
+            self.fc = Linear(2048 * 7 * 7, 512)
         self.bn_o2 = BatchNorm1d(512)
+
+
 
         for m in self.modules():
             if isinstance(m, Conv2d):
@@ -168,6 +167,14 @@ class ResNet(Module):
         x = self.layer2(x)
         x = self.layer3(x)
         x = self.layer4(x)
+
+        # x = self.bn_o1(x)
+        # x = self.gap(x) # [Batch, 2048, H, W] -> [Batch, 2048, 1, 1]
+        # x = x.view(x.size(0), -1)
+        # x = self.dropout(x)
+        # x = self.fc(x)
+        # x = self.bn_o2(x)
+
 
         x = self.bn_o1(x)
         x = self.dropout(x)

@@ -1,9 +1,5 @@
 import sys
-sys.path.append('/content/face.evoLVe/configs')
-# Đường dẫn tới thư mục gốc repo face.evoLVe
-repo_path = '/content/face.evoLVe'
-if repo_path not in sys.path:
-    sys.path.append(repo_path)
+sys.path.append('./configs')
 
 import torch
 import torch.nn as nn
@@ -13,7 +9,8 @@ import torchvision.datasets as datasets
 from config_colab import configurations
 from backbone.model_resnet import ResNet_50, ResNet_101, ResNet_152
 from backbone.model_irse import IR_50, IR_101, IR_152, IR_SE_50, IR_SE_101, IR_SE_152
-from head.metrics import ArcFace, CosFace, SphereFace, Am_softmax
+from backbone.vit_backbone import ViT_EvoLVe
+from head.metrics import ArcFace, CosFace, SphereFace, Am_softmax, Softmax
 from loss.focal import FocalLoss
 # import importlib
 # import util.utils
@@ -46,6 +43,7 @@ import faiss
 import time
 import json
 import subprocess
+import faiss
 
 def get_gpu_usage(gpu_id=0):
     """
@@ -84,118 +82,117 @@ def find_last_epoch(model_root):
     return max(epochs) if epochs else 0
 
 def perform_retrieval_val(backbone, data_loader, device, k_values=[1, 5, 10], desc_prefix="Retrieval"):
-    """
-    Thực hiện đánh giá Retrieval (P@K và R@K) trên tập dữ liệu.
-    Sử dụng Leave-One-Out (mỗi mẫu là Query cho các mẫu còn lại).
-    """
     backbone.eval()
     all_embeddings = []
     all_labels = []
 
-    # 1. Lấy tất cả Embeddings và Labels
+    # Lấy Embeddings
+    # Check data loader rỗng
+    if len(data_loader) == 0:
+        return {f"{m}@{k}": 0.0 for k in k_values for m in ['P', 'R']}
+
     for inputs, labels in tqdm(data_loader, desc=f"{desc_prefix} Embeddings"):
         inputs = inputs.to(device)
         with torch.no_grad():
-            # Lấy features (embeddings) từ BACKBONE
             features = backbone(inputs).cpu().numpy()
             all_embeddings.append(features)
             all_labels.extend(labels.cpu().numpy())
 
     if not all_embeddings:
-        print(f"[{desc_prefix} WARNING] Data loader is empty.")
-        # Trả về NaN cho các metrics nếu không có dữ liệu
-        default_metrics = {f"{m}@{k}": np.nan for k in k_values for m in ['P', 'R']}
-        return default_metrics
+        return {f"{m}@{k}": 0.0 for k in k_values for m in ['P', 'R']}
 
     all_embeddings = np.concatenate(all_embeddings)
     all_labels = np.array(all_labels).astype(np.int64)
     num_samples, dim = all_embeddings.shape
     max_k = max(k_values)
 
-    # Kiểm tra số lượng mẫu để đảm bảo có thể thực hiện Leave-One-Out
     if num_samples < 2:
-        print(f"[{desc_prefix} WARNING] Only {num_samples} sample(s). Cannot perform Leave-One-Out retrieval.")
-        default_metrics = {f"{m}@{k}": np.nan for k in k_values for m in ['P', 'R']}
-        return default_metrics
+        print(f"[{desc_prefix} WARNING] Not enough samples for retrieval.")
+        return {f"{m}@{k}": 0.0 for k in k_values for m in ['P', 'R']}
 
-    # Chuẩn hóa embeddings (rất quan trọng cho Cosine Similarity trong Faiss)
+    # Chuẩn hóa L2
     faiss.normalize_L2(all_embeddings)
 
-    # 2. Xây dựng Faiss Index (CPU)
-    # IndexFlatIP cho Cosine Similarity sau khi đã L2-normalized
-    index_cpu = faiss.IndexFlatIP(dim)
-    index_cpu.add(all_embeddings)
-
-    # 3. Kiểm tra và chuyển Index lên GPU
-    index = index_cpu
-    use_gpu = False
-
-    # Kiểm tra Faiss có hỗ trợ GPU và PyTorch đang dùng CUDA không
+    # Faiss Search
+    index = faiss.IndexFlatIP(dim)
     if device.type == 'cuda' and faiss.get_num_gpus() > 0:
         try:
-            # Chọn GPU đầu tiên (ID 0)
-            res = faiss.StandardGpuResources() # Quản lý tài nguyên GPU
-            # Chuyển Index từ CPU sang GPU (GPU ID 0)
-            index = faiss.index_cpu_to_gpu(res, 0, index_cpu)
-            use_gpu = True
-            print(f"[Faiss] Successfully moved Index to GPU 0 for acceleration.")
-        except Exception as e:
-            # Nếu gặp lỗi, quay về dùng CPU
-            print(f"[Faiss WARNING] Failed to use GPU: {e}. Falling back to CPU.")
-            index = index_cpu
-            use_gpu = False
-    else:
-        print("[Faiss] Using CPU Index (CUDA not detected or Faiss-GPU not installed).")
+            res = faiss.StandardGpuResources()
+            index = faiss.index_cpu_to_gpu(res, 0, index)
+        except Exception:
+            pass # Fallback to CPU
 
-    # 4. Thực hiện truy vấn k-NN (Leave-One-Out)
-    # D: Distances/Scores, I: Indices
+    index.add(all_embeddings)
+
+    # Search k+1 để loại bỏ chính nó
+    # D: Scores, I: Indices
     D, I = index.search(all_embeddings, max_k + 1)
 
-    # Bỏ qua kết quả đầu tiên (chính nó)
-    retrieved_indices_full = I[:, 1:]
+    # Tính toán Metrics bằng Ma trận (Vectorization)
+    print(f"[{desc_prefix}] Calculating metrics (Vectorized)...")
 
-    # Đánh giá (dùng Leave-One-Out, mỗi mẫu là Query cho các mẫu còn lại)
-    retrieval_results = {k: {'P': [], 'R': []} for k in k_values}
+    # Loại bỏ cột đầu tiên (chính nó) -> [N, max_k]
+    retrieved_indices = I[:, 1:]
 
-    for i in trange(num_samples, desc=f"{desc_prefix} Faiss Metrics"):
-        query_label = all_labels[i]
+    # Lấy nhãn của các kết quả tìm được -> [N, max_k]
+    retrieved_labels = all_labels[retrieved_indices]
 
-        # Total Relevant: Số mẫu cùng lớp (trừ chính query)
-        total_relevant = np.sum(all_labels == query_label) - 1
+    # Reshape query_labels thành cột dọc [N, 1] để so sánh broadcast
+    query_labels = all_labels.reshape(-1, 1)
 
-        if total_relevant == 0:
-            for k in k_values:
-                retrieval_results[k]['P'].append(0.0)
-                retrieval_results[k]['R'].append(0.0)
-            continue
+    # Tạo ma trận True/False: Vị trí nào dự đoán đúng nhãn -> [N, max_k]
+    matches = (retrieved_labels == query_labels)
 
-        # Lấy nhãn của Top (max_k) láng giềng
-        top_k_indices_labels = all_labels[retrieved_indices_full[i]]
+    # Tính tổng số lượng ảnh cùng nhãn trong toàn bộ dataset (trừ chính nó)
+    # Cách nhanh: dùng bincount rồi map lại
+    label_counts = np.bincount(all_labels)
+    # Số lượng relevant cho mỗi query = tổng số lượng của label đó - 1 (chính nó)
+    total_relevant_per_query = label_counts[all_labels] - 1
 
-        for k in k_values:
-            # Nhãn của Top K kết quả truy vấn
-            top_k_retrieved_labels = top_k_indices_labels[:k]
+    # Những mẫu này sẽ có Precision = 0, Recall = 0 
+    safe_total_relevant = np.maximum(total_relevant_per_query, 1)
 
-            # Đếm số lượng chính xác (relevant) trong Top K
-            correctly_retrieved = np.sum(top_k_retrieved_labels == query_label)
+    # Tính Cumsum theo chiều ngang để biết tại k=1, k=2... có bao nhiêu đúng
+    # matches: [[T, F, T], ...] -> cumsum: [[1, 1, 2], ...]
+    matches_cumsum = np.cumsum(matches, axis=1)
 
-            p_at_k = correctly_retrieved / k
-            r_at_k = correctly_retrieved / total_relevant
+    avg_metrics = {}
 
-            retrieval_results[k]['P'].append(p_at_k)
-            retrieval_results[k]['R'].append(r_at_k)
+    for k in k_values:
+        # Lấy cột thứ k-1 (vì index bắt đầu từ 0)
+        # correct_at_k là số lượng đúng trong top K
+        correct_at_k = matches_cumsum[:, k-1]
 
-    # 5. Tính trung bình (Giữ nguyên)
-    avg_metrics = {
-        f"P@{k}": np.mean(results['P']) * 100
-        for k, results in retrieval_results.items()
-    }
-    avg_metrics.update({
-        f"R@{k}": np.mean(results['R']) * 100
-        for k, results in retrieval_results.items()
-    })
+        # Precision@K = (Số đúng trong top K) / K
+        p_at_k = correct_at_k / k
+
+        # Recall@K = (Số đúng trong top K) / (Tổng số ảnh cùng loại trong dữ liệu)
+        r_at_k = correct_at_k / safe_total_relevant
+
+        # Xử lý riêng cho trường hợp total_relevant == 0 (Class chỉ có 1 ảnh)
+        # Gán Recall = 0 cho những trường hợp này
+        r_at_k[total_relevant_per_query == 0] = 0.0
+
+        # Tính trung bình toàn bộ tập dữ liệu
+        avg_metrics[f"P@{k}"] = np.mean(p_at_k) * 100
+        avg_metrics[f"R@{k}"] = np.mean(r_at_k) * 100
 
     return avg_metrics
+
+def separate_vit_paras(modules):
+    """
+    Tách tham số cho ViT:
+    - paras_wo_bn: Weights của Linear, Conv2d -> Có Weight Decay
+    - paras_only_bn: Bias tất cả layers + Weights của LayerNorm -> Không Weight Decay
+    """
+    paras_only_bn = []
+    paras_wo_bn = []
+    for name, param in modules.named_parameters():
+        if 'bias' in name or 'norm' in name or 'cls_token' in name or 'pos_embed' in name:
+            paras_only_bn.append(param)
+        else:
+            paras_wo_bn.append(param)
+    return paras_only_bn, paras_wo_bn
 
 if __name__ == "__main__":
 
@@ -245,28 +242,40 @@ if __name__ == "__main__":
     print("=" * 60)
 
     #======= Data =======#
+    # train_transform = transforms.Compose([
+    #         transforms.Resize([int(256 * INPUT_SIZE[0] / 224), int(256 * INPUT_SIZE[0] / 224)]), # smaller side resized
+    #         transforms.RandomCrop([INPUT_SIZE[0], INPUT_SIZE[1]], padding=4, fill=255),
+    #         transforms.RandomHorizontalFlip(),
+    #         transforms.RandomAffine(degrees=30, translate=(0.02, 0.02), scale=(0.8, 1.15), fill=255),
+    #         transforms.RandomPerspective(distortion_scale=0.3, p=0.3, interpolation=transforms.InterpolationMode.BILINEAR, fill=255),
+    #         transforms.RandomApply([
+    #             transforms.GaussianBlur(kernel_size=(3, 7), sigma=(0.1, 2.0))
+    #         ], p=0.5),
+    #         transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4, hue=0.5),
+    #         transforms.RandomGrayscale(p=0.4),
+
+    #         transforms.ToTensor(),
+    #         transforms.Normalize(mean=RGB_MEAN, std=RGB_STD),
+    # ])
+
     train_transform = transforms.Compose([
-        # transforms.Resize([224, 224]),
         transforms.Resize([int(256 * INPUT_SIZE[0] / 224), int(256 * INPUT_SIZE[0] / 224)]), # smaller side resized
         transforms.RandomCrop([INPUT_SIZE[0], INPUT_SIZE[1]]),
+        transforms.ColorJitter(brightness=(0.7,1.3), contrast=(0.7,1.5), saturation=(0.7, 1.5), hue=(-0.03, 0.05)),
         transforms.RandomHorizontalFlip(),
         transforms.RandomAffine(degrees=30, translate=(0.02, 0.02), scale=(0.8, 1.4)),
-        transforms.RandomPerspective(distortion_scale=0.3, p=0.3, interpolation=transforms.InterpolationMode.BILINEAR),
-        transforms.ColorJitter(brightness=(0.7,1.3), contrast=(0.7,1.5), saturation=(0.7, 1.5), hue=(-0.03, 0.05)),
         transforms.RandomAdjustSharpness(sharpness_factor=2, p=0.5),
+        transforms.RandomPerspective(distortion_scale=0.3, p=0.5, interpolation=transforms.InterpolationMode.BILINEAR),
         transforms.GaussianBlur(kernel_size=3, sigma=(0.1, 2.0)),
         transforms.RandomGrayscale(p=0.05),
         transforms.ToTensor(),
         transforms.Normalize(mean=RGB_MEAN, std=RGB_STD),
     ])
 
-
     val_transform = transforms.Compose([
-        transforms.Resize([int(256 * INPUT_SIZE[0] / 224), int(256 * INPUT_SIZE[0] / 224)]), # smaller side resized
-        transforms.CenterCrop([INPUT_SIZE[0], INPUT_SIZE[1]]),
-        # transforms.Resize([224, 224]),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=RGB_MEAN, std=RGB_STD),
+            transforms.Resize([INPUT_SIZE[0], INPUT_SIZE[1]]),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=RGB_MEAN, std=RGB_STD),
     ])
 
     dataset_train = datasets.ImageFolder(os.path.join(DATA_ROOT, cfg['TRAIN_DIR']), train_transform)
@@ -313,6 +322,12 @@ if __name__ == "__main__":
         'IR_SE_101': IR_SE_101(INPUT_SIZE),
         'IR_SE_152': IR_SE_152(INPUT_SIZE)
     }
+    if BACKBONE_NAME == 'ViT_Base':
+        if 'ViT_EvoLVe' not in globals():
+                raise ImportError("Cannot import ViT_EvoLVe. Please check vit_backbone.py file.")
+        BACKBONE_DICT['ViT_Base'] = ViT_EvoLVe(embedding_size=EMBEDDING_SIZE, pretrained=True)
+
+
     BACKBONE = BACKBONE_DICT[BACKBONE_NAME]
 
     for param in BACKBONE.parameters():
@@ -324,7 +339,8 @@ if __name__ == "__main__":
         'ArcFace': ArcFace(in_features=EMBEDDING_SIZE, out_features=NUM_CLASS, s=65, m=0.4, device_id=head_device_id),
         'CosFace': CosFace(in_features=EMBEDDING_SIZE, out_features=NUM_CLASS, device_id=head_device_id),
         'SphereFace': SphereFace(in_features=EMBEDDING_SIZE, out_features=NUM_CLASS, device_id=head_device_id),
-        'Am_softmax': Am_softmax(in_features=EMBEDDING_SIZE, out_features=NUM_CLASS, device_id=head_device_id)
+        'Am_softmax': Am_softmax(in_features=EMBEDDING_SIZE, out_features=NUM_CLASS, device_id=head_device_id),
+        'Softmax': Softmax(in_features=EMBEDDING_SIZE, out_features=NUM_CLASS, device_id=head_device_id),
     }
 
 
@@ -340,6 +356,9 @@ if __name__ == "__main__":
     if "IR" in BACKBONE_NAME:
         backbone_paras_only_bn, backbone_paras_wo_bn = separate_irse_bn_paras(BACKBONE)
         _, head_paras_wo_bn = separate_irse_bn_paras(HEAD)
+    elif "ViT" in BACKBONE_NAME:
+        backbone_paras_only_bn, backbone_paras_wo_bn = separate_vit_paras(BACKBONE)
+        _, head_paras_wo_bn = separate_resnet_bn_paras(HEAD)
     else:
         backbone_paras_only_bn, backbone_paras_wo_bn = separate_resnet_bn_paras(BACKBONE)
         _, head_paras_wo_bn = separate_resnet_bn_paras(HEAD)
@@ -466,7 +485,7 @@ if __name__ == "__main__":
         for batch_idx, (inputs, labels) in enumerate(tqdm(train_loader, desc=f"Epoch {epoch+1}/{NUM_EPOCH}")):
             inputs, labels = inputs.to(DEVICE), labels.to(DEVICE).long()
             features = BACKBONE(inputs)
-            outputs = HEAD(features, labels)
+            outputs = HEAD(features)
             # labels = labels.long()
             # if outputs.device != labels.device:
             #     labels = labels.to(outputs.device)
@@ -519,7 +538,7 @@ if __name__ == "__main__":
             for v_batch_idx, (inputs, labels) in enumerate(tqdm(val_loader, desc="Validation")):
                 inputs, labels = inputs.to(DEVICE), labels.to(DEVICE)
                 features = BACKBONE(inputs)
-                outputs = HEAD(features, labels)
+                outputs = HEAD(features)
 
                 labels = labels.long()
                 if outputs.device != labels.device:

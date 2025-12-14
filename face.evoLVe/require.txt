@@ -1,0 +1,45 @@
+contourpy @ file:///croot/contourpy_1732540045555/work
+cycler @ file:///tmp/build/80754af9/cycler_1637851556182/work
+faiss==1.9.0
+filelock==3.19.1
+fonttools @ file:///home/task_175975467226191/conda-bld/fonttools_1759754871865/work
+fsspec==2025.9.0
+Jinja2==3.1.6
+kiwisolver @ file:///croot/kiwisolver_1737039087198/work
+MarkupSafe==2.1.5
+matplotlib==3.10.6
+mpmath==1.3.0
+networkx==3.5
+numpy==2.3.3
+nvidia-cublas==13.0.0.19
+nvidia-cuda-cupti==13.0.48
+nvidia-cuda-nvrtc==13.0.48
+nvidia-cuda-runtime==13.0.48
+nvidia-cudnn-cu13==9.13.0.50
+nvidia-cufft==12.0.0.15
+nvidia-cufile==1.15.0.42
+nvidia-curand==10.4.0.35
+nvidia-cusolver==12.0.3.29
+nvidia-cusparse==12.6.2.49
+nvidia-cusparselt-cu13==0.8.0
+nvidia-nccl-cu13==2.27.7
+nvidia-nvjitlink==13.0.39
+nvidia-nvshmem-cu13==3.3.24
+nvidia-nvtx==13.0.39
+packaging @ file:///home/task_176104874243446/conda-bld/packaging_1761049080023/work
+pillow @ file:///croot/pillow_1752524526621/work
+pyparsing @ file:///croot/pyparsing_1731445506121/work
+PyQt6==6.9.1
+PyQt6_sip @ file:///home/task_175751008914507/conda-bld/pyqt-split_1757511022708/work/pyqt_sip
+python-dateutil @ file:///croot/python-dateutil_1716495738603/work
+setuptools==80.9.0
+sip @ file:///croot/sip_1756223371714/work
+six @ file:///croot/six_1744271502820/work
+sympy==1.14.0
+torch==2.9.0+cu130
+torchvision==0.24.0+cu130
+tornado @ file:///croot/tornado_1748956929273/work
+tqdm @ file:///croot/tqdm_1738943501192/work
+triton==3.5.0
+typing_extensions==4.15.0
+wheel==0.45.1

@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt  # bây giờ sẽ dùng backend 'Agg'
 from datetime import datetime
 import numpy as np
 from PIL import Image
-
+# import bcolz
 import io
 
 

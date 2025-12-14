@@ -2,3 +2,7 @@
 test
 config_f.py
 train_f.py
+*__pycache__/
+*.pyc
+.vscode/
+*/weights/
