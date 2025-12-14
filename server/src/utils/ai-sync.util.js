@@ -20,9 +20,8 @@ const DELETE_ENDPOINT = `${AI_API_BASE_URL}/txt2img/delete-batch`;
  * Hàm lõi để gửi một ảnh đến AI service để tạo embedding.
  * @param {string} productId - ID của sản phẩm cha.
  * @param {string} imagePath - Đường dẫn tương đối của ảnh.
- * @param {string} targetGroup - Nhóm mục tiêu để AI crop ảnh.
  */
-const addEmbeddingRequest = async (productId, imagePath, targetGroup) => {
+const addEmbeddingRequest = async (productId, imagePath) => {
 	const absolutePath = path.join(process.cwd(), imagePath.substring(1));
 
 	if (!fs.existsSync(absolutePath)) {
@@ -33,14 +32,9 @@ const addEmbeddingRequest = async (productId, imagePath, targetGroup) => {
 	const form = new FormData();
 	form.append("product_id", productId.toString());
 	form.append("image_path", imagePath);
-	// Key là "target_group" (snake_case) để khớp với FastAPI
-	form.append("target_group", targetGroup);
 	form.append("image", fs.createReadStream(absolutePath));
 
 	await axios.post(INDEX_ENDPOINT, form, { headers: form.getHeaders() });
-	console.log(
-		`[AI Sync] Txt2Img - ✅ Indexed: ${imagePath} with group '${targetGroup}'`
-	);
 };
 
 /**
@@ -66,13 +60,8 @@ const deleteEmbeddingsRequest = async (productId, imagePaths) => {
  * Đồng bộ hóa (thêm) một hoặc nhiều ảnh vào AI index.
  * @param {string} productId - ID của sản phẩm.
  * @param {string|string[]} imagePaths - Một hoặc một mảng các đường dẫn ảnh.
- * @param {string} targetGroup - Nhóm mục tiêu để AI crop ảnh.
  */
-export const syncEmbeddings = (
-	productId,
-	imagePaths,
-	targetGroup = "full_body"
-) => {
+export const syncEmbeddings = (productId, imagePaths) => {
 	if (!productId || !imagePaths) {
 		console.warn(
 			"[AI Sync] Txt2Img - Skipped: Missing productId or imagePaths."
@@ -87,21 +76,16 @@ export const syncEmbeddings = (
 
 	if (validPaths.length === 0) return;
 
-	console.log(
-		`[AI Sync] Txt2Img - Queued ${validPaths.length} image(s) for indexing for product ${productId} with group '${targetGroup}'.`
+	Promise.all(validPaths.map((p) => addEmbeddingRequest(productId, p))).catch(
+		(err) => {
+			const errorDetail =
+				err.response?.data?.detail || err.response?.data || err.message;
+			console.error(
+				`[AI Sync] Txt2Img - ❌ Error during parallel sync for product ${productId}:`,
+				JSON.stringify(errorDetail, null, 2)
+			);
+		}
 	);
-
-	// CHỖ SỬA QUAN TRỌNG NHẤT: Truyền đủ 3 tham số (productId, p, targetGroup)
-	Promise.all(
-		validPaths.map((p) => addEmbeddingRequest(productId, p, targetGroup))
-	).catch((err) => {
-		const errorDetail =
-			err.response?.data?.detail || err.response?.data || err.message;
-		console.error(
-			`[AI Sync] Txt2Img - ❌ Error during parallel sync for product ${productId}:`,
-			JSON.stringify(errorDetail, null, 2)
-		);
-	});
 };
 
 /**

@@ -2,177 +2,181 @@
 
 import os
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
 import numpy as np
 from PIL import Image
-from transformers import AutoTokenizer
-from torchvision import transforms
+from transformers import AutoTokenizer, AutoModel
+from torchvision import models, transforms
 from typing import Union, IO
-from pyvi import ViTokenizer # Thêm thư viện tách từ
-from app.config import USE_ALTERNATIVE_PHOCLIP # Import flag từ config
+from pyvi import ViTokenizer
 
 from app.config import (
     TEXT2IMG_MODEL_PATH, TEXT2IMG_BASE_ARCH, TEXT2IMG_EMBEDDING_DIM, DEVICE,
-    RGB_MEAN, RGB_STD, INPUT_SIZE, UPLOAD_ROOT_DIR
+    RGB_MEAN, RGB_STD, INPUT_SIZE
 )
 from app.utils.logger import logger
 from app.utils.timer import Timer
 
-from app.backbones.phoclip_arch import PhoCLIP 
-import cv2
-from app.services.yolo_service import yolo_service
-from app.services.preprocess import auto_crop_for_seller, resize_with_padding
+# =================================================================
+#    ĐỊNH NGHĨA LẠI KIẾN TRÚC MODEL CHO GIỐNG VỚI FILE TRAINING
+# =================================================================
+# NOTE: Đoạn code này phải khớp 100% với các class model trong file training.
+
+class PhoBERTEncoder(nn.Module):
+    def __init__(self, phobert, embed_dim=256, dropout_rate=0.1):
+        super().__init__()
+        self.phobert = phobert
+        self.projection = nn.Sequential(
+            nn.Linear(phobert.config.hidden_size, embed_dim),
+            nn.Dropout(dropout_rate) 
+        )
+    def forward(self, input_ids, attention_mask):
+        out = self.phobert(input_ids=input_ids, attention_mask=attention_mask)
+        return self.projection(out.last_hidden_state[:, 0, :])
+
+class ImageEncoder(nn.Module):
+    def __init__(self, embed_dim=256, base_model="vit_b_16", dropout_rate=0.1):
+        super().__init__()
+        vit = getattr(models, base_model)(weights=models.ViT_B_16_Weights.DEFAULT)
+        in_features = vit.heads.head.in_features
+        vit.heads = nn.Identity()
+        self.backbone = vit
+        self.projection = nn.Sequential(
+            nn.Linear(in_features, embed_dim),
+            nn.Dropout(dropout_rate)
+        )
+    def forward(self, x):
+        feats = self.backbone(x)
+        return self.projection(feats)
+
+class PhoCLIP(nn.Module):
+    def __init__(self, text_encoder, image_encoder, temperature=0.07):
+        super().__init__()
+        self.text_encoder = text_encoder
+        self.image_encoder = image_encoder
+        self.temperature = nn.Parameter(torch.tensor(temperature))
+    
+    # Thêm các hàm encoder vào đây để dễ truy cập
+    def get_text_encoder(self):
+        return self.text_encoder
+
+    def get_image_encoder(self):
+        return self.image_encoder
+
+# =================================================================
+#    SERVICE CLASS
+# =================================================================
 
 class Text2ImgService:
     def __init__(self):
         self.device = DEVICE
-        self.model = None # Khởi tạo là None
-        self.tokenizer = None # Khởi tạo là None
-        
+        self.model = None
+        self.tokenizer = None
+
+        # --- ĐỒNG BỘ HÓA TRANSFORM ---
+        # Transform này giống hệt `transform_val` trong file training.
+        # Nó xử lý đúng màu RGB và resize không bị lỗi.
         self.transform = transforms.Compose([
             transforms.Resize((INPUT_SIZE[0], INPUT_SIZE[1])),
             transforms.ToTensor(),
             transforms.Normalize(mean=RGB_MEAN, std=RGB_STD)
         ])
         
-        self.use_alt_model = USE_ALTERNATIVE_PHOCLIP
         self.load_model()
 
-    # === HÀM load_model ĐÃ ĐƯỢC CẬP NHẬT ===
     def load_model(self):
-        with Timer("Txt2Img Load Model"):
-            logger.info("--- LOADING TEXT2IMG MODEL (Custom PhoCLIP) ---")
+        with Timer("Txt2Img_LoadModel"):
+            logger.info("--- LOADING TEXT2IMG MODEL (v7 Architecture) ---")
             try:
-                # Load Tokenizer trước
+                # 1. Tải tokenizer và PhoBERT gốc (chỉ để xây dựng kiến trúc)
                 self.tokenizer = AutoTokenizer.from_pretrained(TEXT2IMG_BASE_ARCH, use_fast=False)
-
-                # Khởi tạo model
-                model_instance = PhoCLIP(embed_dim=TEXT2IMG_EMBEDDING_DIM).to(self.device)
+                phobert_base = AutoModel.from_pretrained(TEXT2IMG_BASE_ARCH)
+                
+                # 2. Xây dựng lại kiến trúc model rỗng (giống hệt file training)
+                text_encoder = PhoBERTEncoder(phobert_base, embed_dim=TEXT2IMG_EMBEDDING_DIM)
+                image_encoder = ImageEncoder(embed_dim=TEXT2IMG_EMBEDDING_DIM)
+                model_instance = PhoCLIP(text_encoder, image_encoder).to(self.device)
 
                 if not os.path.exists(TEXT2IMG_MODEL_PATH):
-                    # Ghi lỗi và bỏ qua, không dừng ứng dụng
-                    logger.error(f"❌ Checkpoint not found at {TEXT2IMG_MODEL_PATH}! PhoCLIP service will be disabled.")
-                    return # Thoát khỏi hàm load_model
+                    logger.error(f"❌ Checkpoint not found at {TEXT2IMG_MODEL_PATH}! Service disabled.")
+                    return
 
+                # 3. Tải checkpoint đã được "dọn dẹp"
                 logger.info(f"Loading weights from {TEXT2IMG_MODEL_PATH}")
                 checkpoint = torch.load(TEXT2IMG_MODEL_PATH, map_location=self.device)
-                state_dict = checkpoint.get("model_state", checkpoint)
-                model_instance.load_state_dict(state_dict, strict=False)
+                
+                # File checkpoint đã convert chỉ chứa `model_state` và `temperature`
+                model_instance.load_state_dict(checkpoint["model_state"])
                 
                 if "temperature" in checkpoint:
                     model_instance.temperature.data = torch.tensor(checkpoint["temperature"]).to(self.device)
 
                 model_instance.eval()
-                
-                # Chỉ gán model vào self.model nếu tất cả các bước trên thành công
                 self.model = model_instance
-                
                 logger.info(f"✅ PhoCLIP loaded successfully. Dim: {TEXT2IMG_EMBEDDING_DIM}")
 
             except Exception as e:
-                # Bắt tất cả các lỗi khác (lỗi load, lỗi cấu trúc, etc.)
-                logger.error(f"❌ Failed to load PhoCLIP: {e}. The service will be disabled.", exc_info=True)
-                # Đảm bảo self.model vẫn là None
+                logger.error(f"❌ Failed to load PhoCLIP: {e}. Service will be disabled.", exc_info=True)
                 self.model = None
                 self.tokenizer = None
 
-    # === HÀM embed_text ĐÃ ĐƯỢC CẬP NHẬT ===
-    # === HÀM embed_text ĐÃ ĐƯỢC CẬP NHẬT HOÀN CHỈNH ===
-    def embed_text(self, text: str):
-        """Chuyển Text -> Vector, có xử lý tách từ nếu cần."""
-        if self.model is None or self.tokenizer is None:
-            logger.warning("PhoCLIP model is not available. Skipping text embedding.")
+    def embed_text(self, text: str) -> np.ndarray | None:
+        """Chuyển Text -> Vector. LUÔN LUÔN tách từ."""
+        if not self.model or not self.tokenizer:
+            logger.warning("PhoCLIP model not available. Skipping text embedding.")
             return None
 
-        task_metadata = {
-            "service": "txt2img",
-            "action": "search_embedding",
-            "text_length": len(text),
-            "using_alt_model": self.use_alt_model # Thêm metadata để log
-        }
-        
-        with Timer("Txt2Img_TextEmbedding_ForSearch", metadata=task_metadata):
+        with Timer("Txt2Img_TextEmbedding", metadata={"text_length": len(text)}):
             try:
-                processed_text = text # Mặc định là văn bản gốc
+                # --- ĐỒNG BỘ HÓA LOGIC TEXT ---
+                # Luôn luôn gọi ViTokenizer, không cần cờ nữa
+                processed_text = ViTokenizer.tokenize(text)
+                logger.info(f"Original: '{text}' -> Segmented: '{processed_text}'")
 
-                # BƯỚC QUAN TRỌNG: Chỉ tách từ nếu đang dùng model thay thế
-                if self.use_alt_model:
-                    logger.info(f"Alt model is active. Applying word segmentation to query.")
-                    processed_text = ViTokenizer.tokenize(text)
-                    logger.info(f"Original: '{text}' -> Segmented: '{processed_text}'")
-
-                # Các bước sau dùng `processed_text`
                 tokens = self.tokenizer(
-                    processed_text, 
-                    padding="max_length", 
-                    truncation=True, 
-                    max_length=64, 
-                    return_tensors="pt"
+                    processed_text, padding="max_length", truncation=True, 
+                    max_length=64, return_tensors="pt"
                 ).to(self.device)
                 
                 with torch.no_grad():
-                    features = self.model.text_encoder(tokens["input_ids"], tokens["attention_mask"])
+                    features = self.model.get_text_encoder()(tokens["input_ids"], tokens["attention_mask"])
+                    normalized_features = F.normalize(features, p=2, dim=-1)
                 
-                vector = features.cpu().numpy().astype('float32')
-                norm = np.linalg.norm(vector)
-                if norm > 0: vector = vector / norm
-                    
-                return vector
+                return normalized_features.cpu().numpy().astype('float32')
+
             except Exception as e:
                 logger.error(f"Text embed error: {e}", exc_info=True)
                 return None
 
-    # === HÀM embed_image ĐÃ ĐƯỢC CẬP NHẬT ===
-    def embed_image(self, image_data: Union[str, IO], target_group: str):
-        """Chuyển Ảnh -> Vector, CÓ ÁP DỤNG SMART CROP VÀ RESIZE PADDING."""
-        # Kiểm tra xem model đã được load thành công chưa
-        if self.model is None:
-            logger.warning("PhoCLIP model is not available. Skipping image embedding.")
+    def embed_image(self, image_data: Union[str, IO]) -> np.ndarray | None:
+        """Chuyển Ảnh -> Vector, sử dụng transform giống hệt training."""
+        if not self.model:
+            logger.warning("PhoCLIP model not available. Skipping image embedding.")
             return None
 
-        task_metadata = {
-            "service": "txt2img",
-            "action": "indexing", # <-- PHÂN BIỆT RÕ HÀNH ĐỘNG
-            # "group": target_group
-        }
-        with Timer("Txt2Img_ImageEmbedding_ForIndex", metadata=task_metadata) as t:
-
+        with Timer("Txt2Img_ImageEmbedding"):
             try:
+                # --- ĐỒNG BỘ HÓA LOGIC ẢNH ---
+                # Toàn bộ quá trình xử lý ảnh chỉ dùng PIL và Torchvision, đảm bảo đúng màu RGB.
                 image_pil = Image.open(image_data).convert("RGB")
-                image_np_rgb = np.array(image_pil)
                 
-                yolo_model = yolo_service.model
-                if not yolo_model:
-                    raise RuntimeError("YOLO model is not available for cropping.")
-
-                logger.info(f"[Txt2Img] Running auto_crop for group: '{target_group}'")
-                cropped_np, method = auto_crop_for_seller(yolo_model, image_np_rgb, target_group)
-                
-                logger.info(f"[Txt2Img] Image cropped using method: '{method}'")
-                if cropped_np is None or cropped_np.size == 0:
-                    logger.error("[Txt2Img] Cropping failed.")
-                    return None
-
-                img_padded = resize_with_padding(cropped_np, target_size=INPUT_SIZE)
-                if img_padded is None:
-                    logger.error("[Txt2Img] Resize with padding failed.")
-                    return None
-
-                final_pil_image = Image.fromarray(img_padded)
-
-                image_tensor = self.transform(final_pil_image).unsqueeze(0).to(self.device)
+                # Áp dụng transform giống hệt `transform_val`
+                image_tensor = self.transform(image_pil).unsqueeze(0).to(self.device)
                 
                 with torch.no_grad():
-                    features = self.model.image_encoder(image_tensor)
+                    features = self.model.get_image_encoder()(image_tensor)
+                    normalized_features = F.normalize(features, p=2, dim=-1)
                 
-                vector = features.cpu().numpy().astype('float32')
-                norm = np.linalg.norm(vector)
-                if norm > 0: vector = vector / norm
-                    
-                return vector
+                return normalized_features.cpu().numpy().astype('float32')
                 
             except Exception as e:
-                logger.error(f"Error embedding image for Txt2Img: {e}", exc_info=True)
+                logger.error(f"Error embedding image: {e}", exc_info=True)
                 return None
 
-# Singleton Instance
-txt2img_service = Text2ImgService()
+# --- Singleton Instance ---
+try:
+    txt2img_service = Text2ImgService()
+except Exception as e:
+    logger.error(f"Failed to initialize Text2ImgService: {e}", exc_info=True)
+    txt2img_service = None

@@ -847,19 +847,10 @@ export const reindexTextSearchService = async () => {
 			}
 		}
 
-		// === SỬA ĐỔI QUAN TRỌNG BẮT ĐẦU TỪ ĐÂY ===
-
-		// 1. Lấy `targetGroup` từ model ProductAIConfig
-		const aiConfig = await ProductAIConfig.findOne({ productId: pid }).lean();
-
-		// 2. Gán giá trị, có fallback an toàn
-		// Nếu không tìm thấy config, sẽ dùng 'full_body' làm mặc định
-		const targetGroup = aiConfig?.targetGroup || "full_body";
-
 		const validImages = imagesToIndex.filter(isFileExist);
 		if (validImages.length > 0) {
 			// 3. Truyền `targetGroup` đã lấy được vào hàm syncEmbeddings
-			syncEmbeddings(pid, validImages, targetGroup);
+			syncEmbeddings(pid, validImages);
 			count += validImages.length;
 		}
 

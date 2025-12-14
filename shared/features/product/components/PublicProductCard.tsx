@@ -19,7 +19,7 @@ export const PublicProductCard: React.FC<PublicProductCardProps> = ({
 
 	const displayName = p.name || p.pdName || "Sản phẩm";
 
-	const isSearchResult = "similarity" in product && "matchedImage" in product;
+	const isSearchResult = "similarity" in product; //&& "matchedImage" in product;
 	const similarity = isSearchResult
 		? (product as ProductSearchResult).similarity
 		: 0;
