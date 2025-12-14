@@ -1,0 +1,2 @@
+epoch,train_loss,train_acc_top1,train_acc_top5,val_loss,val_acc_top1,val_acc_top5,loss_ratio,val_f1,grad_norm,lr_head,time_sec,gpu_mem_used,gpu_mem_total,gpu_util,val_p@1,val_r@1,val_p@5,val_r@5,val_p@10,val_r@10,train_p@1,train_r@1,train_p@5,train_r@5,train_p@10,train_r@10
+1,37.041897,0.0,0.0,35.812534,0.0,0.0,0.9668,0.0,5.0,0.0125,180.19,1548,16311,92,1.9416,0.8216,0.7223,1.492,0.4475,1.8408,,,,,,
