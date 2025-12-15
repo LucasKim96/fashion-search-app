@@ -31,7 +31,7 @@ export default function SearchPage() {
 		router.replace(`/search-text?q=${encodeURIComponent(text)}`);
 
 		try {
-			const res = await searchByTextApi(text, 60);
+			const res = await searchByTextApi(text, 20);
 			if (res.success) {
 				setResults(res.data);
 			} else {

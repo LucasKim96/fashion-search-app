@@ -142,7 +142,7 @@ export const searchImageService = async (file) => {
  * @param {string} query - Từ khóa tìm kiếm
  * @param {number} limit - Số lượng kết quả
  */
-export const searchByTextService = async (q, limit = 40) => {
+export const searchByTextService = async (q, limit = 20) => {
 	try {
 		// 1. Gọi sang Python (PhoCLIP)
 		// Python trả về: { data: [ { id, score, image }, ... ] }

@@ -29,7 +29,8 @@ class TextIndexService:
         self._load_index()
 
     def _load_index(self):
-        with Timer("TextIndex_LoadIndex"):
+        task_metadata = {"service": "txt_index", "action": "load_index"}
+        with Timer("TextIndex_LoadIndex", metadata=task_metadata):
             # ### UPDATE ### Sử dụng self._file_lock để đảm bảo an toàn khi đọc file lúc khởi động
             with self._file_lock:
                 # Load Index
@@ -74,7 +75,12 @@ class TextIndexService:
         self.next_id = 0
 
     def add_product(self, vector: np.ndarray, product_id: str, image_path: str) -> bool:
-        task_metadata = {"product_id": product_id, "image_path": image_path}
+        task_metadata = {
+            "service": "txt_index",
+            "action": "addPD",
+            "product_id": product_id, 
+            "image_path": image_path
+        }
         with Timer("TextIndex_AddProduct", metadata=task_metadata):
             try:
                 if vector is None: 
@@ -110,7 +116,12 @@ class TextIndexService:
                 return False
 
     def remove_list_images(self, product_id: str, image_paths: list) -> int:
-        task_metadata = {"product_id": product_id, "num_images": len(image_paths)}
+        task_metadata = {
+            "service": "txt_index",
+            "action": "remove_images",
+            "product_id": product_id,
+            "num_images": len(image_paths)
+        }
         with Timer("TextIndex_RemoveListImages", metadata=task_metadata):
             try:
                 ids_to_remove = []
@@ -140,7 +151,11 @@ class TextIndexService:
         Xóa TẤT CẢ các entry của một product_id.
         Hàm này sẽ tìm tất cả các image_path của sản phẩm đó và gọi remove_list_images.
         """
-        task_metadata = {"product_id": product_id}
+        task_metadata = {
+            "service": "txt_index",
+            "action": "remove_product",
+            "product_id": product_id
+        }
         with Timer("TextIndex_RemoveFullProduct", metadata=task_metadata):
             # 1. Tìm tất cả các image_path thuộc về product_id này
             paths_to_remove = []
@@ -160,7 +175,12 @@ class TextIndexService:
             return self.remove_list_images(product_id, paths_to_remove)
 
     def search(self, vector: np.ndarray, k: int = 20) -> list:
-        task_metadata = {"k": k, "index_total": self.index.ntotal if self.index else 0}
+        task_metadata = {
+            "service": "txt_index",
+            "action": "search",
+            "k": k,
+            "index_total": self.index.ntotal if self.index else 0
+        }
         with Timer("TextIndex_Search", metadata=task_metadata):
             try:
                 if not self.index or self.index.ntotal == 0: return []
@@ -190,7 +210,8 @@ class TextIndexService:
                 return []
 
     def reset_index(self):
-        with Timer("TextIndex_ResetIndex"):
+        task_metadata = {"service": "txt_index", "action": "reset"}
+        with Timer("TextIndex_ResetIndex", metadata=task_metadata):
             try:
                 logger.warning("[TextIndex] RESETTING ENTIRE INDEX...")
                 with self._file_lock:
@@ -204,7 +225,8 @@ class TextIndexService:
             
     def save(self):
         """Lưu index và map xuống ổ cứng. Chỉ nên gọi hàm này bên trong một lock."""
-        with Timer("TextIndex_SaveToDisk"):
+        task_metadata = {"service": "txt_index", "action": "save_to_disk"}
+        with Timer("TextIndex_SaveToDisk", metadata=task_metadata):
             try:
                 os.makedirs(os.path.dirname(self.index_path), exist_ok=True)
                 faiss.write_index(self.index, self.index_path)
