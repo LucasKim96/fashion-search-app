@@ -192,8 +192,8 @@ export const ImageSearchCropper: React.FC<Props> = ({
                     box-shadow: none !important;
 					width: 30px !important; /* Tăng diện tích bấm để dễ kéo góc */
                     height: 30px !important; 
-                    transform: translate(-50%, -50%);
-                    margin-top: 0; margin-left: 0; 
+                    // transform: translate(-50%, -50%);
+                    // margin-top: 0; margin-left: 0; 
 				}
                 
                 /* Đảm bảo vẫn hiện con trỏ chuột đúng hướng khi rê vào góc */

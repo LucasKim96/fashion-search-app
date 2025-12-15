@@ -133,8 +133,8 @@ async def search_product(
             
             # Cosine Similarity (IndexFlatIP): Score càng cao càng tốt
             # Lọc bỏ các kết quả quá thấp (ví dụ < 0.5)
-            if score < 0.2: 
-                continue
+            # if score < 0: 
+            #     continue
 
             formatted_results.append(SearchResultItem(
                 rank=item['rank'], # Rank đã tính trong index_service

@@ -10,6 +10,8 @@ import {
 } from "@shared/features/product";
 import { SellerProductDetailModal } from "@/features/products";
 import { ProductToolbar } from "@shared/features/product";
+import { Pagination } from "@shared/core/components/ui/Pagination";
+
 export default function AdminProductPage() {
 	// --- Hooks ---
 	// Lấy thêm fetchAdminCount và adminCountState
@@ -31,6 +33,10 @@ export default function AdminProductPage() {
 		total: 0,
 		active: 0,
 	});
+
+	// --- STATE CHO PHÂN TRANG ---
+	const [page, setPage] = useState<number>(1);
+	const limit = 20; // Giữ hằng số limit để tính toán
 
 	// --- STATE CHO MODAL ---
 	const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -54,16 +60,14 @@ export default function AdminProductPage() {
 		setSelectedProduct(prod);
 		setIsDetailModalOpen(true);
 	};
-
-	// 1. Effect lấy danh sách sản phẩm (Search)
 	useEffect(() => {
 		const fetchData = async () => {
 			await searchAdminProducts({
 				query: searchQuery,
 				priceRange: selectedPriceRange,
 				status: "all",
-				page: 1,
-				limit: 20,
+				page: page, // Sử dụng state 'page'
+				limit: limit,
 			});
 		};
 
@@ -72,7 +76,25 @@ export default function AdminProductPage() {
 		}, 300);
 
 		return () => clearTimeout(timer);
-	}, [searchQuery, selectedPriceRange, refreshKey, searchAdminProducts]);
+	}, [searchQuery, selectedPriceRange, refreshKey, searchAdminProducts, page]);
+	// 1. Effect lấy danh sách sản phẩm (Search)
+	// useEffect(() => {
+	// 	const fetchData = async () => {
+	// 		await searchAdminProducts({
+	// 			query: searchQuery,
+	// 			priceRange: selectedPriceRange,
+	// 			status: "all",
+	// 			page: 1,
+	// 			limit: 20,
+	// 		});
+	// 	};
+
+	// 	const timer = setTimeout(() => {
+	// 		fetchData();
+	// 	}, 300);
+
+	// 	return () => clearTimeout(timer);
+	// }, [searchQuery, selectedPriceRange, refreshKey, searchAdminProducts]);
 
 	// 2. Effect lấy tổng số lượng sản phẩm (chạy mỗi khi reload)
 	useEffect(() => {
@@ -91,6 +113,13 @@ export default function AdminProductPage() {
 		getStats();
 	}, [fetchAdminCount, refreshKey]);
 
+	useEffect(() => {
+		setPage(1);
+	}, [searchQuery, selectedPriceRange]);
+
+	// Tính toán tổng số trang
+	const totalPages = stats.total ? Math.ceil(stats.total / limit) : 1;
+
 	return (
 		<div className="p-6 space-y-4 h-[1000px] flex flex-col bg-gray-50/50">
 			{/* 1. Toolbar (Header, Filter, Stats) */}
@@ -103,38 +132,52 @@ export default function AdminProductPage() {
 				stats={stats}
 			/>
 			{/* 4. Content List */}
-			<div className="flex-1 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden relative min-h-0">
+			{/* <div className="flex-1 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden relative min-h-0"> */}
+			<div className="flex-1 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden relative min-h-0 flex flex-col">
 				{adminProductsState.loading ? (
 					<div className="flex items-center justify-center h-full text-gray-500">
 						Đang tải dữ liệu...
 					</div>
 				) : (
-					<div className="p-6 h-full overflow-y-auto">
-						{adminProductsState.data && adminProductsState.data.length > 0 ? (
-							<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-								{adminProductsState.data.map((prod) => (
-									<ProductCard
-										key={prod._id}
-										product={prod}
-										mode="admin" // Chế độ Admin
-										showActions={true} // Hiển thị nút xóa/ẩn
-										showStatusBadge={true} // Hiển thị badge nếu ẩn
-										onProductChange={triggerReload} // Quan trọng: Gọi reload khi có thay đổi
-										onClick={() => handleProductClick(prod)}
+					<>
+						<div className="p-6 h-full overflow-y-auto">
+							{adminProductsState.data && adminProductsState.data.length > 0 ? (
+								<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+									{adminProductsState.data.map((prod) => (
+										<ProductCard
+											key={prod._id}
+											product={prod}
+											mode="admin" // Chế độ Admin
+											showActions={true} // Hiển thị nút xóa/ẩn
+											showStatusBadge={true} // Hiển thị badge nếu ẩn
+											onProductChange={triggerReload} // Quan trọng: Gọi reload khi có thay đổi
+											onClick={() => handleProductClick(prod)}
+										/>
+									))}
+								</div>
+							) : (
+								<div className="flex flex-col items-center justify-center h-full text-gray-400">
+									<Package
+										size={48}
+										strokeWidth={1}
+										className="mb-2 opacity-50"
 									/>
-								))}
-							</div>
-						) : (
-							<div className="flex flex-col items-center justify-center h-full text-gray-400">
-								<Package
-									size={48}
-									strokeWidth={1}
-									className="mb-2 opacity-50"
-								/>
-								<p>Không tìm thấy sản phẩm nào.</p>
-							</div>
+									<p>Không tìm thấy sản phẩm nào.</p>
+								</div>
+							)}
+						</div>
+						{totalPages > 1 && (
+							<Pagination
+								page={page}
+								totalPages={totalPages}
+								setPage={setPage}
+								backgroundClassName="bg-gradient-to-r from-gray-100 via-gray-50 to-gray-100"
+								activeColorClassName="bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 text-white font-semibold shadow-md"
+								textColorClassName="text-indigo-600 font-medium"
+								hoverColorClassName="hover:bg-gradient-to-r hover:from-blue-100 hover:via-indigo-150 hover:to-purple-100"
+							/>
 						)}
-					</div>
+					</>
 				)}
 			</div>
 			{/* 3. Modal Chi tiết*/}

@@ -16,6 +16,8 @@ import {
 	SellerProductDetailModal,
 	CreateProductModal,
 } from "@/features/products";
+import { Pagination } from "@shared/core/components/ui/Pagination";
+
 export default function SellerProductPage() {
 	// --- Hooks ---
 	const { searchShopProducts, shopProductsState, fetchShopCount } =
@@ -29,6 +31,9 @@ export default function SellerProductPage() {
 	const [isCreateClicked, setIsCreateClicked] = useState<boolean>(false);
 	const [refreshKey, setRefreshKey] = useState<number>(0);
 	const [stats, setStats] = useState({ total: 0, active: 0 });
+	// --- STATE CHO PHÂN TRANG ---
+	const [page, setPage] = useState<number>(1);
+	const limit = 20; // Giữ hằng số limit để tính toán
 
 	// --- STATE CHO MODAL ---
 	const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -53,20 +58,23 @@ export default function SellerProductPage() {
 		setIsDetailModalOpen(true);
 	};
 
-	// 1. Effect lấy danh sách (Search)
 	useEffect(() => {
 		const fetchData = async () => {
 			await searchShopProducts({
 				query: searchQuery,
 				priceRange: selectedPriceRange,
 				status: "all",
-				page: 1,
-				limit: 20,
+				page: page, // Sử dụng state 'page'
+				limit: limit,
 			});
 		};
-		const timer = setTimeout(() => fetchData(), 300);
+
+		const timer = setTimeout(() => {
+			fetchData();
+		}, 300);
+
 		return () => clearTimeout(timer);
-	}, [searchQuery, selectedPriceRange, refreshKey, searchShopProducts]);
+	}, [searchQuery, selectedPriceRange, refreshKey, searchShopProducts, page]);
 
 	// 2. Effect lấy Stats
 	useEffect(() => {
@@ -82,7 +90,12 @@ export default function SellerProductPage() {
 		};
 		getStats();
 	}, [fetchShopCount, refreshKey]);
+	useEffect(() => {
+		setPage(1);
+	}, [searchQuery, selectedPriceRange]);
 
+	// Tính toán tổng số trang
+	const totalPages = stats.total ? Math.ceil(stats.total / limit) : 1;
 	return (
 		<div className="p-6 space-y-4 h-[1000px] flex flex-col bg-gray-50/50">
 			{/* 1. Toolbar (Header, Filter, Stats) */}
@@ -96,38 +109,51 @@ export default function SellerProductPage() {
 			/>
 
 			{/* 2. Danh sách sản phẩm */}
-			<div className="flex-1 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden relative min-h-0">
+			<div className="flex-1 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden relative min-h-0 flex flex-col">
 				{shopProductsState.loading ? (
 					<div className="flex items-center justify-center h-full text-gray-500">
 						Đang tải dữ liệu...
 					</div>
 				) : (
-					<div className="p-6 h-full overflow-y-auto">
-						{shopProductsState.data && shopProductsState.data.length > 0 ? (
-							<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-								{shopProductsState.data.map((prod) => (
-									<ProductCard
-										key={prod._id}
-										product={prod}
-										mode="shop"
-										showActions={true}
-										showStatusBadge={true}
-										onProductChange={triggerReload}
-										onClick={() => handleProductClick(prod)}
+					<>
+						<div className="p-6 h-full overflow-y-auto">
+							{shopProductsState.data && shopProductsState.data.length > 0 ? (
+								<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+									{shopProductsState.data.map((prod) => (
+										<ProductCard
+											key={prod._id}
+											product={prod}
+											mode="shop"
+											showActions={true}
+											showStatusBadge={true}
+											onProductChange={triggerReload}
+											onClick={() => handleProductClick(prod)}
+										/>
+									))}
+								</div>
+							) : (
+								<div className="flex flex-col items-center justify-center h-full text-gray-400">
+									<Package
+										size={48}
+										strokeWidth={1}
+										className="mb-2 opacity-50"
 									/>
-								))}
-							</div>
-						) : (
-							<div className="flex flex-col items-center justify-center h-full text-gray-400">
-								<Package
-									size={48}
-									strokeWidth={1}
-									className="mb-2 opacity-50"
-								/>
-								<p>Không tìm thấy sản phẩm nào.</p>
-							</div>
+									<p>Không tìm thấy sản phẩm nào.</p>
+								</div>
+							)}
+						</div>
+						{totalPages > 1 && (
+							<Pagination
+								page={page}
+								totalPages={totalPages}
+								setPage={setPage}
+								backgroundClassName="bg-gradient-to-r from-gray-100 via-gray-50 to-gray-100"
+								activeColorClassName="bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 text-white font-semibold shadow-md"
+								textColorClassName="text-indigo-600 font-medium"
+								hoverColorClassName="hover:bg-gradient-to-r hover:from-blue-100 hover:via-indigo-150 hover:to-purple-100"
+							/>
 						)}
-					</div>
+					</>
 				)}
 			</div>
 
