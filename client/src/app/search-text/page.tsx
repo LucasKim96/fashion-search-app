@@ -59,10 +59,10 @@ export default function SearchPage() {
 
 	const suggestions = [
 		"Áo thun trắng",
-		"Váy hoa nhí",
-		"Quần jean ống rộng",
+		"Áo sơ mi đen",
+		"Quần jeans nữ",
 		"Áo polo nam",
-		"Đầm dạ hội",
+		"Váy dự tiệc",
 	];
 
 	return (
