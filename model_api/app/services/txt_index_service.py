@@ -223,7 +223,7 @@ class TextIndexService:
                     score = distances[0][i]
                     
                     # Skip if the index is invalid or the score is too low
-                    if idx == -1 or score <= 0.1: continue
+                    if idx == -1 or score <= 0.3: continue
                     
                     # Get the product info from the index map
                     info = self.id_map.get(idx)
