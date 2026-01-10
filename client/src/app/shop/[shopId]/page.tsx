@@ -64,7 +64,7 @@ export default function ShopDetailPage() {
 		totalPages,
 	} = usePublicProducts({
 		page,
-		limit: 12,
+		limit: 10,
 		shopId: shopId,
 	});
 
