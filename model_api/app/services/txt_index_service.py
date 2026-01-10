@@ -29,7 +29,8 @@ class TextIndexService:
         self._load_index()
 
     def _load_index(self):
-        with Timer("TextIndex_LoadIndex"):
+        task_metadata = {"service": "txt_index", "action": "load_index"}
+        with Timer("TextIndex_LoadIndex", metadata=task_metadata):
             # ### UPDATE ### Sử dụng self._file_lock để đảm bảo an toàn khi đọc file lúc khởi động
             with self._file_lock:
                 # Load Index
@@ -74,29 +75,41 @@ class TextIndexService:
         self.next_id = 0
 
     def add_product(self, vector: np.ndarray, product_id: str, image_path: str) -> bool:
-        task_metadata = {"product_id": product_id, "image_path": image_path}
+        """
+        Thêm một sản phẩm mới vào index.
+        - Kiểm tra vector có hợp lệ không
+        - Tìm ID cũ của ảnh để xóa
+        - Thêm vector mới vào index
+        - Cập nhật map và lưu lại
+        """
+        task_metadata = {
+            "service": "txt_index",
+            "action": "addPD",
+            "product_id": product_id, 
+            "image_path": image_path
+        }
         with Timer("TextIndex_AddProduct", metadata=task_metadata):
             try:
                 if vector is None: 
                     logger.error("[TextIndex] Add failed: Vector is None.")
                     return False
                 
-                # ### UPDATE ### Chuyển đổi và kiểm tra vector ở một nơi
+                # Chuyển đổi và kiểm tra vector ở một nơi
                 vector_np = self._prepare_vector(vector)
                 if vector_np is None: return False
 
-                # ### UPDATE ### Bọc các thao tác thay đổi index trong một lock
+                # Bước 1: Tìm ID cũ của ảnh để xóa
                 with self._file_lock:
                     id_to_remove = self._find_id_by_image_path(image_path)
                     
-                    # Thêm vector mới
+                    # Bước 2: Thêm vector mới
                     new_id = self.next_id
                     ids_np = np.array([new_id], dtype=np.int64)
                     self.index.add_with_ids(vector_np, ids_np)
                     self.id_map[new_id] = {"product_id": product_id, "image_path": image_path}
                     self.next_id += 1
                     
-                    # Chỉ xóa vector cũ sau khi đã thêm thành công vector mới
+                    # Bước 3: Chỉ xóa vector cũ sau khi đã thêm thành công vector mới
                     if id_to_remove is not None:
                         self.index.remove_ids(np.array([id_to_remove], dtype=np.int64))
                         # id_map đã được cập nhật trước đó
@@ -110,7 +123,12 @@ class TextIndexService:
                 return False
 
     def remove_list_images(self, product_id: str, image_paths: list) -> int:
-        task_metadata = {"product_id": product_id, "num_images": len(image_paths)}
+        task_metadata = {
+            "service": "txt_index",
+            "action": "remove_images",
+            "product_id": product_id,
+            "num_images": len(image_paths)
+        }
         with Timer("TextIndex_RemoveListImages", metadata=task_metadata):
             try:
                 ids_to_remove = []
@@ -140,7 +158,11 @@ class TextIndexService:
         Xóa TẤT CẢ các entry của một product_id.
         Hàm này sẽ tìm tất cả các image_path của sản phẩm đó và gọi remove_list_images.
         """
-        task_metadata = {"product_id": product_id}
+        task_metadata = {
+            "service": "txt_index",
+            "action": "remove_product",
+            "product_id": product_id
+        }
         with Timer("TextIndex_RemoveFullProduct", metadata=task_metadata):
             # 1. Tìm tất cả các image_path thuộc về product_id này
             paths_to_remove = []
@@ -160,14 +182,38 @@ class TextIndexService:
             return self.remove_list_images(product_id, paths_to_remove)
 
     def search(self, vector: np.ndarray, k: int = 20) -> list:
-        task_metadata = {"k": k, "index_total": self.index.ntotal if self.index else 0}
+        """
+        Search for similar products to the given vector.
+
+        This function takes a vector and searches for similar products in the index.
+        It returns a list of dictionaries, where each dictionary contains the product ID, score, and image path.
+
+        The search is performed using the FAISS library, which uses the cosine similarity metric.
+        The search is limited to the top k results.
+
+        If the index is empty or no results are found, an empty list is returned.
+
+        If an exception occurs during the search, an empty list is returned and the exception is logged.
+
+        :param vector: The vector to search for.
+        :param k: The number of results to return.
+        :return: A list of dictionaries, where each dictionary contains the product ID, score, and image path.
+        """
+        task_metadata = {
+            "service": "txt_index",
+            "action": "search",
+            "k": k,
+            "index_total": self.index.ntotal if self.index else 0
+        }
         with Timer("TextIndex_Search", metadata=task_metadata):
             try:
                 if not self.index or self.index.ntotal == 0: return []
                 
+                # Prepare the vector for searching
                 vector_np = self._prepare_vector(vector)
                 if vector_np is None: return []
 
+                # Perform the search
                 distances, indices = self.index.search(vector_np, k)
                 
                 results = []
@@ -176,11 +222,14 @@ class TextIndexService:
                     idx = indices[0][i]
                     score = distances[0][i]
                     
-                    if idx == -1 or score <= 0: continue
+                    # Skip if the index is invalid or the score is too low
+                    if idx == -1 or score <= -1: continue
                     
+                    # Get the product info from the index map
                     info = self.id_map.get(idx)
                     if isinstance(info, dict):
                         p_id = info.get('product_id')
+                        # Skip if the product ID is already seen
                         if p_id and p_id not in seen_products:
                             seen_products.add(p_id)
                             results.append({"id": p_id, "score": float(score), "image": info.get('image_path')})
@@ -190,7 +239,8 @@ class TextIndexService:
                 return []
 
     def reset_index(self):
-        with Timer("TextIndex_ResetIndex"):
+        task_metadata = {"service": "txt_index", "action": "reset"}
+        with Timer("TextIndex_ResetIndex", metadata=task_metadata):
             try:
                 logger.warning("[TextIndex] RESETTING ENTIRE INDEX...")
                 with self._file_lock:
@@ -203,11 +253,22 @@ class TextIndexService:
                 return False
             
     def save(self):
-        """Lưu index và map xuống ổ cứng. Chỉ nên gọi hàm này bên trong một lock."""
-        with Timer("TextIndex_SaveToDisk"):
+        """Lưu index và map xuống ổ cứng. Chỉ nên gọi hàm này bên trong một lock.
+
+        Bước 1: Tạo thư mục chứa index và map nếu chưa có (đề phòng)
+        Bước 2: Lưu index xuống ổ cứng
+        Bước 3: Lưu map xuống ổ cứng
+        """
+        task_metadata = {"service": "txt_index", "action": "save_to_disk"}
+        with Timer("TextIndex_SaveToDisk", metadata=task_metadata):
             try:
+                # Bước 1: Tạo thư mục chứa index và map nếu chưa có (đề phòng)
                 os.makedirs(os.path.dirname(self.index_path), exist_ok=True)
+
+                # Bước 2: Lưu index xuống ổ cứng
                 faiss.write_index(self.index, self.index_path)
+                
+                # Bước 3: Lưu map xuống ổ cứng
                 with open(self.mapping_path, 'w', encoding='utf-8') as f:
                     json.dump({"next_id": self.next_id, "mapping": self.id_map}, f, indent=2)
             except Exception:

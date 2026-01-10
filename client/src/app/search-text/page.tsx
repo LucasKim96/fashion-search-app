@@ -31,7 +31,7 @@ export default function SearchPage() {
 		router.replace(`/search-text?q=${encodeURIComponent(text)}`);
 
 		try {
-			const res = await searchByTextApi(text, 60);
+			const res = await searchByTextApi(text, 20);
 			if (res.success) {
 				setResults(res.data);
 			} else {
@@ -59,10 +59,10 @@ export default function SearchPage() {
 
 	const suggestions = [
 		"Áo thun trắng",
-		"Váy hoa nhí",
-		"Quần jean ống rộng",
+		"Áo sơ mi đen",
+		"Quần jeans nữ",
 		"Áo polo nam",
-		"Đầm dạ hội",
+		"Váy dự tiệc",
 	];
 
 	return (

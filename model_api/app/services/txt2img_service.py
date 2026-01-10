@@ -86,8 +86,9 @@ class Text2ImgService:
         self.load_model()
 
     def load_model(self):
-        with Timer("Txt2Img_LoadModel"):
-            logger.info("--- LOADING TEXT2IMG MODEL (v7 Architecture) ---")
+        task_metadata = {"service": "txt2img", "action": "load_model"}
+        with Timer("Txt2Img_LoadModel", metadata=task_metadata):
+            logger.info("--- LOADING TEXT2IMG MODEL (PhoCLIP Architecture) ---")
             try:
                 # 1. Tải tokenizer và PhoBERT gốc (chỉ để xây dựng kiến trúc)
                 self.tokenizer = AutoTokenizer.from_pretrained(TEXT2IMG_BASE_ARCH, use_fast=False)
@@ -126,8 +127,12 @@ class Text2ImgService:
         if not self.model or not self.tokenizer:
             logger.warning("PhoCLIP model not available. Skipping text embedding.")
             return None
-
-        with Timer("Txt2Img_TextEmbedding", metadata={"text_length": len(text)}):
+        task_metadata = {
+            "service": "txt2img",
+            "action": "embed_text",
+            "text_length": len(text)
+        }
+        with Timer("Txt2Img_TextEmbedding", metadata=task_metadata):
             try:
                 # --- ĐỒNG BỘ HÓA LOGIC TEXT ---
                 # Luôn luôn gọi ViTokenizer, không cần cờ nữa
@@ -154,8 +159,11 @@ class Text2ImgService:
         if not self.model:
             logger.warning("PhoCLIP model not available. Skipping image embedding.")
             return None
-
-        with Timer("Txt2Img_ImageEmbedding"):
+        task_metadata = {
+            "service": "txt2img",
+            "action": "embed_image"
+        }
+        with Timer("Txt2Img_ImageEmbedding", metadata=task_metadata):
             try:
                 # --- ĐỒNG BỘ HÓA LOGIC ẢNH ---
                 # Toàn bộ quá trình xử lý ảnh chỉ dùng PIL và Torchvision, đảm bảo đúng màu RGB.

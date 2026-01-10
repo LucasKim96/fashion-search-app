@@ -47,7 +47,7 @@ export const searchByImage = async (
 };
 
 // Endpoint tìm kiếm Text (AI PhoCLIP)
-export const searchByTextApi = async (query: string, limit = 60) => {
+export const searchByTextApi = async (query: string, limit = 20) => {
 	const res = await axiosInstance.get<ApiResponse<ProductSearchResult[]>>(
 		"/search/text", // Khớp với route backend
 		{
